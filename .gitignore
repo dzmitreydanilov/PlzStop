@@ -1,0 +1,79 @@
+########################
+# Build artifacts
+########################
+build/
+.gradle/
+local.properties
+
+# KMP / Kotlin
+.kotlin/
+externalNativeBuild/
+.cxx/
+
+########################
+# IDE: Android Studio / IntelliJ
+########################
+*.iml
+.idea/
+!.idea/codeStyles/*.xml         # оставляем кастомный CodeStyle
+!.idea/inspectionProfiles/*.xml # оставляем профили инспекций
+
+# Удаляем нежелательные XML в .idea
+.idea/*.xml
+.idea/**/workspace.xml
+.idea/**/shelf/
+.idea/**/libraries/
+.idea/**/tasks.xml
+.idea/**/jarRepositories.xml
+.idea/**/deploymentTarget*
+.idea/**/encodings.xml
+.idea/**/misc.xml
+.idea/**/kotlinc.xml
+.idea/**/gradle.xml
+.idea/**/copilot*
+.idea/**/markdown.xml
+.idea/**/compiler.xml
+.idea/**/dictionaries/
+
+########################
+# iOS / Xcode
+########################
+xcuserdata/
+Pods/
+pod/
+*.podspec
+*.xcworkspace
+
+########################
+# MacOS
+########################
+.DS_Store
+
+########################
+# Sensitive files
+########################
+keystore.properties
+release-keystore.properties
+google-services.json
+*.jks
+
+########################
+# APK / Artifacts
+########################
+composeApp/qa/*.apk
+composeApp/release/*.apk
+composeApp/**/output-metadata.json
+
+########################
+# Captures
+########################
+captures/
+
+# 1. Keep ignoring general generated folders
+**/generated/
+
+!**/src/**/generated/
+!**/src/**/generated/baselineProfiles/
+
+# 3. Explicitly allow the profile text files
+!**/src/**/generated/baselineProfiles/*.txt
