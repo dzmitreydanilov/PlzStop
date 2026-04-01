@@ -1,0 +1,25 @@
+package com.please.stop.app.core.db
+
+import android.content.Context
+import androidx.room.Room
+import com.please.stop.app.core.buildSettings.AppBuildSettingsProvider
+
+actual class AppDatabaseFactory(
+    private val context: Context,
+    private val passphraseProvider: PassphraseProvider,
+    private val buildSettingsProvider: AppBuildSettingsProvider,
+) {
+    actual fun create(): AppDatabase {
+        val passphrase = resolvePassphrase()
+        val dbFile = context.getDatabasePath(AppDatabase.NAME)
+        return Room.databaseBuilder<AppDatabase>(
+            context = context,
+            name = dbFile.absolutePath,
+        ).buildEncrypted(passphrase)
+    }
+
+    private fun resolvePassphrase(): String? {
+        if (buildSettingsProvider.isDebug()) return null
+        return passphraseProvider.getOrCreate()
+    }
+}
