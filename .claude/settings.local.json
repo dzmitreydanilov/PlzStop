@@ -62,7 +62,20 @@
       "Bash(xargs cat:*)",
       "WebFetch(domain:api.github.com)",
       "Bash(cat:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(curl -sL \"https://kotlinlang.org/docs/multiplatform/multiplatform-spm-import.html\")",
+      "Bash(curl -sL \"https://www.zetetic.net/sqlcipher/sqlcipher-apple-integrators/\")",
+      "WebFetch(domain:www.zetetic.net)",
+      "Bash(curl -sL \"https://api.github.com/repos/nicklama/sqlcipher/SQLCipher.swift\")",
+      "Bash(curl -sL \"https://api.github.com/search/repositories?q=SQLCipher.swift+in:name\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/sqlcipher/SQLCipher.swift/main/Package.swift\")",
+      "Bash(curl -sL \"https://api.github.com/repos/sqlcipher/SQLCipher.swift/tags?per_page=5\")",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/sqlcipher/SQLCipher.swift/refs/tags/4.14.0/Package.swift\")",
+      "Bash(curl -s -L \"https://desquared.notion.site/Encrypted-Room-Database-in-Kotlin-Multiplatform-KMP-for-Android-iOS-25b9aac7b816801b9067c627602335c6\")",
+      "Bash(curl:*)",
+      "WebFetch(domain:desquared.notion.site)",
+      "WebFetch(domain:central.sonatype.com)",
+      "Bash(XCODEPROJ_PATH='/Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/iosApp.xcodeproj' ./gradlew ':composeApp:integrateLinkagePackage' -i)"
     ]
   },
   "enabledMcpjsonServers": [

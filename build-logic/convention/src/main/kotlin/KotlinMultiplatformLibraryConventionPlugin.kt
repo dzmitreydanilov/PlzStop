@@ -15,8 +15,17 @@ class KotlinMultiplatformLibraryConventionPlugin : Plugin<Project> {
             extensions.configure<KotlinMultiplatformExtension> {
 
                 applyDefaultHierarchyTemplate()
-                iosArm64()
-                iosSimulatorArm64()
+
+                listOf(
+                    iosArm64(),
+                    iosSimulatorArm64(),
+                ).forEach { target ->
+                    target.binaries.framework {
+                        baseName = "ComposeApp"
+                        isStatic = true
+                    }
+                }
+
                 configureKotlin()
             }
         }
