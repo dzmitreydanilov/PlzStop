@@ -23,11 +23,6 @@ kotlin {
         freeCompilerArgs.add("-XXLanguage:+ExplicitBackingFields")
     }
 
-    js {
-        browser()
-        binaries.executable()
-    }
-
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
@@ -55,12 +50,10 @@ kotlin {
 
             implementation(libs.bundles.coil)
             implementation(libs.bundles.ktor)
-            implementation(libs.bundles.moko.permissions)
             implementation(libs.bundles.filekit)
             implementation(libs.bundles.haze)
             implementation(libs.bundles.jb.nav3)
             implementation(libs.bundles.jb.compose)
-            implementation(libs.bundles.paging)
         }
 
         commonTest.dependencies {
@@ -70,13 +63,11 @@ kotlin {
 
         androidMain.dependencies {
             implementation(libs.amplitude.android)
-            implementation(libs.sqldelight.android)
             implementation(libs.koin.android)
             implementation(libs.ktor.okhttp)
             implementation(libs.coil.gif)
 
             implementation(libs.bundles.googleOauth)
-            implementation(libs.androidx.work.runtime.ktx)
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.androidx.lifecycle.process)
             implementation(libs.androidx.lifecycle.service)
@@ -88,7 +79,10 @@ kotlin {
 
         iosMain.dependencies {
             implementation(libs.ktor.ios)
-            implementation(libs.sqldelight.native)
+        }
+
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.js)
         }
     }
 }
