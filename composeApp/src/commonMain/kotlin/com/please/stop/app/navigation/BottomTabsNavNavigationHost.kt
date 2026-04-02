@@ -48,7 +48,7 @@ private fun PolymorphicModuleBuilder<NavKey>.registerMainBottomNavigation() {
 fun BottomTabsNavNavigationHost(
     modifier: Modifier = Modifier,
     initialTab: MainBottomTabs = MainBottomTabs.Home,
-    onNavigateOnboarding: () -> Unit = {},
+    onNavigateToAddExpense: (preselectedCategoryId: Long?) -> Unit = {},
 ) {
     val bottomNavIntentHolder = LocalBottomNavIntentHolder.current
 
@@ -82,7 +82,9 @@ fun BottomTabsNavNavigationHost(
         ) {
             val entries = hostState.toEntries(
                 entryProvider = entryProvider {
-                    bottomNavigationEntries(onNavigateOnboarding = onNavigateOnboarding)
+                    bottomNavigationEntries(
+                        onNavigateToAddExpense = onNavigateToAddExpense,
+                    )
                 },
             )
             NavDisplay(
@@ -127,9 +129,11 @@ private fun PushPendingNestedRouteAfterTabSwitch(
 }
 
 private fun EntryProviderScope<NavKey>.bottomNavigationEntries(
-    onNavigateOnboarding: () -> Unit,
+    onNavigateToAddExpense: (preselectedCategoryId: Long?) -> Unit = {},
 ) {
-    homeTabEntries(onNavigateOnboarding = onNavigateOnboarding)
+    homeTabEntries(
+        onNavigateToAddExpense = onNavigateToAddExpense,
+    )
     analyticsTabEntries()
     settingsTabEntries()
 }

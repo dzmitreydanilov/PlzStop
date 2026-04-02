@@ -14,4 +14,10 @@ interface CategoryDao {
 
     @Insert
     suspend fun insertAll(categories: List<CategoryEntity>)
+
+    @Insert
+    suspend fun insert(category: CategoryEntity): Long
+
+    @Query("SELECT COALESCE(MAX(sortOrder), 0) + 1 FROM category")
+    suspend fun getNextSortOrder(): Int
 }
