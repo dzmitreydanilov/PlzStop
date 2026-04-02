@@ -9,14 +9,14 @@ sealed interface ScreenOverlay {
         val type: ErrorType,
         val title: String? = null,
         val subtitle: String? = null
-    ) : com.please.stop.app.uicomponents.error.ScreenOverlay
+    ) : ScreenOverlay
 
     data class Message(
         val title: String,
         val subtitle: String? = null,
-        val type: com.please.stop.app.uicomponents.error.MessageType = com.please.stop.app.uicomponents.error.MessageType.Info,
-        val position: com.please.stop.app.uicomponents.error.SnackbarPosition = com.please.stop.app.uicomponents.error.SnackbarPosition.Top,
-    ) : com.please.stop.app.uicomponents.error.ScreenOverlay
+        val type: MessageType = MessageType.Info,
+        val position: SnackbarPosition = SnackbarPosition.Top,
+    ) : ScreenOverlay
 }
 
 enum class MessageType { Info, Success }

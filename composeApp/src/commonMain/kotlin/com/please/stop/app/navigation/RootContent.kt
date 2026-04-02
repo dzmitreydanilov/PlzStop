@@ -32,7 +32,9 @@ import com.please.stop.app.navigation.nav3.Nav3Host
 import com.please.stop.app.navigation.nav3.Router
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.navigation.routes.OnboardingRoute
+import com.please.stop.app.navigation.routes.AddExpenseRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
+import com.please.stop.app.features.addexpense.presentation.ui.AddExpenseScreen
 import com.please.stop.app.features.onboarding.presentation.ui.OnboardingScreen
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -157,7 +159,17 @@ private fun applyDeepLinkResult(
 private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<NavKey>) {
     entry<MainBottomTabs.Home> {
         BottomTabsNavNavigationHost(
-            onNavigateOnboarding = { router.push(OnboardingRoute) },
+            onNavigateToAddExpense = { categoryId ->
+                router.push(AddExpenseRoute(preselectedCategoryId = categoryId))
+            },
+        )
+    }
+
+    entry<AddExpenseRoute> { route ->
+        AddExpenseScreen(
+            expenseId = route.expenseId,
+            preselectedCategoryId = route.preselectedCategoryId,
+            onGoBack = { router.pop() },
         )
     }
 }

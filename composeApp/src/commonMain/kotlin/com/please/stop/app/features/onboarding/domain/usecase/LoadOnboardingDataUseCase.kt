@@ -23,20 +23,22 @@ class LoadOnboardingDataUseCase(
         val currenciesDeferred = async { currencyRepository.getAllCurrencies() }
         val categoriesDeferred = async { categoryRepository.getDefaultCategories() }
 
-        val currencies = currenciesDeferred.await()
-        val categories = categoriesDeferred.await()
+        val currenciesResult = currenciesDeferred.await()
+        val categoriesResult = categoriesDeferred.await()
 
-        val currenciesError = currencies.exceptionOrNull()
-        val categoriesError = categories.exceptionOrNull()
-        val firstError = currenciesError ?: categoriesError
-
-        if (firstError != null) {
-            return@withContext Result.Failure(firstError.toErrorType())
-        }
-
-        Result.Success(
-            currencies = currencies.getOrThrow().toImmutableList(),
-            categories = categories.getOrThrow().toImmutableList(),
+        currenciesResult.fold(
+            onSuccess = { currencies ->
+                categoriesResult.fold(
+                    onSuccess = { categories ->
+                        Result.Success(
+                            currencies = currencies.toImmutableList(),
+                            categories = categories.toImmutableList(),
+                        )
+                    },
+                    onFailure = { Result.Failure(it.toErrorType()) },
+                )
+            },
+            onFailure = { Result.Failure(it.toErrorType()) },
         )
     }
 
