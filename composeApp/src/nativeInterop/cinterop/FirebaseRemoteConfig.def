@@ -1,0 +1,4 @@
+language = Objective-C
+package = cocoapods.FirebaseRemoteConfig
+headers = FIRRemoteConfig.h
+headerFilter = FIR**

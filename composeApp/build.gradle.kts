@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+    @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import com.please.stop.app.convention.getCompileSDK
 import com.please.stop.app.convention.getMinSDK
@@ -34,6 +34,27 @@ kotlin {
             version = libs.versions.sqlcipher.get(),
             products = listOf("SQLCipher"),
         )
+        swiftPackage(
+            url = "https://github.com/firebase/firebase-ios-sdk.git",
+            version = "11.12.0",
+            products = listOf("FirebaseCore", "FirebaseRemoteConfig"),
+        )
+    }
+
+    val firebaseHeadersDir = project.layout.buildDirectory
+        .dir("kotlin/swiftPMCheckout/checkouts/firebase-ios-sdk/FirebaseRemoteConfig/Sources/Public/FirebaseRemoteConfig")
+        .get().asFile.absolutePath
+
+    listOf(
+        iosArm64(),
+        iosSimulatorArm64(),
+    ).forEach { target ->
+        target.compilations.getByName("main") {
+            cinterops.create("FirebaseRemoteConfig") {
+                definitionFile.set(project.file("src/nativeInterop/cinterop/FirebaseRemoteConfig.def"))
+                compilerOpts("-I$firebaseHeadersDir")
+            }
+        }
     }
 
     sourceSets {
@@ -75,6 +96,8 @@ kotlin {
         }
 
         androidMain.dependencies {
+            implementation(libs.gitlive.firebase.common)
+            implementation(libs.gitlive.firebase.config)
             implementation(libs.amplitude.android)
             implementation(libs.koin.android)
             implementation(libs.ktor.okhttp)
@@ -91,6 +114,10 @@ kotlin {
 
             implementation(libs.room.ktx)
             implementation(libs.android.sqlcipher)
+
+            implementation(project.dependencies.platform("com.google.firebase:firebase-bom:33.16.0"))
+            implementation("com.google.firebase:firebase-common-ktx")
+            implementation("com.google.firebase:firebase-config-ktx")
         }
 
         iosMain.dependencies {

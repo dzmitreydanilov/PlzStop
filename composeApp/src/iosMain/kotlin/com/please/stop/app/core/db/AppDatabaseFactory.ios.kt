@@ -24,7 +24,9 @@ actual class AppDatabaseFactory(
         val dbFilePath = "${documentDir.path}/${AppDatabase.NAME}"
         return Room.databaseBuilder<AppDatabase>(
             name = dbFilePath,
-        ).buildEncrypted(passphrase)
+        )
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .buildEncrypted(passphrase)
     }
 
     private fun resolvePassphrase(): String? {

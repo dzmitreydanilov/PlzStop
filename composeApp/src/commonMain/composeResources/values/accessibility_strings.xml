@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <!-- Navigation -->
+    <string name="content_desc_navigate_back">Navigate back</string>
+    <string name="content_desc_close">Close</string>
+    <string name="content_desc_clear">Clear</string>
+    <string name="content_desc_search">Search</string>
+
+    <!-- Media -->
+    <string name="content_desc_microphone">Microphone</string>
+    <string name="content_desc_gallery">Gallery</string>
+
+    <!-- State descriptions -->
+    <string name="content_desc_loading">Loading</string>
+    <string name="content_desc_pending">Pending</string>
+    <string name="content_desc_selected">Selected</string>
+    <string name="content_desc_not_selected">Not selected</string>
+
+    <!-- Progress -->
+    <string name="content_desc_step_progress">Step %1$d of %2$d</string>
+</resources>

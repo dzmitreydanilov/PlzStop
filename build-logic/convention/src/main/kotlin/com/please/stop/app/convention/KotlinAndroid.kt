@@ -45,6 +45,7 @@ fun Project.configureKotlinAndroid(
         compileOptions.apply {
             sourceCompatibility = javaVersion
             targetCompatibility = javaVersion
+            isCoreLibraryDesugaringEnabled = true
         }
     }
 

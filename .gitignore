@@ -57,6 +57,7 @@ KotlinMultiplatformLinkedPackage/
 keystore.properties
 release-keystore.properties
 google-services.json
+GoogleService-Info.plist
 *.jks
 
 ########################

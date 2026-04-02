@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+
+    <string name="skip">Skip</string>
+    <string name="close">Close</string>
+    <string name="retry">Retry</string>
+    <string name="error_dialog_title">Ooops Something went wrong</string>
+    <string name="error_occurred_internet">Looks like you're offline. Please check your internet connection and try again</string>
+    <string name="error_occurred_we_are_fixing">An error occurred. We’re fixing the issue — hang tight and try again soon.</string>
+
+    <string name="home_tab">Home</string>
+    <string name="analytics_tab">Analytics</string>
+    <string name="settings_tab">Settings</string>
+
+    <string name="onboarding_something_went_wrong">Something went wrong</string>
+    <string name="onboarding_app_name">PlzStop</string>
+    <string name="onboarding_tagline">Track your spending.\nStop overspending.</string>
+    <string name="onboarding_name_label">Your name (optional)</string>
+    <string name="onboarding_choose_currency">Choose your currency</string>
+    <string name="onboarding_search_currencies">Search currencies...</string>
+    <string name="onboarding_popular">Popular</string>
+    <string name="onboarding_all_currencies">All currencies</string>
+    <string name="onboarding_selected">Selected</string>
+    <string name="onboarding_set_budget">Set your monthly budget</string>
+    <string name="onboarding_budget_label">Monthly budget</string>
+    <string name="onboarding_budget_hint">You can always change this in Settings</string>
+    <string name="onboarding_pick_categories">Pick your categories</string>
+    <string name="onboarding_min_categories">Select at least %d categories</string>
+    <string name="onboarding_add_custom_category">+ Add custom category</string>
+    <string name="onboarding_new_category">New category</string>
+    <string name="onboarding_category_name_label">Category name</string>
+    <string name="onboarding_add">Add</string>
+    <string name="onboarding_cancel">Cancel</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_home_coming_soon">Home — coming soon</string>
+    <string name="onboarding_analytics_coming_soon">Analytics — coming soon</string>
+    <string name="onboarding_settings_coming_soon">Settings — coming soon</string>
+
+    <string-array name="month_names">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+
+    <string-array name="month_names_short">
+        <item>Jan</item>
+        <item>Feb</item>
+        <item>Mar</item>
+        <item>Apr</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>Aug</item>
+        <item>Sept</item>
+        <item>Oct</item>
+        <item>Nov</item>
+        <item>Dec</item>
+    </string-array>
+
+    <string-array name="day_of_week">
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+        <item>Sunday</item>
+    </string-array>
+</resources>
+
+
