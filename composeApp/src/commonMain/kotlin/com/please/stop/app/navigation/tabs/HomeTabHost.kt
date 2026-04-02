@@ -1,68 +1,39 @@
 package com.please.stop.app.navigation.tabs
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
-import com.please.stop.app.navigation.nav3.Router
-import com.please.stop.app.navigation.routes.AuthRoute
-import com.dog.care.navigation.routes.MainBottomTabs
-import com.dog.care.navigation.tabs.ArticlesRoutes
-import com.please.stop.app.navigation.routes.RemindersRoutes
-
-@Composable
-fun HomeTabHost(
-    onNavigateSignIn: () -> Unit,
-    onNavigatePreSignIn: () -> Unit,
-    onNavigateSymptom: () -> Unit,
-    onReminderClick: (String, String) -> Unit,
-    onCreateReminder: () -> Unit,
-    onSearchReminderClick: () -> Unit,
-    onOpenProfile: () -> Unit = {},
-    onOpenArticleDetails: (String) -> Unit = {},
-) {
-    HomeScreenRoute(
-        onNavigateProfile = onOpenProfile,
-        onNavigateRemindersSearch = onSearchReminderClick,
-        onNavigateArticlesFromStories = onOpenArticleDetails,
-        onNavigatePreSignIn = onNavigatePreSignIn,
-        onNavigateLogin = onNavigateSignIn,
-        onAddSymptomsClick = onNavigateSymptom,
-        onReminderClick = onReminderClick,
-        onCreateReminder = onCreateReminder
-    )
-}
+import com.please.stop.app.navigation.routes.MainBottomTabs
+import org.jetbrains.compose.resources.stringResource
+import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.onboarding_home_coming_soon
 
 internal fun EntryProviderScope<NavKey>.homeTabEntries(
-    onNavigateProfile: () -> Unit,
-    router: Router<NavKey>,
-    onNavigateSignIn: (AuthRoute) -> Unit,
-    onNavigateSymptoms: () -> Unit,
-    onNavigateReminder: (RemindersRoutes) -> Unit
+    onNavigateOnboarding: () -> Unit,
 ) {
     entry<MainBottomTabs.Home> {
-        HomeTabHost(
-            onOpenProfile = onNavigateProfile,
-            onOpenArticleDetails = { articleId ->
-                router.replaceCurrent(MainBottomTabs.Articles)
-                router.push(ArticlesRoutes.ArticleDetails(articleId))
-            },
-            onNavigateSignIn = { onNavigateSignIn(AuthRoute.ChooseSignInOption) },
-            onNavigatePreSignIn = { onNavigateSignIn(AuthRoute.PreSignIn) },
-            onNavigateSymptom = onNavigateSymptoms,
-            onReminderClick = { id, date ->
-                onNavigateReminder(
-                    RemindersRoutes.EditReminder(id, date)
-                )
-            },
-            onCreateReminder = {
-                onNavigateReminder(
-                    RemindersRoutes.CreateReminder(
-                        date = null,
-                        fromHome = true
-                    )
-                )
-            },
-            onSearchReminderClick = { onNavigateReminder(RemindersRoutes.SearchReminders) }
-        )
+        HomePlaceholderScreen(onNavigateOnboarding = onNavigateOnboarding)
+    }
+}
+
+@Composable
+private fun HomePlaceholderScreen(onNavigateOnboarding: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+    ) {
+        Text(stringResource(Res.string.onboarding_home_coming_soon))
+        OutlinedButton(onClick = onNavigateOnboarding) {
+            Text("Open Onboarding")
+        }
     }
 }

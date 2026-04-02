@@ -1,4 +1,4 @@
-package com.dog.care.navigation
+package com.please.stop.app.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect

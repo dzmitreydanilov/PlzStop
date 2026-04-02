@@ -6,9 +6,6 @@ expect class AppDatabaseFactory {
     fun create(): AppDatabase
 }
 
-internal fun RoomDatabase.Builder<AppDatabase>.buildEncrypted(
+internal expect fun RoomDatabase.Builder<AppDatabase>.buildEncrypted(
     passphrase: String?,
-): AppDatabase {
-    val builder = if (passphrase != null) encrypted(passphrase) else this
-    return builder.build()
-}
+): AppDatabase

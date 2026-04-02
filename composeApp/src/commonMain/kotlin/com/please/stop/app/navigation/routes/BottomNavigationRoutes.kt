@@ -1,6 +1,6 @@
 @file:Suppress("Filename", "MatchingDeclarationName")
 
-package com.dog.care.navigation.routes
+package com.please.stop.app.navigation.routes
 
 import androidx.compose.runtime.Stable
 import androidx.navigation3.runtime.NavKey
@@ -13,11 +13,8 @@ sealed interface MainBottomTabs : NavKey {
     data object Home : MainBottomTabs
 
     @Serializable
-    data object AiAssistant : MainBottomTabs
+    data object Analytics : MainBottomTabs
 
     @Serializable
-    data object Calendar : MainBottomTabs
-
-    @Serializable
-    data object Articles : MainBottomTabs
+    data object Settings : MainBottomTabs
 }

@@ -15,7 +15,9 @@ actual class AppDatabaseFactory(
         return Room.databaseBuilder<AppDatabase>(
             context = context,
             name = dbFile.absolutePath,
-        ).buildEncrypted(passphrase)
+        )
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .buildEncrypted(passphrase)
     }
 
     private fun resolvePassphrase(): String? {

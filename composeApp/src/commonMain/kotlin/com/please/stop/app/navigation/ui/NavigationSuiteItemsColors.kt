@@ -1,4 +1,4 @@
-package com.dog.care.navigation.ui
+package com.please.stop.app.navigation.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItemDefaults

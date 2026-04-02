@@ -2,7 +2,7 @@ package com.please.stop.app.navigation.bottomnavbar
 
 import androidx.compose.runtime.compositionLocalOf
 import androidx.navigation3.runtime.NavKey
-import com.dog.care.navigation.routes.MainBottomTabs
+import com.please.stop.app.navigation.routes.MainBottomTabs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

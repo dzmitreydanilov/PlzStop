@@ -1,7 +1,7 @@
 package com.please.stop.app.navigation.deeplink
 
 import androidx.navigation3.runtime.NavKey
-import com.dog.care.navigation.routes.MainBottomTabs
+import com.please.stop.app.navigation.routes.MainBottomTabs
 
 /**
  * Result of resolving a deep link URI to a navigation target.

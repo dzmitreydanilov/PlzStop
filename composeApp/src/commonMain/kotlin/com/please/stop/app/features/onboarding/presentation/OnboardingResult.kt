@@ -1,0 +1,17 @@
+package com.please.stop.app.features.onboarding.presentation
+
+import com.please.stop.app.core.models.domain.Result
+import com.please.stop.app.features.onboarding.domain.model.Currency
+
+sealed interface OnboardingResult : Result {
+    data class DisplayNameUpdated(val name: String) : OnboardingResult
+    data class CurrencySearchUpdated(val query: String) : OnboardingResult
+    data class CurrencyChosen(val currency: Currency) : OnboardingResult
+    data class BudgetInputUpdated(val input: String) : OnboardingResult
+    data class CategoryToggled(val categoryId: Long) : OnboardingResult
+    data class CustomCategoryAdded(val category: CategoryUiModel) : OnboardingResult
+    data object StepAdvanced : OnboardingResult
+    data object StepBacked : OnboardingResult
+    data object Saving : OnboardingResult
+    data object ErrorCleared : OnboardingResult
+}

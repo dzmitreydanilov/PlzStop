@@ -1,0 +1,12 @@
+[
+  {"id":1,"name":"Food","iconKey":"ic_food","isDefault":true,"sortOrder":0},
+  {"id":2,"name":"Transport","iconKey":"ic_transport","isDefault":true,"sortOrder":1},
+  {"id":3,"name":"Housing","iconKey":"ic_housing","isDefault":true,"sortOrder":2},
+  {"id":4,"name":"Entertainment","iconKey":"ic_entertainment","isDefault":true,"sortOrder":3},
+  {"id":5,"name":"Groceries","iconKey":"ic_groceries","isDefault":true,"sortOrder":4},
+  {"id":6,"name":"Health","iconKey":"ic_health","isDefault":true,"sortOrder":5},
+  {"id":7,"name":"Shopping","iconKey":"ic_shopping","isDefault":true,"sortOrder":6},
+  {"id":8,"name":"Education","iconKey":"ic_education","isDefault":true,"sortOrder":7},
+  {"id":9,"name":"Subscriptions","iconKey":"ic_subscriptions","isDefault":true,"sortOrder":8},
+  {"id":10,"name":"Other","iconKey":"ic_other","isDefault":true,"sortOrder":9}
+]
