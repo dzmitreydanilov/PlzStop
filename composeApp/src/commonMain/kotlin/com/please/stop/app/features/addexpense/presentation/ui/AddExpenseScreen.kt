@@ -1,5 +1,6 @@
 package com.please.stop.app.features.addexpense.presentation.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -16,12 +19,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -32,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +48,8 @@ import com.please.stop.app.features.addexpense.presentation.AddExpenseEvent
 import com.please.stop.app.features.addexpense.presentation.AddExpenseNavigation
 import com.please.stop.app.features.addexpense.presentation.AddExpenseState
 import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder
+import com.please.stop.app.features.addexpense.domain.model.ReceiptError
+import com.please.stop.app.features.addexpense.scanner.DocumentScanner
 import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder.Companion.MAX_NOTES_LENGTH
 import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder.Companion.MAX_TITLE_LENGTH
 import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder.Companion.NOTES_COUNTER_THRESHOLD
@@ -49,6 +57,7 @@ import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolde
 import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
+import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
@@ -56,10 +65,12 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.add_expense_add
+import plzstop.composeapp.generated.resources.add_expense_analyzing_receipt
 import plzstop.composeapp.generated.resources.add_expense_cancel
 import plzstop.composeapp.generated.resources.add_expense_category
 import plzstop.composeapp.generated.resources.add_expense_confirm
@@ -71,12 +82,17 @@ import plzstop.composeapp.generated.resources.add_expense_discard
 import plzstop.composeapp.generated.resources.add_expense_discard_message
 import plzstop.composeapp.generated.resources.add_expense_discard_title
 import plzstop.composeapp.generated.resources.add_expense_notes
+import plzstop.composeapp.generated.resources.add_expense_receipt_no_network
+import plzstop.composeapp.generated.resources.add_expense_receipt_service_unavailable
+import plzstop.composeapp.generated.resources.add_expense_receipt_unreadable
 import plzstop.composeapp.generated.resources.add_expense_save_changes
+import plzstop.composeapp.generated.resources.add_expense_scan_receipt
 import plzstop.composeapp.generated.resources.add_expense_time
 import plzstop.composeapp.generated.resources.add_expense_title
 import plzstop.composeapp.generated.resources.add_expense_title_edit
 import plzstop.composeapp.generated.resources.add_expense_title_label
 import plzstop.composeapp.generated.resources.ic_arrow_back
+import plzstop.composeapp.generated.resources.ic_photo_camera
 import plzstop.composeapp.generated.resources.ic_trash_bin
 import plzstop.composeapp.generated.resources.onboarding_something_went_wrong
 
@@ -148,6 +164,8 @@ private fun AddExpenseContent(
     state: AddExpenseState.Content,
     onEvent: (AddExpenseEvent) -> Unit,
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val documentScanner = koinInject<DocumentScanner>()
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
@@ -219,6 +237,30 @@ private fun AddExpenseContent(
                         .fillMaxWidth()
                         .padding(vertical = 24.dp, horizontal = 16.dp),
                 )
+
+                if (!state.isEditMode) {
+                    FilledTonalButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                documentScanner.scan()
+                                    .onSuccess { bytes ->
+                                        onEvent(AddExpenseEvent.ReceiptScanned(bytes))
+                                    }
+                            }
+                        },
+                        enabled = !state.isAnalyzingReceipt,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        Icon(
+                            imageVector = vectorResource(Res.drawable.ic_photo_camera),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(Res.string.add_expense_scan_receipt))
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
                 OutlinedTextField(
                     value = state.title,
@@ -424,6 +466,50 @@ private fun AddExpenseContent(
             },
         )
     }
+
+    if (state.isAnalyzingReceipt) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(Res.string.add_expense_analyzing_receipt),
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+        }
+    }
+
+    if (state.receiptError != null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Snackbar(
+                modifier = Modifier.padding(16.dp),
+                action = {
+                    TextButton(onClick = { onEvent(AddExpenseEvent.DismissReceiptError) }) {
+                        Text(stringResource(Res.string.add_expense_confirm))
+                    }
+                },
+            ) {
+                Text(text = state.receiptError.toMessage())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReceiptError.toMessage(): String = when (this) {
+    ReceiptError.UNREADABLE -> stringResource(Res.string.add_expense_receipt_unreadable)
+    ReceiptError.NO_NETWORK -> stringResource(Res.string.add_expense_receipt_no_network)
+    ReceiptError.SERVICE_UNAVAILABLE -> stringResource(Res.string.add_expense_receipt_service_unavailable)
 }
 
 @Composable

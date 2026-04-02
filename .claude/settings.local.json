@@ -76,7 +76,8 @@
       "WebFetch(domain:desquared.notion.site)",
       "WebFetch(domain:central.sonatype.com)",
       "Bash(XCODEPROJ_PATH='/Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/iosApp.xcodeproj' ./gradlew ':composeApp:integrateLinkagePackage' -i)",
-      "Bash(/usr/libexec/PlistBuddy -c \"Print :BUNDLE_ID\" /Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/GoogleService-Info.plist)"
+      "Bash(/usr/libexec/PlistBuddy -c \"Print :BUNDLE_ID\" /Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/GoogleService-Info.plist)",
+      "Bash(npx tsc:*)"
     ]
   },
   "enabledMcpjsonServers": [

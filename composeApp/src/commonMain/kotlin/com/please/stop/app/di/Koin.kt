@@ -1,11 +1,17 @@
 package com.please.stop.app.di
 
 import org.koin.core.context.startKoin
+import org.koin.core.module.Module
 import org.koin.dsl.KoinAppDeclaration
 
-fun initKoin(config: KoinAppDeclaration? = null) {
+fun initKoin(
+    config: KoinAppDeclaration? = null,
+    platformOverrides: Module? = null,
+) {
     startKoin {
         config?.invoke(this)
-        modules(appModule)
+        val modules = mutableListOf(appModule)
+        platformOverrides?.let { modules.add(it) }
+        modules(modules)
     }
 }

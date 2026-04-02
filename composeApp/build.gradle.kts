@@ -37,7 +37,7 @@ kotlin {
         swiftPackage(
             url = "https://github.com/firebase/firebase-ios-sdk.git",
             version = "11.12.0",
-            products = listOf("FirebaseCore", "FirebaseRemoteConfig"),
+            products = listOf("FirebaseCore", "FirebaseRemoteConfig", "FirebaseFunctions", "FirebaseAppCheck"),
         )
     }
 
@@ -118,6 +118,10 @@ kotlin {
             implementation(project.dependencies.platform("com.google.firebase:firebase-bom:33.16.0"))
             implementation("com.google.firebase:firebase-common-ktx")
             implementation("com.google.firebase:firebase-config-ktx")
+            implementation("com.google.firebase:firebase-functions-ktx")
+            implementation("com.google.firebase:firebase-appcheck-ktx")
+            implementation("com.google.firebase:firebase-appcheck-playintegrity")
+            implementation(libs.mlkit.document.scanner)
         }
 
         iosMain.dependencies {

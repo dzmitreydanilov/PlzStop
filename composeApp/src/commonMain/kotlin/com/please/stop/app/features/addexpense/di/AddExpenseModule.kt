@@ -3,7 +3,10 @@ package com.please.stop.app.features.addexpense.di
 import com.please.stop.app.core.db.AppDatabase
 import com.please.stop.app.di.dispatchers.DispatchersQualifiers
 import com.please.stop.app.features.addexpense.data.repository.AddExpenseRepositoryImpl
+import com.please.stop.app.features.addexpense.data.repository.ReceiptRepositoryImpl
 import com.please.stop.app.features.addexpense.domain.repository.AddExpenseRepository
+import com.please.stop.app.features.addexpense.domain.repository.ReceiptRepository
+import com.please.stop.app.features.addexpense.domain.usecase.AnalyzeReceiptUseCase
 import com.please.stop.app.features.addexpense.domain.usecase.DeleteExpenseUseCase
 import com.please.stop.app.features.addexpense.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.addexpense.domain.usecase.ObserveAddExpenseFormDataUseCase
@@ -14,6 +17,12 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val addExpenseModule = module {
+
+    single<ReceiptRepository> {
+        ReceiptRepositoryImpl(
+            callableFunctions = get(),
+        )
+    }
 
     single<AddExpenseRepository> {
         AddExpenseRepositoryImpl(
@@ -53,14 +62,23 @@ val addExpenseModule = module {
         )
     }
 
+    factory {
+        AnalyzeReceiptUseCase(
+            receiptRepository = get(),
+            addExpenseRepository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+
     viewModel { params ->
         AddExpenseStateHolder(
-            expenseId = params.get(),
-            preselectedCategoryId = params.get(),
+            expenseId = params.getOrNull(),
+            preselectedCategoryId = params.getOrNull(),
             observeFormDataUseCase = get(),
             getExpenseByIdUseCase = get(),
             saveExpenseUseCase = get(),
             deleteExpenseUseCase = get(),
+            analyzeReceiptUseCase = get(),
         )
     }
 }

@@ -18,7 +18,11 @@ struct iOSApp: App {
 
     init() {
         KermitInitializeUtilsKt.doInitLogger(minSeverity: .verbose)
-        KoinKt.doInitKoin(config: nil)
+
+        let platformOverrides = IosKoinHelperKt.createIosPlatformOverrides(
+            firebaseFunctionsCaller: AppFirebaseFunctionsCaller()
+        )
+        KoinKt.doInitKoin(config: nil, platformOverrides: platformOverrides)
     }
 
     var body: some Scene {

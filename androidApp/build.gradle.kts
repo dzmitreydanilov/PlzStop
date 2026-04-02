@@ -29,6 +29,8 @@ dependencies {
     implementation(project.dependencies.platform("com.google.firebase:firebase-bom:33.16.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-config")
+    implementation("com.google.firebase:firebase-functions")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
 
     implementation(libs.purchases.core)
     implementation(libs.androidx.work.runtime.ktx)

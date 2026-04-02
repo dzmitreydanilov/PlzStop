@@ -3,6 +3,7 @@ package com.please.stop.app.features.addexpense.data.repository
 import com.please.stop.app.core.db.dao.CategoryDao
 import com.please.stop.app.core.db.dao.ExpenseDao
 import com.please.stop.app.core.db.dao.UserProfileDao
+import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.db.entity.ExpenseEntity
 import com.please.stop.app.features.addexpense.domain.model.AddExpenseFormData
 import com.please.stop.app.features.addexpense.domain.model.ExpenseCategory
@@ -12,6 +13,7 @@ import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.domain.repository.CurrencyRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlin.time.Clock
@@ -29,23 +31,30 @@ class AddExpenseRepositoryImpl(
 
     override fun observeFormData(): Flow<AddExpenseFormData> {
         return categoryDao.observeAll()
-            .map { categories ->
-                val profile = userProfileDao.get()
-                val currency = resolveCurrency(profile?.currencyCode)
-
-                AddExpenseFormData(
-                    currencySymbol = currency?.symbol ?: "$",
-                    decimalPlaces = currency?.decimalPlaces ?: 2,
-                    categories = categories.map { entity ->
-                        ExpenseCategory(
-                            id = entity.id,
-                            name = entity.name,
-                            iconKey = entity.iconKey,
-                        )
-                    },
-                )
-            }
+            .map { categories -> buildFormData(categories) }
             .flowOn(ioDispatcher)
+    }
+
+    override suspend fun getFormData(): Result<AddExpenseFormData> = runCatching {
+        buildFormData(categoryDao.observeAll().first())
+    }
+
+    private suspend fun buildFormData(
+        categories: List<CategoryEntity>,
+    ): AddExpenseFormData {
+        val profile = userProfileDao.get()
+        val currency = resolveCurrency(profile?.currencyCode)
+        return AddExpenseFormData(
+            currencySymbol = currency?.symbol ?: "$",
+            decimalPlaces = currency?.decimalPlaces ?: 2,
+            categories = categories.map { entity ->
+                ExpenseCategory(
+                    id = entity.id,
+                    name = entity.name,
+                    iconKey = entity.iconKey,
+                )
+            },
+        )
     }
 
     override suspend fun getExpenseById(id: Long): Result<ExpenseDetail?> = runCatching {
