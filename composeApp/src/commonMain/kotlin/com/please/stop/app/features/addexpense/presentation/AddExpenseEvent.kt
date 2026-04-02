@@ -15,6 +15,8 @@ sealed interface AddExpenseEvent {
     data object ConfirmDiscard : AddExpenseEvent
     data object DismissDiscardDialog : AddExpenseEvent
     data object DismissError : AddExpenseEvent
+    data class ReceiptScanned(val imageBytes: ByteArray) : AddExpenseEvent
+    data object DismissReceiptError : AddExpenseEvent
 }
 
 sealed interface NumericKey {

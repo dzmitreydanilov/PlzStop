@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface AddExpenseRepository {
     fun observeFormData(): Flow<AddExpenseFormData>
+    suspend fun getFormData(): Result<AddExpenseFormData>
     suspend fun getExpenseById(id: Long): Result<ExpenseDetail?>
     suspend fun saveExpense(
         amountMinorUnits: Long,

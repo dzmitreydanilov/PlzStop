@@ -6,6 +6,7 @@ import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.presentation.Navigation
 import com.please.stop.app.features.addexpense.domain.model.AddExpenseFormData
 import com.please.stop.app.features.addexpense.domain.model.ExpenseDetail
+import com.please.stop.app.features.addexpense.domain.usecase.AnalyzeReceiptUseCase
 import com.please.stop.app.features.addexpense.domain.usecase.DeleteExpenseUseCase
 import com.please.stop.app.features.addexpense.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.addexpense.domain.usecase.ObserveAddExpenseFormDataUseCase
@@ -14,8 +15,10 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
@@ -32,6 +35,7 @@ class AddExpenseStateHolder(
     private val getExpenseByIdUseCase: GetExpenseByIdUseCase,
     private val saveExpenseUseCase: SaveExpenseUseCase,
     private val deleteExpenseUseCase: DeleteExpenseUseCase,
+    private val analyzeReceiptUseCase: AnalyzeReceiptUseCase,
 ) : StateHolder<AddExpenseState, AddExpenseEvent>() {
 
     override val tag = "AddExpenseStateHolder"
@@ -99,6 +103,25 @@ class AddExpenseStateHolder(
                     errorType = result.errorType,
                 ) ?: previous
             }
+            is AnalyzeReceiptUseCase.Result.Success -> {
+                val data = result.data
+                val content = previous as? AddExpenseState.Content ?: return previous
+                content.copy(
+                    isAnalyzingReceipt = false,
+                    title = data.merchantName ?: content.title,
+                    amountInput = data.totalAmountMinorUnits?.let {
+                        formatMinorUnitsToInput(it, content.decimalPlaces)
+                    } ?: content.amountInput,
+                    selectedCategoryId = data.categoryId ?: content.selectedCategoryId,
+                    dateEpochMillis = data.date?.toEpochMillis() ?: content.dateEpochMillis,
+                )
+            }
+            is AnalyzeReceiptUseCase.Result.Failure -> {
+                (previous as? AddExpenseState.Content)?.copy(
+                    isAnalyzingReceipt = false,
+                    receiptError = result.receiptError,
+                ) ?: previous
+            }
             else -> super.getStateByResult(previous, result)
         }
         return (newState as? AddExpenseState.Content)?.withDerivedFields() ?: newState
@@ -163,6 +186,8 @@ class AddExpenseStateHolder(
         is AddExpenseEvent.ConfirmDiscard -> flowOf(AddExpenseResult.NavigateBack)
         is AddExpenseEvent.DismissDiscardDialog -> flowOf(updateContent { copy(showDiscardDialog = false) })
         is AddExpenseEvent.DismissError -> flowOf(updateContent { copy(errorType = null) })
+        is AddExpenseEvent.ReceiptScanned -> handleReceiptScanned(event.imageBytes)
+        is AddExpenseEvent.DismissReceiptError -> flowOf(updateContent { copy(receiptError = null) })
     }
 
     private fun handleKeyPress(key: NumericKey): DomainResult {
@@ -240,6 +265,12 @@ class AddExpenseStateHolder(
         }
     }
 
+    private fun handleReceiptScanned(imageBytes: ByteArray): Flow<DomainResult> = flow {
+        emit(updateContent { copy(isAnalyzingReceipt = true, receiptError = null) })
+        val result = analyzeReceiptUseCase(imageBytes)
+        emit(result)
+    }
+
     private fun handleBack(): Flow<DomainResult> {
         val content = state.value as? AddExpenseState.Content
         return if (content != null && content.hasUnsavedChanges) {
@@ -265,17 +296,21 @@ class AddExpenseStateHolder(
 
     private fun AddExpenseState.Content.hasUnsavedChanges(): Boolean {
         val initial = initialExpense
-        return if (initial != null) {
-            amountInput != formatMinorUnitsToInput(initial.amountMinorUnits, decimalPlaces) ||
-                title != initial.title ||
-                selectedCategoryId != initial.categoryId ||
-                dateEpochMillis != initial.dateEpochMillis ||
-                notes != (initial.notes.orEmpty())
-        } else {
-            amountInput.isNotEmpty() ||
-                title.isNotBlank() ||
-                selectedCategoryId != null ||
-                notes.isNotBlank()
+        return when {
+            initial != null -> {
+                amountInput != formatMinorUnitsToInput(initial.amountMinorUnits, decimalPlaces) ||
+                    title != initial.title ||
+                    selectedCategoryId != initial.categoryId ||
+                    dateEpochMillis != initial.dateEpochMillis ||
+                    notes != (initial.notes.orEmpty())
+            }
+            isEditMode -> false
+            else -> {
+                amountInput.isNotEmpty() ||
+                    title.isNotBlank() ||
+                    selectedCategoryId != null ||
+                    notes.isNotBlank()
+            }
         }
     }
 
@@ -337,6 +372,11 @@ class AddExpenseStateHolder(
         }
     }
 }
+
+private fun String.toEpochMillis(): Long? = runCatching {
+    val localDate = LocalDate.parse(this)
+    localDate.atStartOfDayIn(TimeZone.currentSystemDefault()).toEpochMilliseconds()
+}.getOrNull()
 
 private sealed interface AddExpenseResult : DomainResult {
     data class UpdateContent(

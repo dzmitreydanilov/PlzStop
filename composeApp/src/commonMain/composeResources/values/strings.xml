@@ -60,6 +60,11 @@
     <string name="add_expense_confirm">OK</string>
     <string name="add_expense_cancel">Cancel</string>
     <string name="add_expense_done">Done</string>
+    <string name="add_expense_scan_receipt">Scan Receipt</string>
+    <string name="add_expense_analyzing_receipt">Analyzing receipt…</string>
+    <string name="add_expense_receipt_unreadable">Couldn\'t read this receipt. Try again or enter manually.</string>
+    <string name="add_expense_receipt_no_network">Receipt scan requires an internet connection.</string>
+    <string name="add_expense_receipt_service_unavailable">Service temporarily unavailable. Enter manually.</string>
 
     <string name="onboarding_home_coming_soon">Home — coming soon</string>
     <string name="onboarding_analytics_coming_soon">Analytics — coming soon</string>

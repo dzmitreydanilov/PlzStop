@@ -36,6 +36,7 @@ sqldelight = "2.3.2"
 workmanager = "2.11.2"
 rickhText-editor = "1.0.0-rc13"
 androidx-paging = "3.5.0-alpha01"
+mlkit-document-scanner = "16.0.0-beta1"
 moko-permissions = "0.20.1"
 savedstateKtx = "1.4.0"
 kotlinxCoroutinesCore = "1.10.2"
@@ -127,6 +128,9 @@ sqldelight-sqlite-dialect = { module = "app.cash.sqldelight:sqlite-3-25-dialect"
 # Firebase (KMP)
 gitlive-firebase-common = { module = "dev.gitlive:firebase-common", version.ref = "gitlive-firebase" }
 gitlive-firebase-config = { module = "dev.gitlive:firebase-config", version.ref = "gitlive-firebase" }
+
+# ML Kit
+mlkit-document-scanner = { module = "com.google.android.gms:play-services-mlkit-document-scanner", version.ref = "mlkit-document-scanner" }
 
 # Room
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }

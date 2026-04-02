@@ -2,6 +2,7 @@ package com.please.stop.app.features.addexpense.presentation
 
 import androidx.compose.runtime.Stable
 import com.please.stop.app.core.models.domain.ErrorType
+import com.please.stop.app.features.addexpense.domain.model.ReceiptError
 import com.please.stop.app.core.serialization.ImmutableListSerializer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -33,6 +34,8 @@ sealed interface AddExpenseState {
         val isFormValid: Boolean = false,
         val hasUnsavedChanges: Boolean = false,
         val errorType: ErrorType? = null,
+        val isAnalyzingReceipt: Boolean = false,
+        val receiptError: ReceiptError? = null,
     ) : AddExpenseState
 
     @Serializable
