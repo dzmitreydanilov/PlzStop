@@ -31,6 +31,7 @@ dependencies {
     implementation("com.google.firebase:firebase-config")
     implementation("com.google.firebase:firebase-functions")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    implementation("com.google.firebase:firebase-appcheck-debug")
 
     implementation(libs.purchases.core)
     implementation(libs.androidx.work.runtime.ktx)
