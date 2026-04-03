@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
@@ -49,7 +50,7 @@ fun OnboardingCenteredContent(
             .background(Color(0xFFF6FAFF)),
         contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.foundation.Image(
+        Image(
             painter = painterResource(Res.drawable.onboarding_bg_network),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),

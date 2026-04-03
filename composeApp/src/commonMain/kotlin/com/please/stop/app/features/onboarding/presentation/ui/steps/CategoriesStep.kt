@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -58,6 +59,7 @@ import plzstop.composeapp.generated.resources.onboarding_category_name_label
 import plzstop.composeapp.generated.resources.onboarding_min_categories
 import plzstop.composeapp.generated.resources.onboarding_new_category
 import plzstop.composeapp.generated.resources.onboarding_pick_categories
+import kotlin.math.abs
 
 @Composable
 fun CategoriesStep(
@@ -70,7 +72,7 @@ fun CategoriesStep(
     OnboardingCenteredContent {
         Column(
             modifier = Modifier.padding(vertical = 20.dp),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
@@ -202,7 +204,7 @@ private fun CategoryTile(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 14.dp, horizontal = 8.dp),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Box(
@@ -216,7 +218,7 @@ private fun CategoryTile(
                         },
                         shape = RoundedCornerShape(12.dp),
                     ),
-                contentAlignment = androidx.compose.ui.Alignment.Center,
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = categoryEmojiForKey(category.iconKey),
@@ -321,5 +323,5 @@ private fun categoryBackgroundFor(categoryId: Long): Color {
         Color(0xFFFFF1E9),
         Color(0xFFFBEFFF),
     )
-    return variants[(kotlin.math.abs(categoryId) % variants.size).toInt()]
+    return variants[(abs(categoryId) % variants.size).toInt()]
 }
