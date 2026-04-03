@@ -1,16 +1,13 @@
 package com.please.stop.app.features.onboarding.presentation.ui
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
-import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingBottomBar
 import com.please.stop.app.features.onboarding.presentation.ui.steps.BudgetStep
 import com.please.stop.app.features.onboarding.presentation.ui.steps.CategoriesStep
 import com.please.stop.app.features.onboarding.presentation.ui.steps.CurrencyStep
@@ -30,28 +27,16 @@ fun OnboardingContent(
         pagerState.animateScrollToPage(state.currentStep.ordinal)
     }
 
-    Scaffold(
-        bottomBar = {
-            OnboardingBottomBar(
-                currentStep = state.currentStep,
-                isNextEnabled = state.isNextEnabled,
-                isSaving = state.isSaving,
-                onNext = { onEvent(OnboardingEvent.NextTapped) },
-                onBack = { onEvent(OnboardingEvent.BackTapped) },
-            )
-        },
-    ) { padding ->
-        HorizontalPager(
-            state = pagerState,
-            userScrollEnabled = false,
-            modifier = Modifier.padding(padding),
-        ) { page ->
-            when (OnboardingStep.entries[page]) {
-                OnboardingStep.WELCOME -> WelcomeStep(state = state, onEvent = onEvent)
-                OnboardingStep.CURRENCY -> CurrencyStep(state = state, onEvent = onEvent)
-                OnboardingStep.BUDGET -> BudgetStep(state = state, onEvent = onEvent)
-                OnboardingStep.CATEGORIES -> CategoriesStep(state = state, onEvent = onEvent)
-            }
+    HorizontalPager(
+        state = pagerState,
+        userScrollEnabled = false,
+        modifier = Modifier,
+    ) { page ->
+        when (OnboardingStep.entries[page]) {
+            OnboardingStep.WELCOME -> WelcomeStep(state = state, onEvent = onEvent)
+            OnboardingStep.CURRENCY -> CurrencyStep(state = state, onEvent = onEvent)
+            OnboardingStep.BUDGET -> BudgetStep(state = state, onEvent = onEvent)
+            OnboardingStep.CATEGORIES -> CategoriesStep(state = state, onEvent = onEvent)
         }
     }
 }

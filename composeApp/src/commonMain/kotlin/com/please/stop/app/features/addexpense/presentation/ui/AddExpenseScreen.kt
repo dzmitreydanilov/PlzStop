@@ -41,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -169,6 +170,8 @@ private fun AddExpenseContent(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
+    val appColors = com.please.stop.app.theme.LocalAppColors.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -213,6 +216,7 @@ private fun AddExpenseContent(
                                     if (state.isEditMode) Res.string.add_expense_save_changes
                                     else Res.string.add_expense_add
                                 ),
+                                color = appColors.teal600,
                             )
                         }
                     }
@@ -518,21 +522,42 @@ private fun AmountDisplay(
     currencySymbol: String,
     modifier: Modifier = Modifier,
 ) {
+    val appColors = com.please.stop.app.theme.LocalAppColors.current
     val displayText = if (amountInput.isEmpty()) {
         "${currencySymbol}0"
     } else {
         "$currencySymbol$amountInput"
     }
 
-    Text(
-        text = displayText,
-        style = MaterialTheme.typography.displayMedium,
-        color = if (amountInput.isEmpty()) {
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        },
-        textAlign = TextAlign.Center,
-        modifier = modifier,
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (amountInput.isEmpty()) 1f else 1.02f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+        ),
     )
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            )
+            .padding(vertical = 24.dp, horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = displayText,
+            style = MaterialTheme.typography.displayLarge,
+            color = if (amountInput.isEmpty()) {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            } else {
+                appColors.teal600
+            },
+            textAlign = TextAlign.Center,
+        )
+    }
 }
