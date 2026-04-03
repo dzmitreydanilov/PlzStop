@@ -11,7 +11,8 @@ import com.please.stop.app.features.addexpense.domain.usecase.DeleteExpenseUseCa
 import com.please.stop.app.features.addexpense.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.addexpense.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.addexpense.domain.usecase.SaveExpenseUseCase
-import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder
+import com.please.stop.app.features.addexpense.presentation.CreateExpenseStateHolder
+import com.please.stop.app.features.addexpense.presentation.EditExpenseStateHolder
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
@@ -71,9 +72,17 @@ val addExpenseModule = module {
     }
 
     viewModel { params ->
-        AddExpenseStateHolder(
-            expenseId = params.getOrNull(),
+        CreateExpenseStateHolder(
             preselectedCategoryId = params.getOrNull(),
+            observeFormDataUseCase = get(),
+            saveExpenseUseCase = get(),
+            analyzeReceiptUseCase = get(),
+        )
+    }
+
+    viewModel { params ->
+        EditExpenseStateHolder(
+            expenseId = params.get(),
             observeFormDataUseCase = get(),
             getExpenseByIdUseCase = get(),
             saveExpenseUseCase = get(),

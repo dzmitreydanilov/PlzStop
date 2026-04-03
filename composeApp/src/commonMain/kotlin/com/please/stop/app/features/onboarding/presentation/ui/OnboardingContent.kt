@@ -28,9 +28,9 @@ fun OnboardingContent(
     }
 
     HorizontalPager(
-        state = pagerState,
-        userScrollEnabled = false,
         modifier = Modifier,
+        userScrollEnabled = false,
+        state = pagerState
     ) { page ->
         when (OnboardingStep.entries[page]) {
             OnboardingStep.WELCOME -> WelcomeStep(state = state, onEvent = onEvent)

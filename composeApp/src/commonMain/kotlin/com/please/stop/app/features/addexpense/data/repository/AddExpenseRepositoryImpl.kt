@@ -11,6 +11,7 @@ import com.please.stop.app.features.addexpense.domain.model.ExpenseDetail
 import com.please.stop.app.features.addexpense.domain.repository.AddExpenseRepository
 import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.domain.repository.CurrencyRepository
+import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -85,7 +86,7 @@ class AddExpenseRepositoryImpl(
                 categoryId = categoryId,
                 dateEpochMillis = dateEpochMillis,
                 notes = notes?.takeIf { it.isNotBlank() },
-                createdAtEpochMillis = Clock.System.now().toEpochMilliseconds(),
+                createdAtEpochMillis = nowMillis(),
             )
         )
     }

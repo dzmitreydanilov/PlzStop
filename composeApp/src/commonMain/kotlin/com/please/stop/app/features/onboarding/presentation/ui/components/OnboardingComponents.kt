@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -29,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
 import com.please.stop.app.theme.LocalAppColors
@@ -41,13 +45,14 @@ import plzstop.composeapp.generated.resources.onboarding_bg_network
 
 @Composable
 fun OnboardingCenteredContent(
+    scrollable: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val appColors = LocalAppColors.current
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF6FAFF)),
+            .background(appColors.onboardingBackground),
         contentAlignment = Alignment.Center,
     ) {
         Image(
@@ -63,15 +68,21 @@ fun OnboardingCenteredContent(
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            appColors.blue400.copy(alpha = 0.58f),
-                            Color(0xFFEAF3FF).copy(alpha = 0.82f),
+                            appColors.onboardingGradientTop.copy(alpha = 0.58f),
+                            appColors.onboardingGradientMid.copy(alpha = 0.82f),
                             Color.White.copy(alpha = 0.92f),
                         ),
                     )
                 ),
         )
         Box(
-            modifier = Modifier.fillMaxWidth(0.66f),
+            modifier = Modifier
+                .widthIn(max = 460.dp)
+                .fillMaxWidth(0.85f)
+                .then(
+                    if (scrollable) Modifier.verticalScroll(rememberScrollState())
+                    else Modifier
+                ),
             contentAlignment = Alignment.Center,
         ) {
             content()
@@ -83,7 +94,7 @@ fun OnboardingCenteredContent(
 fun OnboardingStepIndicator(
     currentStep: OnboardingStep,
 ) {
-    val appColors = LocalAppColors.current
+    val colorScheme = MaterialTheme.colorScheme
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -101,7 +112,7 @@ fun OnboardingStepIndicator(
                 ),
             )
             val color by animateColorAsState(
-                targetValue = if (isActive) appColors.teal500 else MaterialTheme.colorScheme.outlineVariant,
+                targetValue = if (isActive) colorScheme.secondary else colorScheme.outlineVariant,
                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
             )
 
@@ -123,7 +134,6 @@ fun OnboardingPrimaryButton(
     isSaving: Boolean,
     onClick: () -> Unit,
 ) {
-    val appColors = LocalAppColors.current
     Button(
         onClick = onClick,
         enabled = isEnabled && !isSaving,
@@ -132,7 +142,7 @@ fun OnboardingPrimaryButton(
             .height(52.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = appColors.teal500,
+            containerColor = MaterialTheme.colorScheme.secondary,
             contentColor = Color.White,
         ),
     ) {
@@ -163,6 +173,103 @@ fun OnboardingSecondaryTextButton(
         Text(
             text = text,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 640)
+@Composable
+private fun OnboardingCenteredContentPreview() {
+    MaterialTheme {
+        OnboardingCenteredContent {
+            Text("Centered content preview")
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun OnboardingStepIndicatorWelcomePreview() {
+    MaterialTheme {
+        OnboardingStepIndicator(currentStep = OnboardingStep.WELCOME)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun OnboardingStepIndicatorBudgetPreview() {
+    MaterialTheme {
+        OnboardingStepIndicator(currentStep = OnboardingStep.BUDGET)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun OnboardingStepIndicatorCategoriesPreview() {
+    MaterialTheme {
+        OnboardingStepIndicator(currentStep = OnboardingStep.CATEGORIES)
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun OnboardingPrimaryButtonNextPreview() {
+    MaterialTheme {
+        OnboardingPrimaryButton(
+            currentStep = OnboardingStep.WELCOME,
+            isEnabled = true,
+            isSaving = false,
+            onClick = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun OnboardingPrimaryButtonDisabledPreview() {
+    MaterialTheme {
+        OnboardingPrimaryButton(
+            currentStep = OnboardingStep.BUDGET,
+            isEnabled = false,
+            isSaving = false,
+            onClick = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun OnboardingPrimaryButtonSavingPreview() {
+    MaterialTheme {
+        OnboardingPrimaryButton(
+            currentStep = OnboardingStep.CATEGORIES,
+            isEnabled = true,
+            isSaving = true,
+            onClick = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+private fun OnboardingPrimaryButtonGetStartedPreview() {
+    MaterialTheme {
+        OnboardingPrimaryButton(
+            currentStep = OnboardingStep.CATEGORIES,
+            isEnabled = true,
+            isSaving = false,
+            onClick = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun OnboardingSecondaryTextButtonPreview() {
+    MaterialTheme {
+        OnboardingSecondaryTextButton(
+            text = "Skip",
+            onClick = {},
         )
     }
 }

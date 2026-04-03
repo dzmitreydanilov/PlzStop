@@ -32,9 +32,11 @@ import com.please.stop.app.navigation.nav3.Nav3Host
 import com.please.stop.app.navigation.nav3.Router
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.navigation.routes.OnboardingRoute
-import com.please.stop.app.navigation.routes.AddExpenseRoute
+import com.please.stop.app.navigation.routes.CreateExpenseRoute
+import com.please.stop.app.navigation.routes.EditExpenseRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
-import com.please.stop.app.features.addexpense.presentation.ui.AddExpenseScreen
+import com.please.stop.app.features.addexpense.presentation.ui.CreateExpenseScreen
+import com.please.stop.app.features.addexpense.presentation.ui.EditExpenseScreen
 import com.please.stop.app.features.onboarding.presentation.ui.OnboardingScreen
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -160,15 +162,23 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
     entry<MainBottomTabs.Home> {
         BottomTabsNavNavigationHost(
             onNavigateToAddExpense = { categoryId ->
-                router.push(AddExpenseRoute(preselectedCategoryId = categoryId))
+                router.push(CreateExpenseRoute(categoryId = categoryId))
             },
+            onNavigateToSettings = {},
+            onNavigateToCreateExpense = { router.push(CreateExpenseRoute()) },
         )
     }
 
-    entry<AddExpenseRoute> { route ->
-        AddExpenseScreen(
+    entry<CreateExpenseRoute> { route ->
+        CreateExpenseScreen(
+            categoryId = route.categoryId,
+            onGoBack = { router.pop() },
+        )
+    }
+
+    entry<EditExpenseRoute> { route ->
+        EditExpenseScreen(
             expenseId = route.expenseId,
-            preselectedCategoryId = route.preselectedCategoryId,
             onGoBack = { router.pop() },
         )
     }

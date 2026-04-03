@@ -1,9 +1,10 @@
 package com.please.stop.app.features.home.domain.model
 
+import com.please.stop.app.core.models.domain.Currency
+
 data class HomeData(
     val displayName: String?,
-    val currencyCode: String,
-    val currencySymbol: String,
+    val currency: Currency,
     val decimalPlaces: Int,
     val totalSpentMinorUnits: Long,
     val categories: List<HomeCategoryItem>,

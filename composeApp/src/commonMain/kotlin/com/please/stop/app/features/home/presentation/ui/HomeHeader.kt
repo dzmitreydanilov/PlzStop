@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -30,15 +29,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.please.stop.app.theme.AppTheme
 import com.please.stop.app.theme.LocalAppColors
+import com.please.stop.app.uicomponents.ANIMATION_DURATION_MS
 import com.please.stop.app.uicomponents.animation.rememberShimmerOffset
 import com.please.stop.app.uicomponents.animation.shimmerOverlay
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.home_greeting_default
 import plzstop.composeapp.generated.resources.home_spent_this_month
+import plzstop.composeapp.generated.resources.home_total_spent
+import plzstop.composeapp.generated.resources.home_welcome_back
+
+private const val CARD_STAGGER_DELAY_MS = 200L
+private const val CARD_INITIAL_SCALE = 0.92f
+private const val HEADER_SLIDE_OFFSET_PX = 20
+private const val SUBTITLE_ALPHA = 0.8f
+private const val CARD_LABEL_ALPHA = 0.7f
+private const val CARD_CONTAINER_ALPHA = 0.18f
+private const val SHIMMER_ALPHA = 0.08f
+private const val AVATAR_BG_ALPHA = 0.25f
 
 @Composable
 internal fun HomeHeader(
@@ -47,32 +61,29 @@ internal fun HomeHeader(
     onProfileClicked: () -> Unit,
 ) {
     val appColors = LocalAppColors.current
-
-    val headerAlpha = remember { Animatable(0f) }
-    val headerOffsetY = remember { Animatable(20f) }
-    val cardScale = remember { Animatable(0.92f) }
-    val cardAlpha = remember { Animatable(0f) }
     val shimmerOffset = rememberShimmerOffset()
 
+    val headerProgress = remember { Animatable(0f) }
+    val cardAlpha = remember { Animatable(0f) }
+    val cardScale = remember { Animatable(CARD_INITIAL_SCALE) }
+
     LaunchedEffect(Unit) {
-        headerAlpha.animateTo(1f, tween(400))
-    }
-    LaunchedEffect(Unit) {
-        headerOffsetY.animateTo(0f, tween(400))
-    }
-    LaunchedEffect(Unit) {
-        delay(200)
-        cardAlpha.animateTo(1f, tween(350))
-    }
-    LaunchedEffect(Unit) {
-        delay(200)
-        cardScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow))
+        launch { headerProgress.animateTo(1f, tween(ANIMATION_DURATION_MS)) }
+        delay(CARD_STAGGER_DELAY_MS)
+        launch { cardAlpha.animateTo(1f, tween(ANIMATION_DURATION_MS)) }
+        cardScale.animateTo(
+            1f,
+            spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            ),
+        )
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+            .clip(MaterialTheme.shapes.extraLarge)
             .background(appColors.headerGradient)
             .padding(horizontal = 20.dp, vertical = 24.dp),
     ) {
@@ -80,17 +91,17 @@ internal fun HomeHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
-                    alpha = headerAlpha.value
-                    translationY = headerOffsetY.value
+                    alpha = headerProgress.value
+                    translationY = (1f - headerProgress.value) * HEADER_SLIDE_OFFSET_PX
                 },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Welcome back,",
+                    text = stringResource(Res.string.home_welcome_back),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = Color.White.copy(alpha = SUBTITLE_ALPHA),
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -107,15 +118,17 @@ internal fun HomeHeader(
         Spacer(modifier = Modifier.height(20.dp))
 
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.18f)),
-            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White.copy(alpha = CARD_CONTAINER_ALPHA),
+            ),
+            shape = MaterialTheme.shapes.large,
             modifier = Modifier
                 .graphicsLayer {
+                    alpha = cardAlpha.value
                     scaleX = cardScale.value
                     scaleY = cardScale.value
-                    alpha = cardAlpha.value
                 }
-                .shimmerOverlay(shimmerOffset, Color.White.copy(alpha = 0.08f)),
+                .shimmerOverlay(shimmerOffset, Color.White.copy(alpha = SHIMMER_ALPHA)),
         ) {
             Column(
                 modifier = Modifier
@@ -123,9 +136,9 @@ internal fun HomeHeader(
                     .padding(20.dp),
             ) {
                 Text(
-                    text = "Total Spent",
+                    text = stringResource(Res.string.home_total_spent),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = Color.White.copy(alpha = CARD_LABEL_ALPHA),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -138,7 +151,7 @@ internal fun HomeHeader(
                 Text(
                     text = stringResource(Res.string.home_spent_this_month, totalSpentFormatted),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = Color.White.copy(alpha = CARD_LABEL_ALPHA),
                 )
             }
         }
@@ -155,7 +168,7 @@ private fun InitialAvatar(
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.25f))
+            .background(Color.White.copy(alpha = AVATAR_BG_ALPHA))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -164,6 +177,30 @@ private fun InitialAvatar(
             style = MaterialTheme.typography.titleMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeHeaderPreview() {
+    AppTheme {
+        HomeHeader(
+            displayName = "Dmitry",
+            totalSpentFormatted = "$1,234.56",
+            onProfileClicked = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeHeaderNoNamePreview() {
+    AppTheme {
+        HomeHeader(
+            displayName = null,
+            totalSpentFormatted = "$0.00",
+            onProfileClicked = {},
         )
     }
 }

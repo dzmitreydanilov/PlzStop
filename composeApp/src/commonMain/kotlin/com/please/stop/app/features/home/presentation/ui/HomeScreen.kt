@@ -1,9 +1,5 @@
 package com.please.stop.app.features.home.presentation.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -13,27 +9,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.core.SheetDetent
@@ -43,26 +30,21 @@ import com.please.stop.app.features.home.presentation.HomeNavigation
 import com.please.stop.app.features.home.presentation.HomeState
 import com.please.stop.app.features.home.presentation.HomeStateHolder
 import com.please.stop.app.navigation.CollectNavigationFlow
-import com.please.stop.app.theme.LocalAppColors
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
+import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
-import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
 import plzstop.composeapp.generated.resources.Res
-import plzstop.composeapp.generated.resources.home_add_category
-import plzstop.composeapp.generated.resources.home_add_expense
-import plzstop.composeapp.generated.resources.ic_add
 import plzstop.composeapp.generated.resources.onboarding_add
-import plzstop.composeapp.generated.resources.onboarding_cancel
 import plzstop.composeapp.generated.resources.onboarding_category_name_label
 import plzstop.composeapp.generated.resources.onboarding_new_category
 
 @Composable
 fun HomeScreen(
-    onNavigateToAddExpense: (preselectedCategoryId: Long?) -> Unit,
+    onNavigateToAddExpense: (selectedCategoryId: Long) -> Unit,
+    onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
     val stateHolder = koinViewModel<HomeStateHolder>()
@@ -71,61 +53,51 @@ fun HomeScreen(
     CollectNavigationFlow(
         flow = stateHolder.getNavigation(),
         key1 = stateHolder,
-    ) { nav ->
-        when (nav) {
-            is HomeNavigation.NavigateToAddExpense -> onNavigateToAddExpense(nav.preselectedCategoryId)
+    ) { navigation ->
+        when (navigation) {
+            is HomeNavigation.NavigateToAddExpense -> onNavigateToAddExpense(navigation.expenseCategoryId)
+            is HomeNavigation.NavigateToCreateExpense -> onNavigateToCreateExpense()
             HomeNavigation.NavigateToSettings -> onNavigateToSettings()
         }
     }
+    ScreenOverlayContainer(
+        overlay = state.asOverlay,
+        onDismiss = { stateHolder.processEvent(HomeEvent.DismissError) },
+    ) {
+        DisplayFullScreenProgress(
+            showProgress = state is HomeState.Loading,
+        )
 
-    when (val s = state) {
-        is HomeState.Loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
-            }
-        }
+        HomeContent(
+            state = state,
+            onEvent = stateHolder::processEvent,
+        )
 
-        is HomeState.Content -> {
-            ScreenOverlayContainer(
-                overlay = asOverlay(state = s),
-                onDismiss = { stateHolder.processEvent(HomeEvent.DismissError) },
-            ) {
-                HomeContent(
-                    state = s,
-                    onEvent = stateHolder::processEvent,
-                )
-            }
-        }
-
-        is HomeState.Error -> {
-            ScreenOverlayContainer(
-                overlay = ScreenOverlay.Error(type = s.errorType),
-                onDismiss = {},
-                onRetry = {},
-            ) {
-                Box(Modifier.fillMaxSize())
-            }
+        if (state.showAddCategorySheet) {
+            AddCategoryBottomSheet(
+                onDismiss = { stateHolder.processEvent(HomeEvent.DismissAddCategorySheet) },
+                onConfirm = { name -> stateHolder.processEvent(HomeEvent.ConfirmAddCategory(name)) },
+            )
         }
     }
 }
 
-@Composable
-private fun asOverlay(state: HomeState.Content): ScreenOverlay? {
-    val errorType = state.errorType ?: return null
-    return ScreenOverlay.Error(type = errorType)
-}
+
+internal val HomeState.asOverlay: ScreenOverlay?
+    @Composable get() = when (this) {
+        is HomeState.Error -> ScreenOverlay.Error(type = errorType)
+
+        else -> null
+    }
 
 @Composable
 private fun HomeContent(
-    state: HomeState.Content,
+    state: HomeState,
     onEvent: (HomeEvent) -> Unit,
 ) {
     Scaffold(
         floatingActionButton = {
-            AnimatedHomeFab(onEvent = onEvent)
+            HomeFab(onEvent = onEvent)
         },
     ) { paddingValues ->
         HomeBody(
@@ -135,67 +107,6 @@ private fun HomeContent(
                 .fillMaxSize()
                 .padding(paddingValues),
         )
-    }
-
-    if (state.showAddCategorySheet) {
-        AddCategoryBottomSheet(
-            onDismiss = { onEvent(HomeEvent.DismissAddCategorySheet) },
-            onConfirm = { name -> onEvent(HomeEvent.ConfirmAddCategory(name)) },
-        )
-    }
-}
-
-@Composable
-private fun AnimatedHomeFab(onEvent: (HomeEvent) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val appColors = LocalAppColors.current
-    val fabScale = remember { Animatable(0f) }
-
-    LaunchedEffect(Unit) {
-        delay(600)
-        fabScale.animateTo(
-            1f,
-            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-        )
-    }
-
-    Box(
-        modifier = Modifier.graphicsLayer {
-            scaleX = fabScale.value
-            scaleY = fabScale.value
-        },
-    ) {
-        FloatingActionButton(
-            onClick = { expanded = true },
-            shape = CircleShape,
-            containerColor = appColors.teal500,
-            contentColor = Color.White,
-        ) {
-            Icon(
-                imageVector = vectorResource(Res.drawable.ic_add),
-                contentDescription = stringResource(Res.string.home_add_expense),
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.home_add_expense)) },
-                onClick = {
-                    expanded = false
-                    onEvent(HomeEvent.AddExpenseClicked)
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.home_add_category)) },
-                onClick = {
-                    expanded = false
-                    onEvent(HomeEvent.AddCategoryClicked)
-                },
-            )
-        }
     }
 }
 

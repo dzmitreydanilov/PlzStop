@@ -1,7 +1,7 @@
 package com.please.stop.app.features.onboarding.data.repository
 
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.please.stop.app.core.logger.logErrorWithTag
-import dev.gitlive.firebase.remoteconfig.FirebaseRemoteConfig
 
 class FirebaseRemoteConfigDataSource(
     private val remoteConfig: FirebaseRemoteConfig,

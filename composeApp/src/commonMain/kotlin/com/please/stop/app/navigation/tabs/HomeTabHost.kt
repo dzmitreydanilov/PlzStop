@@ -6,12 +6,14 @@ import com.please.stop.app.features.home.presentation.ui.HomeScreen
 import com.please.stop.app.navigation.routes.MainBottomTabs
 
 internal fun EntryProviderScope<NavKey>.homeTabEntries(
-    onNavigateToAddExpense: (preselectedCategoryId: Long?) -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
+    onNavigateToAddExpense: (categoryId: Long) -> Unit,
+    onNavigateToCreateExpense: () -> Unit,
+    onNavigateToSettings: () -> Unit,
 ) {
     entry<MainBottomTabs.Home> {
         HomeScreen(
             onNavigateToAddExpense = onNavigateToAddExpense,
+            onNavigateToCreateExpense = onNavigateToCreateExpense,
             onNavigateToSettings = onNavigateToSettings,
         )
     }

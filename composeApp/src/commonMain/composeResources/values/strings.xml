@@ -14,6 +14,8 @@
 
     <string name="home_greeting">Hi, %1$s</string>
     <string name="home_greeting_default">Hi there</string>
+    <string name="home_welcome_back">Welcome back,</string>
+    <string name="home_total_spent">Total Spent</string>
     <string name="home_spent_this_month">%1$s spent this month</string>
     <string name="home_add_expense">Add expense</string>
     <string name="home_add_category">Add category</string>

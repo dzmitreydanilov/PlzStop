@@ -1,6 +1,6 @@
-package com.please.stop.app.features.home.presentation.ui
+package com.please.stop.app.uicomponents
 
-internal fun categoryEmojiForKey(iconKey: String): String = when (iconKey) {
+fun categoryEmojiForKey(iconKey: String): String = when (iconKey) {
     "ic_food" -> "\uD83C\uDF54"          // 🍔
     "ic_transport" -> "\uD83D\uDE8C"      // 🚌
     "ic_housing" -> "\uD83C\uDFE0"        // 🏠

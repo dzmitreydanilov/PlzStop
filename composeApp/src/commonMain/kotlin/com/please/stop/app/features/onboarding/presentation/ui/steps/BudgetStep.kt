@@ -1,7 +1,6 @@
 package com.please.stop.app.features.onboarding.presentation.ui.steps
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,21 +13,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
+import com.please.stop.app.uicomponents.GlassTextField
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingCenteredContent
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingPrimaryButton
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingSecondaryTextButton
@@ -79,7 +74,7 @@ fun BudgetStep(
                             )
                             .padding(horizontal = 14.dp, vertical = 8.dp),
                     ) {
-                        OutlinedTextField(
+                        GlassTextField(
                             value = state.monthlyBudgetInput,
                             onValueChange = { input ->
                                 val filtered = filterBudgetInput(input, decimalPlaces)
@@ -97,30 +92,6 @@ fun BudgetStep(
                             },
                             label = { Text(stringResource(Res.string.onboarding_budget_label)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            textStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                cursorColor = MaterialTheme.colorScheme.primary,
-                                focusedContainerColor = Color.White.copy(alpha = 0.24f),
-                                unfocusedContainerColor = Color.White.copy(alpha = 0.24f),
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    color = Color.White.copy(alpha = 0.52f),
-                                    shape = RoundedCornerShape(16.dp),
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = Color.White.copy(alpha = 0.82f),
-                                    shape = RoundedCornerShape(16.dp),
-                                ),
                         )
                     }
 

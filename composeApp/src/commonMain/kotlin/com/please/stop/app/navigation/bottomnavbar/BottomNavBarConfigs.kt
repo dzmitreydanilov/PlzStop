@@ -15,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.navigation.routes.MainBottomTabs
-import com.please.stop.app.theme.LocalAppColors
+
 import kotlinx.collections.immutable.persistentSetOf
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
@@ -55,13 +55,13 @@ fun BottomBarItemIcon(
 ) {
     val destination = navigableRoute.toDestination()
     val icon = if (selected) destination.selectedIcon else destination.unselectedIcon
-    val appColors = LocalAppColors.current
+    val colorScheme = MaterialTheme.colorScheme
     val iconTint = animateColorAsState(
-        targetValue = if (selected) appColors.blue500 else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (selected) colorScheme.primary else colorScheme.onSurfaceVariant,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
     )
     val bgColor = animateColorAsState(
-        targetValue = if (selected) appColors.blue500.copy(alpha = 0.15f) else androidx.compose.ui.graphics.Color.Transparent,
+        targetValue = if (selected) colorScheme.primary.copy(alpha = 0.15f) else androidx.compose.ui.graphics.Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
     )
 

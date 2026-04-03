@@ -48,22 +48,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.please.stop.app.features.addexpense.presentation.AddExpenseEvent
 import com.please.stop.app.features.addexpense.presentation.AddExpenseNavigation
 import com.please.stop.app.features.addexpense.presentation.AddExpenseState
-import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder
+import com.please.stop.app.features.addexpense.presentation.BaseExpenseStateHolder
+import com.please.stop.app.features.addexpense.presentation.CreateExpenseStateHolder
+import com.please.stop.app.features.addexpense.presentation.EditExpenseStateHolder
 import com.please.stop.app.features.addexpense.domain.model.ReceiptError
 import com.please.stop.app.features.addexpense.scanner.DocumentScanner
-import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder.Companion.MAX_NOTES_LENGTH
-import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder.Companion.MAX_TITLE_LENGTH
-import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder.Companion.NOTES_COUNTER_THRESHOLD
-import com.please.stop.app.features.addexpense.presentation.AddExpenseStateHolder.Companion.TITLE_COUNTER_THRESHOLD
+import com.please.stop.app.features.addexpense.presentation.BaseExpenseStateHolder.Companion.MAX_NOTES_LENGTH
+import com.please.stop.app.features.addexpense.presentation.BaseExpenseStateHolder.Companion.MAX_TITLE_LENGTH
+import com.please.stop.app.features.addexpense.presentation.BaseExpenseStateHolder.Companion.NOTES_COUNTER_THRESHOLD
+import com.please.stop.app.features.addexpense.presentation.BaseExpenseStateHolder.Companion.TITLE_COUNTER_THRESHOLD
+import com.please.stop.app.features.home.presentation.HomeState
 import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
+import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
+import com.please.stop.app.utils.date.localDateTimeFromMillis
+import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.koinInject
@@ -98,71 +100,73 @@ import plzstop.composeapp.generated.resources.ic_trash_bin
 import plzstop.composeapp.generated.resources.onboarding_something_went_wrong
 
 @Composable
-fun AddExpenseScreen(
-    expenseId: Long?,
-    preselectedCategoryId: Long? = null,
+fun CreateExpenseScreen(
+    categoryId: Long?,
     onGoBack: () -> Unit,
 ) {
-    val stateHolder = koinViewModel<AddExpenseStateHolder>(
-        key = "add_expense_${expenseId ?: "new"}_${preselectedCategoryId ?: "none"}",
-    ) { parametersOf(expenseId, preselectedCategoryId) }
+    val stateHolder = koinViewModel<CreateExpenseStateHolder>(
+        key = "create_expense_$categoryId",
+    ) { parametersOf(categoryId) }
+
+    ExpenseScreenContent(stateHolder = stateHolder, onGoBack = onGoBack)
+}
+
+@Composable
+fun EditExpenseScreen(
+    expenseId: Long,
+    onGoBack: () -> Unit,
+) {
+    val stateHolder = koinViewModel<EditExpenseStateHolder>(
+        key = "edit_expense_$expenseId",
+    ) { parametersOf(expenseId) }
+
+    ExpenseScreenContent(stateHolder = stateHolder, onGoBack = onGoBack)
+}
+
+@Composable
+private fun ExpenseScreenContent(
+    stateHolder: BaseExpenseStateHolder,
+    onGoBack: () -> Unit,
+) {
     val state by stateHolder.state.collectAsStateWithLifecycle()
 
     CollectNavigationFlow(
         flow = stateHolder.getNavigation(),
         key1 = stateHolder,
-    ) { nav ->
-        when (nav) {
+    ) { navigation ->
+        when (navigation) {
             AddExpenseNavigation.GoBack -> onGoBack()
         }
     }
 
-    when (val s = state) {
-        is AddExpenseState.Loading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
-            }
-        }
+    ScreenOverlayContainer(
+        overlay = state.asOverlay,
+        onDismiss = { stateHolder.processEvent(AddExpenseEvent.DismissError) },
+    ) {
 
-        is AddExpenseState.Content -> {
-            ScreenOverlayContainer(
-                overlay = asOverlay(state = s),
-                onDismiss = { stateHolder.processEvent(AddExpenseEvent.DismissError) },
-            ) {
-                AddExpenseContent(
-                    state = s,
-                    onEvent = stateHolder::processEvent,
-                )
-            }
-        }
+        DisplayFullScreenProgress(
+            showProgress = state is AddExpenseState.Loading,
+        )
 
-        is AddExpenseState.Error -> {
-            ScreenOverlayContainer(
-                overlay = ScreenOverlay.Error(type = s.errorType),
-                onDismiss = onGoBack,
-                onRetry = onGoBack,
-            ) {
-                Box(Modifier.fillMaxSize())
-            }
-        }
+        AddExpenseContent(
+            state = state,
+            onEvent = stateHolder::processEvent,
+        )
     }
 }
 
-@Composable
-private fun asOverlay(state: AddExpenseState.Content): ScreenOverlay? {
-    return when {
-        state.errorType != null -> ScreenOverlay.Error(type = state.errorType)
+
+internal val AddExpenseState.asOverlay: ScreenOverlay?
+    @Composable get() = when (this) {
+        is AddExpenseState.Error -> ScreenOverlay.Error(type = errorType)
+
         else -> null
     }
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
 @Composable
 private fun AddExpenseContent(
-    state: AddExpenseState.Content,
+    state: AddExpenseState,
     onEvent: (AddExpenseEvent) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -170,7 +174,10 @@ private fun AddExpenseContent(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
-    val appColors = com.please.stop.app.theme.LocalAppColors.current
+    val form = state.form
+    val editContext = state.editContext
+    val status = state.status
+    val receipt = state.receipt
 
     Scaffold(
         topBar = {
@@ -178,7 +185,7 @@ private fun AddExpenseContent(
                 title = {
                     Text(
                         text = stringResource(
-                            if (state.isEditMode) Res.string.add_expense_title_edit
+                            if (editContext.isEditMode) Res.string.add_expense_title_edit
                             else Res.string.add_expense_title
                         ),
                     )
@@ -192,7 +199,7 @@ private fun AddExpenseContent(
                     }
                 },
                 actions = {
-                    if (state.isEditMode) {
+                    if (editContext.isEditMode) {
                         IconButton(onClick = { onEvent(AddExpenseEvent.DeleteClicked) }) {
                             Icon(
                                 imageVector = vectorResource(Res.drawable.ic_trash_bin),
@@ -203,9 +210,9 @@ private fun AddExpenseContent(
                     }
                     TextButton(
                         onClick = { onEvent(AddExpenseEvent.SaveClicked) },
-                        enabled = state.isFormValid && !state.isSaving,
+                        enabled = status.isFormValid && !status.isSaving,
                     ) {
-                        if (state.isSaving) {
+                        if (status.isSaving) {
                             CircularProgressIndicator(
                                 modifier = Modifier.height(20.dp),
                                 strokeWidth = 2.dp,
@@ -213,10 +220,10 @@ private fun AddExpenseContent(
                         } else {
                             Text(
                                 text = stringResource(
-                                    if (state.isEditMode) Res.string.add_expense_save_changes
+                                    if (editContext.isEditMode) Res.string.add_expense_save_changes
                                     else Res.string.add_expense_add
                                 ),
-                                color = appColors.teal600,
+                                color = MaterialTheme.colorScheme.secondary,
                             )
                         }
                     }
@@ -235,14 +242,14 @@ private fun AddExpenseContent(
                     .verticalScroll(rememberScrollState()),
             ) {
                 AmountDisplay(
-                    amountInput = state.amountInput,
-                    currencySymbol = state.currencySymbol,
+                    amountInput = form.amountInput,
+                    currencySymbol = state.currency.symbol,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 24.dp, horizontal = 16.dp),
                 )
 
-                if (!state.isEditMode) {
+                if (!editContext.isEditMode) {
                     FilledTonalButton(
                         onClick = {
                             coroutineScope.launch {
@@ -252,7 +259,7 @@ private fun AddExpenseContent(
                                     }
                             }
                         },
-                        enabled = !state.isAnalyzingReceipt,
+                        enabled = !receipt.isAnalyzing,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     ) {
                         Icon(
@@ -267,12 +274,12 @@ private fun AddExpenseContent(
                 }
 
                 OutlinedTextField(
-                    value = state.title,
+                    value = form.title,
                     onValueChange = { onEvent(AddExpenseEvent.TitleChanged(it)) },
                     label = { Text(stringResource(Res.string.add_expense_title_label)) },
                     singleLine = true,
-                    supportingText = if (state.title.length > TITLE_COUNTER_THRESHOLD) {
-                        { Text("${state.title.length}/$MAX_TITLE_LENGTH") }
+                    supportingText = if (form.title.length > TITLE_COUNTER_THRESHOLD) {
+                        { Text("${form.title.length}/$MAX_TITLE_LENGTH") }
                     } else {
                         null
                     },
@@ -291,15 +298,14 @@ private fun AddExpenseContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 CategoryPicker(
                     categories = state.categories,
-                    selectedCategoryId = state.selectedCategoryId,
+                    selectedCategoryId = form.selectedCategoryId,
                     onCategorySelected = { onEvent(AddExpenseEvent.CategorySelected(it)) },
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                val dateTime = remember(state.dateEpochMillis) {
-                    Instant.fromEpochMilliseconds(state.dateEpochMillis)
-                        .toLocalDateTime(TimeZone.currentSystemDefault())
+                val dateTime = remember(form.dateEpochMillis) {
+                    localDateTimeFromMillis(form.dateEpochMillis)
                 }
 
                 OutlinedTextField(
@@ -317,7 +323,9 @@ private fun AddExpenseContent(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
-                    value = "${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}",
+                    value = "${
+                        dateTime.hour.toString().padStart(2, '0')
+                    }:${dateTime.minute.toString().padStart(2, '0')}",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(stringResource(Res.string.add_expense_time)) },
@@ -331,13 +339,13 @@ private fun AddExpenseContent(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = state.notes,
+                    value = form.notes,
                     onValueChange = { onEvent(AddExpenseEvent.NotesChanged(it)) },
                     label = { Text(stringResource(Res.string.add_expense_notes)) },
                     minLines = 2,
                     maxLines = 4,
-                    supportingText = if (state.notes.length > NOTES_COUNTER_THRESHOLD) {
-                        { Text("${state.notes.length}/$MAX_NOTES_LENGTH") }
+                    supportingText = if (form.notes.length > NOTES_COUNTER_THRESHOLD) {
+                        { Text("${form.notes.length}/$MAX_NOTES_LENGTH") }
                     } else {
                         null
                     },
@@ -350,7 +358,7 @@ private fun AddExpenseContent(
             }
 
             NumericKeyboard(
-                showDecimal = state.decimalPlaces > 0,
+                showDecimal = state.currency.decimalPlaces > 0,
                 onKey = { onEvent(AddExpenseEvent.KeyPressed(it)) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -360,9 +368,9 @@ private fun AddExpenseContent(
     }
 
     if (showDatePicker) {
-        val nowMillis = remember { Clock.System.now().toEpochMilliseconds() }
+        val nowMillis = remember { nowMillis() }
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = state.dateEpochMillis,
+            initialSelectedDateMillis = form.dateEpochMillis,
             selectableDates = object : SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                     return utcTimeMillis <= nowMillis
@@ -394,9 +402,8 @@ private fun AddExpenseContent(
     }
 
     if (showTimePicker) {
-        val dateTime = remember(state.dateEpochMillis) {
-            Instant.fromEpochMilliseconds(state.dateEpochMillis)
-                .toLocalDateTime(TimeZone.currentSystemDefault())
+        val dateTime = remember(form.dateEpochMillis) {
+            localDateTimeFromMillis(form.dateEpochMillis)
         }
         val timePickerState = rememberTimePickerState(
             initialHour = dateTime.hour,
@@ -430,7 +437,7 @@ private fun AddExpenseContent(
         )
     }
 
-    if (state.showDiscardDialog) {
+    if (status.showDiscardDialog) {
         AlertDialog(
             onDismissRequest = { onEvent(AddExpenseEvent.DismissDiscardDialog) },
             title = { Text(stringResource(Res.string.add_expense_discard_title)) },
@@ -448,7 +455,7 @@ private fun AddExpenseContent(
         )
     }
 
-    if (state.showDeleteDialog) {
+    if (status.showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { onEvent(AddExpenseEvent.DismissDeleteDialog) },
             title = { Text(stringResource(Res.string.add_expense_delete_title)) },
@@ -471,7 +478,7 @@ private fun AddExpenseContent(
         )
     }
 
-    if (state.isAnalyzingReceipt) {
+    if (receipt.isAnalyzing) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -490,7 +497,7 @@ private fun AddExpenseContent(
         }
     }
 
-    if (state.receiptError != null) {
+    if (receipt.error != null) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter,
@@ -503,7 +510,7 @@ private fun AddExpenseContent(
                     }
                 },
             ) {
-                Text(text = state.receiptError.toMessage())
+                Text(text = receipt.error.toMessage())
             }
         }
     }
@@ -522,7 +529,6 @@ private fun AmountDisplay(
     currencySymbol: String,
     modifier: Modifier = Modifier,
 ) {
-    val appColors = com.please.stop.app.theme.LocalAppColors.current
     val displayText = if (amountInput.isEmpty()) {
         "${currencySymbol}0"
     } else {
@@ -555,7 +561,7 @@ private fun AmountDisplay(
             color = if (amountInput.isEmpty()) {
                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             } else {
-                appColors.teal600
+                MaterialTheme.colorScheme.secondary
             },
             textAlign = TextAlign.Center,
         )

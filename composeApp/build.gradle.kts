@@ -1,4 +1,4 @@
-    @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import com.please.stop.app.convention.getCompileSDK
 import com.please.stop.app.convention.getMinSDK
@@ -31,7 +31,7 @@ kotlin {
     swiftPMDependencies {
         swiftPackage(
             url = "https://github.com/sqlcipher/SQLCipher.swift.git",
-            version = libs.versions.sqlcipher.get(),
+            version = "4.14.0",
             products = listOf("SQLCipher"),
         )
         swiftPackage(
@@ -70,12 +70,10 @@ kotlin {
             implementation(libs.kotlinx.collections.immutable)
             implementation(libs.androidx.datastore.preferences)
 
-            implementation(libs.sqldelight.runtime)
-            implementation(libs.sqldelight.coroutines)
             implementation(libs.kotlinx.atomicfu)
 
-            implementation(libs.calendar.compose.multiplatform)
             implementation(libs.richetext.editor)
+            implementation(libs.charty)
             implementation(libs.composeunstyled.primitives)
 
             implementation(libs.bundles.coil)
@@ -96,8 +94,6 @@ kotlin {
         }
 
         androidMain.dependencies {
-            implementation(libs.gitlive.firebase.common)
-            implementation(libs.gitlive.firebase.config)
             implementation(libs.amplitude.android)
             implementation(libs.koin.android)
             implementation(libs.ktor.okhttp)

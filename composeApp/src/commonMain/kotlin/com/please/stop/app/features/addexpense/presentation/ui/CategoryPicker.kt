@@ -23,12 +23,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.addexpense.presentation.CategoryUiModel
-import com.please.stop.app.features.home.presentation.ui.categoryEmojiForKey
-import com.please.stop.app.theme.LocalAppColors
+import com.please.stop.app.uicomponents.categoryEmojiForKey
 import kotlinx.collections.immutable.ImmutableList
 
 private const val COLUMNS = 2
@@ -74,7 +72,6 @@ private fun CategoryTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val appColors = LocalAppColors.current
     val tileScale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isSelected) 1.03f else 1f,
         animationSpec = androidx.compose.animation.core.spring(
@@ -90,7 +87,7 @@ private fun CategoryTile(
         },
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
-                appColors.teal500
+                MaterialTheme.colorScheme.secondary
             } else {
                 MaterialTheme.colorScheme.surfaceContainerLowest
             },
