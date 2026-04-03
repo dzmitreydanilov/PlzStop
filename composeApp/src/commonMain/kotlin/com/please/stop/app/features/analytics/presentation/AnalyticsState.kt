@@ -2,8 +2,6 @@ package com.please.stop.app.features.analytics.presentation
 
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
-import com.himanshoe.charty.bar.model.BarData
-import com.himanshoe.charty.pie.model.PieChartData
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -27,9 +25,7 @@ sealed interface AnalyticsState {
         override val categoriesCount: Int,
         override val activeCategoriesCount: Int,
         override val hasAnyExpenses: Boolean,
-        val pieChartData: ImmutableList<PieChartData>,
-        val barChartData: ImmutableList<BarData>,
-        val legend: ImmutableList<LegendItem>,
+        val spendingSlices: ImmutableList<SpendingSlice>,
     ) : AnalyticsState
 
     data class Error(
@@ -41,8 +37,9 @@ sealed interface AnalyticsState {
 }
 
 @Stable
-data class LegendItem(
-    val color: Color,
+data class SpendingSlice(
     val name: String,
-    val value: String,
+    val formattedAmount: String,
+    val amount: Float,
+    val color: Color,
 )

@@ -1,16 +1,11 @@
 package com.please.stop.app.features.analytics.presentation
 
 import androidx.compose.ui.graphics.Color
-import com.himanshoe.charty.bar.model.BarData
-import com.himanshoe.charty.common.ChartColor
-import com.himanshoe.charty.common.asSolidChartColor
-import com.himanshoe.charty.pie.model.PieChartData
 import com.please.stop.app.core.BootstrapTiming
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.domain.Result
 import com.please.stop.app.features.home.domain.model.HomeData
-import com.please.stop.app.features.home.domain.model.HomeCategoryItem
 import com.please.stop.app.features.home.domain.usecase.ObserveHomeDataUseCase
 import com.please.stop.app.utils.formatCurrencyAmount
 import kotlinx.collections.immutable.toImmutableList
@@ -51,29 +46,16 @@ class AnalyticsStateHolder(
             categoriesCount = categories.size,
             activeCategoriesCount = spendingCategories.size,
             hasAnyExpenses = totalSpentMinorUnits > 0,
-            pieChartData = spendingCategories.mapIndexed { i, item ->
-                PieChartData(
-                    label = item.name,
-                    value = item.spentMinorUnits.toFloat(),
-                    color = chartColor(i).asSolidChartColor(),
-                )
-            }.toImmutableList(),
-            barChartData = spendingCategories.mapIndexed { i, item ->
-                BarData(
-                    yValue = item.spentMinorUnits.toFloat(),
-                    xValue = item.name,
-                    barColor = ChartColor.Solid(chartColor(i)),
-                )
-            }.toImmutableList(),
-            legend = spendingCategories.mapIndexed { i, item ->
-                LegendItem(
-                    color = chartColor(i),
+            spendingSlices = spendingCategories.mapIndexed { i, item ->
+                SpendingSlice(
                     name = item.name,
-                    value = formatCurrencyAmount(
+                    formattedAmount = formatCurrencyAmount(
                         item.spentMinorUnits,
                         currency.symbol,
                         decimalPlaces,
                     ),
+                    amount = item.spentMinorUnits.toFloat(),
+                    color = chartColor(i),
                 )
             }.toImmutableList(),
         )

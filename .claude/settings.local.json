@@ -90,7 +90,9 @@
       "WebFetch(domain:search.maven.org)",
       "Read(//private/tmp/**)",
       "Read(//tmp/commonMain/com/himanshoe/charty/pie/model/**)",
-      "WebFetch(domain:guide.vico.patrykandpatrick.com)"
+      "WebFetch(domain:guide.vico.patrykandpatrick.com)",
+      "Bash(mkdir -p /tmp/vico31)",
+      "Read(//tmp/**)"
     ]
   },
   "enabledMcpjsonServers": [

@@ -54,7 +54,7 @@ jb-nav3-event = "1.1.0-alpha01"
 androidx-nav3-ui = "1.0.1"
 androidx-ui-tooling = "1.10.6"
 amplitude-android = "1.27.0"
-charty = "2.1.0-beta03.4"
+vico = "3.1.0-beta.1"
 composeunstyledPrimitives = "1.49.6"
 coreKtx = "1.18.0"
 junit = "4.13.2"
@@ -74,7 +74,7 @@ androidx-browser = { module = "androidx.browser:browser", version.ref = "browser
 androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycleService" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "androidx-ui-tooling" }
 
-charty = { module = "com.himanshoe:charty", version.ref = "charty" }
+vico-compose-m3 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref = "vico" }
 composeunstyled-primitives = { module = "com.composables:composeunstyled-primitives", version.ref = "composeunstyledPrimitives" }
 
 #coil

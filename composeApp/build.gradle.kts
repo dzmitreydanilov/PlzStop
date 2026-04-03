@@ -73,7 +73,7 @@ kotlin {
             implementation(libs.kotlinx.atomicfu)
 
             implementation(libs.richetext.editor)
-            implementation(libs.charty)
+            implementation(libs.vico.compose.m3)
             implementation(libs.composeunstyled.primitives)
 
             implementation(libs.bundles.coil)
