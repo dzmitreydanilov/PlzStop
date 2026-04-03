@@ -61,7 +61,7 @@ interface ReceiptResponse {
 
 export const analyzeReceipt = onCall(
   {
-    enforceAppCheck: true,
+    enforceAppCheck: false, // TODO: enable for production
     region: "europe-west1",
     timeoutSeconds: 120,
     memory: "512MiB",

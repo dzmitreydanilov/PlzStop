@@ -77,7 +77,9 @@
       "WebFetch(domain:central.sonatype.com)",
       "Bash(XCODEPROJ_PATH='/Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/iosApp.xcodeproj' ./gradlew ':composeApp:integrateLinkagePackage' -i)",
       "Bash(/usr/libexec/PlistBuddy -c \"Print :BUNDLE_ID\" /Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/GoogleService-Info.plist)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(keytool -list -v -keystore /Users/dmitry.danilov/.android/debug.keystore -alias AndroidDebugKey -storepass android)",
+      "Bash(/usr/libexec/PlistBuddy -c 'Print :TEAM_ID' /Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/GoogleService-Info.plist)"
     ]
   },
   "enabledMcpjsonServers": [
