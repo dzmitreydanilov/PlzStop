@@ -32,7 +32,7 @@ import com.composables.core.ModalSheetProperties
 import com.composables.core.Scrim
 import com.composables.core.Sheet
 import com.composeunstyled.ProvideContentColor
-import com.please.stop.app.uicomponents.ANIMATION_DURATION
+import com.please.stop.app.uicomponents.ANIMATION_DURATION_MS
 import com.composables.core.ModalBottomSheet as UnstyledModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,8 +49,8 @@ fun AppModalBottomSheet(
 ) {
     UnstyledModalBottomSheet(state = state, onDismiss = onDismiss, properties = properties) {
         Scrim(
-            enter = fadeIn(tween(ANIMATION_DURATION)),
-            exit = fadeOut(tween(ANIMATION_DURATION)),
+            enter = fadeIn(tween(ANIMATION_DURATION_MS)),
+            exit = fadeOut(tween(ANIMATION_DURATION_MS)),
             scrimColor = BottomSheetDefaults.ScrimColor
         )
         Sheet(

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -22,14 +21,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.home.presentation.HomeCategoryUiModel
+import com.please.stop.app.theme.AppTheme
 import com.please.stop.app.theme.LocalAppColors
+import com.please.stop.app.uicomponents.ANIMATION_DURATION_MS
+import com.please.stop.app.uicomponents.categoryEmojiForKey
 import kotlinx.coroutines.delay
+
+private const val STAGGER_DELAY_MS = 50L
+private const val INITIAL_SCALE = 0.9f
+private const val SLIDE_OFFSET_PX = 40
 
 @Composable
 internal fun CategoryTile(
@@ -42,47 +50,42 @@ internal fun CategoryTile(
     val gradientIndex = category.name.hashCode()
         .let { (it % gradients.size + gradients.size) % gradients.size }
 
-    val alpha = remember { Animatable(0f) }
-    val offsetY = remember { Animatable(40f) }
-    val scale = remember { Animatable(0.9f) }
+    val progress = remember { Animatable(0f) }
 
     LaunchedEffect(category.id) {
-        delay(index * 50L)
-        alpha.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
+        delay(index * STAGGER_DELAY_MS)
+        progress.animateTo(1f, tween(ANIMATION_DURATION_MS, easing = FastOutSlowInEasing))
     }
-    LaunchedEffect(category.id) {
-        delay(index * 50L)
-        offsetY.animateTo(0f, tween(350, easing = FastOutSlowInEasing))
-    }
-    LaunchedEffect(category.id) {
-        delay(index * 50L)
-        scale.animateTo(1f, tween(350, easing = FastOutSlowInEasing))
-    }
+
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
 
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            containerColor = surfaceColor.copy(alpha = progress.value),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (progress.value == 1f) 2.dp else 0.dp,
+        ),
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier.graphicsLayer {
-            this.alpha = alpha.value
-            translationY = offsetY.value
-            scaleX = scale.value
-            scaleY = scale.value
+            translationY = (1f - progress.value) * SLIDE_OFFSET_PX
+            val scale = INITIAL_SCALE + (1f - INITIAL_SCALE) * progress.value
+            scaleX = scale
+            scaleY = scale
         },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer { alpha = progress.value }
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .background(gradients[gradientIndex]),
                 contentAlignment = Alignment.Center,
             ) {
@@ -105,11 +108,45 @@ internal fun CategoryTile(
             Text(
                 text = category.spentFormatted,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (category.hasSpending) appColors.teal600
+                color = if (category.hasSpending) MaterialTheme.colorScheme.secondary
                 else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (category.hasSpending) FontWeight.Medium else FontWeight.Normal,
                 textAlign = TextAlign.Center,
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CategoryTilePreview() {
+    AppTheme {
+        CategoryTile(
+            category = HomeCategoryUiModel(
+                id = 1,
+                name = "Food",
+                iconKey = "ic_food",
+                spentFormatted = "$120.50",
+                hasSpending = true,
+            ),
+            onClick = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CategoryTileNoSpendingPreview() {
+    AppTheme {
+        CategoryTile(
+            category = HomeCategoryUiModel(
+                id = 2,
+                name = "Entertainment",
+                iconKey = "ic_entertainment",
+                spentFormatted = "$0.00",
+                hasSpending = false,
+            ),
+            onClick = {},
+        )
     }
 }

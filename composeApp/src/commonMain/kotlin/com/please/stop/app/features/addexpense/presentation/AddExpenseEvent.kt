@@ -15,7 +15,21 @@ sealed interface AddExpenseEvent {
     data object ConfirmDiscard : AddExpenseEvent
     data object DismissDiscardDialog : AddExpenseEvent
     data object DismissError : AddExpenseEvent
-    data class ReceiptScanned(val imageBytes: ByteArray) : AddExpenseEvent
+    data class ReceiptScanned(val imageBytes: ByteArray) : AddExpenseEvent {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other == null || this::class != other::class) return false
+
+            other as ReceiptScanned
+
+            return imageBytes.contentEquals(other.imageBytes)
+        }
+
+        override fun hashCode(): Int {
+            return imageBytes.contentHashCode()
+        }
+    }
+
     data object DismissReceiptError : AddExpenseEvent
 }
 

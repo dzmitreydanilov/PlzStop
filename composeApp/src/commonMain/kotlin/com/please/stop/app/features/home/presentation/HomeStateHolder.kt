@@ -12,7 +12,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlin.math.pow
+import com.please.stop.app.utils.formatCurrencyAmount
 import kotlin.reflect.KClass
 
 class HomeStateHolder(
@@ -29,7 +29,7 @@ class HomeStateHolder(
 
     override fun resolveEventResult(event: HomeEvent): Flow<Result> = when (event) {
         is HomeEvent.CategoryClicked -> flowOf(HomeResult.NavigateToAddExpense(event.categoryId))
-        HomeEvent.AddExpenseClicked -> flowOf(HomeResult.NavigateToAddExpense())
+        HomeEvent.AddExpenseClicked -> flowOf(HomeResult.NavigateToCreateExpense)
         HomeEvent.AddCategoryClicked -> flowOf(HomeResult.ShowAddCategorySheet)
         is HomeEvent.ConfirmAddCategory -> handleAddCategory(event.name)
         HomeEvent.DismissAddCategorySheet -> flowOf(HomeResult.HideAddCategorySheet)
@@ -39,102 +39,99 @@ class HomeStateHolder(
 
     override fun getNavigationResults(): Set<KClass<out Result>> = setOf(
         HomeResult.NavigateToAddExpense::class,
+        HomeResult.NavigateToCreateExpense::class,
         HomeResult.NavigateToSettings::class,
     )
 
     override fun getNavigationByResult(result: Result): Navigation? = when (result) {
         is HomeResult.NavigateToAddExpense -> HomeNavigation.NavigateToAddExpense(result.categoryId)
+        is HomeResult.NavigateToCreateExpense -> HomeNavigation.NavigateToCreateExpense
         is HomeResult.NavigateToSettings -> HomeNavigation.NavigateToSettings
         else -> null
     }
 
     override fun getStateByResult(previous: HomeState, result: Result): HomeState {
-        val content = previous as? HomeState.Content
         return when (result) {
             is ObserveHomeDataUseCase.Result.Success -> result.data.toContent(previous)
-            is ObserveHomeDataUseCase.Result.Failure -> HomeState.Error(result.errorType)
-            is HomeResult.ShowAddCategorySheet -> {
-                content?.copy(showAddCategorySheet = true) ?: previous
-            }
-            is HomeResult.HideAddCategorySheet -> {
-                content?.copy(showAddCategorySheet = false) ?: previous
-            }
-            is HomeResult.ClearError -> {
-                content?.copy(errorType = null) ?: previous
-            }
-            is AddCategoryUseCase.Result.Success -> {
-                content?.copy(showAddCategorySheet = false) ?: previous
-            }
+            is ObserveHomeDataUseCase.Result.Failure -> previous.toError(result.errorType)
+            is HomeResult.ShowAddCategorySheet -> previous.updateShowAddCategorySheet(true)
+            is HomeResult.HideAddCategorySheet -> previous.updateShowAddCategorySheet(false)
+            is HomeResult.ClearError -> previous.toContent()
+            is AddCategoryUseCase.Result.Success -> previous.updateShowAddCategorySheet(false)
             is AddCategoryUseCase.Result.Failure -> {
-                content?.copy(
-                    showAddCategorySheet = false,
-                    errorType = result.errorType,
-                ) ?: previous
+                previous.updateShowAddCategorySheet(false).toError(result.errorType)
             }
             else -> super.getStateByResult(previous, result)
         }
     }
 
     override fun getErrorStateByResult(result: Result, errorType: ErrorType): HomeState {
-        return HomeState.Error(errorType)
+        return state.value.toError(errorType)
     }
 
     private fun handleAddCategory(name: String): Flow<Result> = flow {
         emit(addCategoryUseCase(name.trim(), "ic_other"))
     }
 
-    private fun HomeData.toContent(previous: HomeState): HomeState.Content {
-        val prev = previous as? HomeState.Content
-        return HomeState.Content(
+    private fun HomeState.toError(errorType: ErrorType): HomeState.Error = HomeState.Error(
+        errorType = errorType,
+        displayName = displayName,
+        currency = currency,
+        totalSpentFormatted = totalSpentFormatted,
+        categories = categories,
+        hasAnyExpenses = hasAnyExpenses,
+        showAddCategorySheet = showAddCategorySheet,
+    )
+
+    private fun HomeState.toContent(): HomeState = when (this) {
+        is HomeState.Error -> HomeState.Content(
             displayName = displayName,
-            currencySymbol = currencySymbol,
-            decimalPlaces = decimalPlaces,
-            totalSpentFormatted = formatAmount(totalSpentMinorUnits, currencySymbol, decimalPlaces),
+            currency = currency,
+            totalSpentFormatted = totalSpentFormatted,
+            categories = categories,
+            hasAnyExpenses = hasAnyExpenses,
+            showAddCategorySheet = showAddCategorySheet,
+        )
+        else -> this
+    }
+
+    private fun HomeState.updateShowAddCategorySheet(show: Boolean): HomeState = when (this) {
+        is HomeState.Content -> copy(showAddCategorySheet = show)
+        is HomeState.Error -> copy(showAddCategorySheet = show)
+        HomeState.Loading -> this
+    }
+
+    private fun HomeData.toContent(previous: HomeState): HomeState.Content {
+        return HomeState.Content(
+            displayName = displayName.orEmpty(),
+            currency = currency,
+            totalSpentFormatted = formatCurrencyAmount(
+                totalSpentMinorUnits,
+                currency.symbol,
+                decimalPlaces,
+            ),
             categories = categories.map { item ->
                 HomeCategoryUiModel(
                     id = item.id,
                     name = item.name,
                     iconKey = item.iconKey,
-                    spentFormatted = formatAmount(
+                    spentFormatted = formatCurrencyAmount(
                         item.spentMinorUnits,
-                        currencySymbol,
-                        decimalPlaces
+                        currency.symbol,
+                        decimalPlaces,
                     ),
                     hasSpending = item.spentMinorUnits > 0,
                 )
             }.toImmutableList(),
             hasAnyExpenses = totalSpentMinorUnits > 0,
-            showAddCategorySheet = prev?.showAddCategorySheet ?: false,
-            errorType = prev?.errorType,
+            showAddCategorySheet = previous.showAddCategorySheet,
         )
-    }
-
-    companion object {
-        internal fun formatAmount(
-            minorUnits: Long,
-            currencySymbol: String,
-            decimalPlaces: Int,
-        ): String {
-            if (decimalPlaces == 0) return "$currencySymbol$minorUnits"
-            val divisor = 10.0.pow(decimalPlaces)
-            val value = minorUnits / divisor
-            val formatted = value.toBigDecimalString(decimalPlaces)
-            return "$currencySymbol$formatted"
-        }
-
-        private fun Double.toBigDecimalString(decimalPlaces: Int): String {
-            val intPart = toLong()
-            val fracPart = ((this - intPart) * 10.0.pow(decimalPlaces))
-                .toLong()
-                .toString()
-                .padStart(decimalPlaces, '0')
-            return "$intPart.$fracPart"
-        }
     }
 }
 
 private sealed interface HomeResult : Result {
-    data class NavigateToAddExpense(val categoryId: Long? = null) : HomeResult
+    data class NavigateToAddExpense(val categoryId: Long) : HomeResult
+    data object NavigateToCreateExpense : HomeResult
     data object NavigateToSettings : HomeResult
     data object ShowAddCategorySheet : HomeResult
     data object HideAddCategorySheet : HomeResult

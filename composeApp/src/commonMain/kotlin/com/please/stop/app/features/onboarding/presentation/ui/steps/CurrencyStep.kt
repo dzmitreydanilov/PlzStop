@@ -21,22 +21,19 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
+import com.please.stop.app.uicomponents.GlassTextField
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingCenteredContent
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingPrimaryButton
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingSecondaryTextButton
@@ -57,7 +54,7 @@ fun CurrencyStep(
     state: Content,
     onEvent: (OnboardingEvent) -> Unit,
 ) {
-    OnboardingCenteredContent {
+    OnboardingCenteredContent(scrollable = false) {
         BoxWithConstraints {
             val listHeight = maxHeight * 0.5f
             Column(
@@ -74,7 +71,7 @@ fun CurrencyStep(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                OutlinedTextField(
+                GlassTextField(
                     value = state.currencySearchQuery,
                     onValueChange = { onEvent(OnboardingEvent.CurrencySearchQueryChanged(it)) },
                     placeholder = {
@@ -83,29 +80,6 @@ fun CurrencyStep(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    textStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedContainerColor = Color.White.copy(alpha = 0.28f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.28f),
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = Color.White.copy(alpha = 0.52f),
-                            shape = RoundedCornerShape(16.dp),
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color.White.copy(alpha = 0.82f),
-                            shape = RoundedCornerShape(16.dp),
-                        ),
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))

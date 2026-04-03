@@ -35,8 +35,7 @@ exifinterface = "1.4.2"
 sqldelight = "2.3.2"
 workmanager = "2.11.2"
 rickhText-editor = "1.0.0-rc13"
-androidx-paging = "3.5.0-alpha01"
-mlkit-document-scanner = "16.0.0-beta1"
+mlkit-document-scanner = "16.0.0"
 moko-permissions = "0.20.1"
 savedstateKtx = "1.4.0"
 kotlinxCoroutinesCore = "1.10.2"
@@ -44,7 +43,6 @@ lifecycleService = "2.10.0"
 lifecycleViewmodelCompose = "2.10.0"
 androidxNavigation3Material = "1.3.0-alpha06"
 jb-material3 = "1.10.0-alpha05"
-calendar-compose = "2.10.1"
 fileKit = "0.13.0"
 haze = "1.7.2"
 coroutines-test = "1.10.2"
@@ -55,17 +53,15 @@ jb-nav3 = "1.1.0-beta01"
 jb-nav3-event = "1.1.0-alpha01"
 androidx-nav3-ui = "1.0.1"
 androidx-ui-tooling = "1.10.6"
-purchases-kmp = "2.10.0+17.52.0"
 amplitude-android = "1.27.0"
+charty = "2.1.0-beta03.4"
 composeunstyledPrimitives = "1.49.6"
 coreKtx = "1.18.0"
 junit = "4.13.2"
 espressoCore = "3.7.0"
 appcompat = "1.7.1"
-material = "1.13.0"
 
-gitlive-firebase = "2.1.0"
-sqlcipher = "4.14.0"
+sqlcipher = "4.14.1"
 room = "2.8.4"
 ksp = "2.3.6"
 androidx-sqlite = "2.6.2"
@@ -78,15 +74,8 @@ androidx-browser = { module = "androidx.browser:browser", version.ref = "browser
 androidx-lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycleService" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "androidx-ui-tooling" }
 
-#calendar
-calendar-compose-multiplatform = { module = "com.kizitonwose.calendar:compose-multiplatform", version.ref = "calendar-compose" }
-
+charty = { module = "com.himanshoe:charty", version.ref = "charty" }
 composeunstyled-primitives = { module = "com.composables:composeunstyled-primitives", version.ref = "composeunstyledPrimitives" }
-
-#paging
-paging-common = { module = "androidx.paging:paging-common", version.ref = "androidx-paging" }
-paging-compose-common = { module = "androidx.paging:paging-compose", version.ref = "androidx-paging" }
-square-paging3-extension = { module = "app.cash.sqldelight:androidx-paging3-extensions", version.ref = "sqldelight" }
 
 #coil
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
@@ -117,17 +106,6 @@ moko-permissions-storage = { module = "dev.icerock.moko:permissions-storage", ve
 
 #richtext
 richetext-editor = { module = "com.mohamedrejeb.richeditor:richeditor-compose", version.ref = "rickhText-editor" }
-
-# SQLDelight
-sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
-sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
-sqldelight-android = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
-sqldelight-native = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
-sqldelight-sqlite-dialect = { module = "app.cash.sqldelight:sqlite-3-25-dialect", version.ref = "sqldelight" }
-
-# Firebase (KMP)
-gitlive-firebase-common = { module = "dev.gitlive:firebase-common", version.ref = "gitlive-firebase" }
-gitlive-firebase-config = { module = "dev.gitlive:firebase-config", version.ref = "gitlive-firebase" }
 
 # ML Kit
 mlkit-document-scanner = { module = "com.google.android.gms:play-services-mlkit-document-scanner", version.ref = "mlkit-document-scanner" }
@@ -189,7 +167,6 @@ ktor-serialization = { module = "io.ktor:ktor-client-content-negotiation", versi
 ktor-serializationJson = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-ios = { module = "io.ktor:ktor-client-ios", version.ref = "ktor" }
-ktor-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 ktor-logger = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 ktor-resource = { module = "io.ktor:ktor-client-resources", version.ref = "ktor" }
 ktor-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
@@ -197,11 +174,6 @@ ktor-content-encoding = { module = "io.ktor:ktor-client-encoding", version.ref =
 
 # Amplitude
 amplitude-android = { module = "com.amplitude:analytics-android", version.ref = "amplitude-android" }
-
-# Required
-purchases-core = { module = "com.revenuecat.purchases:purchases-kmp-core", version.ref = "purchases-kmp" }
-purchases-result = { module = "com.revenuecat.purchases:purchases-kmp-result", version.ref = "purchases-kmp" }
-purchases-ui = { module = "com.revenuecat.purchases:purchases-kmp-ui", version.ref = "purchases-kmp" }
 
 # test
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -293,12 +265,6 @@ filekit = [
     "filekit-dialogs-compose"
 ]
 
-paging = [
-    "paging-compose-common",
-    "paging-common",
-    "square-paging3-extension"
-]
-
 coil = [
     "coil-compose",
     "coil-network-ktor3"
@@ -325,10 +291,4 @@ jb-compose = [
     "jb-compose-runtime-savable",
     "jb-compose-animation-graphics",
     "jb-lifecycle-viewmodel-compose",
-]
-
-revenue-cat = [
-    "purchases-core",
-    "purchases-result",
-    "purchases-ui"
 ]

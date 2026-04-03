@@ -2,7 +2,6 @@ package com.please.stop.app.features.onboarding.presentation.ui.steps
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,8 +20,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,17 +31,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
-import com.please.stop.app.features.home.presentation.ui.categoryEmojiForKey
+import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.features.onboarding.presentation.CategoryUiModel
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
+import com.please.stop.app.uicomponents.GlassTextField
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingCenteredContent
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingPrimaryButton
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingSecondaryTextButton
@@ -69,7 +65,7 @@ fun CategoriesStep(
     var showAddDialog by remember { mutableStateOf(false) }
     val allCategories = state.availableCategories + state.customCategories
 
-    OnboardingCenteredContent {
+    OnboardingCenteredContent(scrollable = false) {
         Column(
             modifier = Modifier.padding(vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -257,35 +253,10 @@ private fun AddCategoryDialog(
         },
         text = {
             Column {
-                OutlinedTextField(
+                GlassTextField(
                     value = name,
                     onValueChange = { name = it.take(24) },
                     label = { Text(stringResource(Res.string.onboarding_category_name_label)) },
-                    textStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold),
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        cursorColor = MaterialTheme.colorScheme.primary,
-                        focusedContainerColor = Color.White.copy(alpha = 0.24f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.24f),
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = Color.White.copy(alpha = 0.52f),
-                            shape = RoundedCornerShape(16.dp),
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color.White.copy(alpha = 0.82f),
-                            shape = RoundedCornerShape(16.dp),
-                        ),
                 )
             }
         },

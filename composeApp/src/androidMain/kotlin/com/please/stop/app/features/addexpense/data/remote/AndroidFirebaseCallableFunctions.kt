@@ -5,8 +5,7 @@ import kotlinx.coroutines.tasks.await
 
 class AndroidFirebaseCallableFunctions : FirebaseCallableFunctions {
 
-    private val functions: FirebaseFunctions =
-        FirebaseFunctions.getInstance("europe-west1")
+    private val functions: FirebaseFunctions = FirebaseFunctions.getInstance("europe-west1")
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun call(

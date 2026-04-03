@@ -3,6 +3,7 @@ package com.please.stop.app.features.addexpense.scanner
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import java.io.ByteArrayOutputStream
+import androidx.core.graphics.scale
 
 actual fun compressImage(imageBytes: ByteArray, maxWidthPx: Int, quality: Int): ByteArray {
     val options = BitmapFactory.Options().apply {
@@ -23,7 +24,7 @@ actual fun compressImage(imageBytes: ByteArray, maxWidthPx: Int, quality: Int): 
         val scale = maxWidthPx.toFloat() / maxOf(sampledBitmap.width, sampledBitmap.height)
         val targetWidth = (sampledBitmap.width * scale).toInt()
         val targetHeight = (sampledBitmap.height * scale).toInt()
-        Bitmap.createScaledBitmap(sampledBitmap, targetWidth, targetHeight, true).also {
+        sampledBitmap.scale(targetWidth, targetHeight).also {
             if (it != sampledBitmap) sampledBitmap.recycle()
         }
     } else {

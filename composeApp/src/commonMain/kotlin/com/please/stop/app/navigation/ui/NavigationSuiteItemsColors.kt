@@ -6,7 +6,6 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItemColors
 import androidx.compose.runtime.Composable
-import com.please.stop.app.theme.LocalAppColors
 
 @Composable
 internal fun getNavigationSuiteItemColors(): NavigationSuiteItemColors {
@@ -40,10 +39,10 @@ internal object AppNavigationDefaults {
     fun navigationContentColor() = MaterialTheme.colorScheme.onSurfaceVariant
 
     @Composable
-    fun navigationSelectedItemColor() = LocalAppColors.current.blue500
+    fun navigationSelectedItemColor() = MaterialTheme.colorScheme.primary
 
     @Composable
-    fun navigationSelectedLabelColor() = LocalAppColors.current.blue600
+    fun navigationSelectedLabelColor() = MaterialTheme.colorScheme.primary
 
     @Composable
     fun navigationIndicatorColor() = MaterialTheme.colorScheme.primaryContainer

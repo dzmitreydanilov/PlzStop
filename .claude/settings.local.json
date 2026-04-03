@@ -79,7 +79,18 @@
       "Bash(/usr/libexec/PlistBuddy -c \"Print :BUNDLE_ID\" /Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/GoogleService-Info.plist)",
       "Bash(npx tsc:*)",
       "Bash(keytool -list -v -keystore /Users/dmitry.danilov/.android/debug.keystore -alias AndroidDebugKey -storepass android)",
-      "Bash(/usr/libexec/PlistBuddy -c 'Print :TEAM_ID' /Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/GoogleService-Info.plist)"
+      "Bash(/usr/libexec/PlistBuddy -c 'Print :TEAM_ID' /Users/dmitry.danilov/StudioProjects/PlzStop/iosApp/GoogleService-Info.plist)",
+      "WebFetch(domain:cs.android.com)",
+      "Bash(rm -rf ~/Library/Caches/org.swift.swiftpm)",
+      "Bash(rm -rf ~/Library/Developer/Xcode/DerivedData)",
+      "Bash(xcodebuild -resolvePackageDependencies -project iosApp.xcodeproj)",
+      "Bash(gh repo:*)",
+      "WebFetch(domain:himanshoe.com)",
+      "WebFetch(domain:hi-manshu.github.io)",
+      "WebFetch(domain:search.maven.org)",
+      "Read(//private/tmp/**)",
+      "Read(//tmp/commonMain/com/himanshoe/charty/pie/model/**)",
+      "WebFetch(domain:guide.vico.patrykandpatrick.com)"
     ]
   },
   "enabledMcpjsonServers": [

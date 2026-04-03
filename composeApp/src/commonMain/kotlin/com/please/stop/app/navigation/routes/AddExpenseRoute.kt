@@ -4,7 +4,7 @@ import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class AddExpenseRoute(
-    val expenseId: Long? = null,
-    val preselectedCategoryId: Long? = null,
-) : NavKey
+data class CreateExpenseRoute(val categoryId: Long? = null) : NavKey
+
+@Serializable
+data class EditExpenseRoute(val expenseId: Long) : NavKey

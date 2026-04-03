@@ -1,6 +1,7 @@
 package com.please.stop.app.utils.date
 
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -66,4 +67,19 @@ fun currentDayEndMillis(timeZone: TimeZone = TimeZone.currentSystemDefault()): L
 @OptIn(ExperimentalTime::class)
 fun now(): Instant {
     return Clock.System.now()
+}
+
+data class EpochMillisRange(val fromMillis: Long, val toMillis: Long)
+
+@OptIn(ExperimentalTime::class)
+fun currentMonthMillisRange(
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): EpochMillisRange {
+    val today = Clock.System.todayIn(timeZone)
+    val monthStart = LocalDate(today.year, today.month, 1)
+    val nextMonthStart = monthStart.plus(1, DateTimeUnit.MONTH)
+    return EpochMillisRange(
+        fromMillis = monthStart.atStartOfDayIn(timeZone).toEpochMilliseconds(),
+        toMillis = nextMonthStart.atStartOfDayIn(timeZone).toEpochMilliseconds(),
+    )
 }
