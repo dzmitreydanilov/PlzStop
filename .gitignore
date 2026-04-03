@@ -44,7 +44,6 @@ pod/
 *.podspec
 *.xcworkspace
 Package.resolved
-KotlinMultiplatformLinkedPackage/
 
 ########################
 # MacOS
