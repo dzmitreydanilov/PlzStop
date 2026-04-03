@@ -1,23 +1,28 @@
 package com.please.stop.app.features.onboarding.presentation.ui.steps
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,16 +31,28 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import com.please.stop.app.features.home.presentation.ui.categoryEmojiForKey
 import com.please.stop.app.features.onboarding.presentation.CategoryUiModel
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
+import com.please.stop.app.features.onboarding.presentation.OnboardingStep
+import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingCenteredContent
+import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingPrimaryButton
+import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingSecondaryTextButton
+import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingStepIndicator
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.onboarding_add
 import plzstop.composeapp.generated.resources.onboarding_add_custom_category
+import plzstop.composeapp.generated.resources.onboarding_back
 import plzstop.composeapp.generated.resources.onboarding_cancel
 import plzstop.composeapp.generated.resources.onboarding_category_name_label
 import plzstop.composeapp.generated.resources.onboarding_min_categories
@@ -48,56 +65,104 @@ fun CategoriesStep(
     onEvent: (OnboardingEvent) -> Unit,
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    val allCategories = state.availableCategories + state.customCategories
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
-    ) {
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = stringResource(Res.string.onboarding_pick_categories),
-            style = MaterialTheme.typography.headlineSmall,
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = stringResource(Res.string.onboarding_min_categories, OnboardingState.MIN_CATEGORIES),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        val allCategories = state.availableCategories + state.customCategories
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f),
+    OnboardingCenteredContent {
+        Column(
+            modifier = Modifier.padding(vertical = 20.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            items(allCategories, key = { it.id }) { category ->
-                CategoryTile(
-                    category = category,
-                    isSelected = category.id in state.selectedCategoryIds,
-                    onClick = { onEvent(OnboardingEvent.CategoryToggled(category.id)) },
-                )
-            }
-        }
+            Text(
+                text = stringResource(Res.string.onboarding_pick_categories),
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+            )
 
-        if (state.canAddCustomCategory) {
-            OutlinedButton(
-                onClick = { showAddDialog = true },
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = stringResource(Res.string.onboarding_min_categories, OnboardingState.MIN_CATEGORIES),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .height(320.dp)
+                    .shadow(elevation = 10.dp, shape = RoundedCornerShape(18.dp), clip = true)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)),
             ) {
-                Text(stringResource(Res.string.onboarding_add_custom_category))
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    items(allCategories, key = { it.id }) { category ->
+                        CategoryTile(
+                            category = category,
+                            isSelected = category.id in state.selectedCategoryIds,
+                            onClick = { onEvent(OnboardingEvent.CategoryToggled(category.id)) },
+                        )
+                    }
+                }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Scroll to see more categories",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (state.canAddCustomCategory) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 12.dp),
+                ) {
+                    OutlinedButton(
+                    onClick = { showAddDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                            .padding(2.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color.Transparent),
+                ) {
+                    Text(
+                        text = stringResource(Res.string.onboarding_add_custom_category),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(44.dp))
+            OnboardingStepIndicator(currentStep = OnboardingStep.CATEGORIES)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OnboardingPrimaryButton(
+                currentStep = OnboardingStep.CATEGORIES,
+                isEnabled = state.isNextEnabled,
+                isSaving = state.isSaving,
+                onClick = { onEvent(OnboardingEvent.NextTapped) },
+            )
+
+            OnboardingSecondaryTextButton(
+                text = stringResource(Res.string.onboarding_back),
+                onClick = { onEvent(OnboardingEvent.BackTapped) },
+            )
         }
     }
 
@@ -124,26 +189,48 @@ private fun CategoryTile(
             containerColor = if (isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
-                MaterialTheme.colorScheme.surface
+                categoryBackgroundFor(category.id)
             },
         ),
-        border = BorderStroke(
+        border = if (!isSelected) BorderStroke(
             width = 1.dp,
-            color = if (isSelected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.outlineVariant
-            },
-        ),
+            color = MaterialTheme.colorScheme.outlineVariant,
+        ) else null,
+        shape = RoundedCornerShape(14.dp),
     ) {
-        Text(
-            text = category.name,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp, horizontal = 8.dp),
-        )
+                .padding(vertical = 14.dp, horizontal = 8.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                        } else {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                    ),
+                contentAlignment = androidx.compose.ui.Alignment.Center,
+            ) {
+                Text(
+                    text = categoryEmojiForKey(category.iconKey),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+
+            Text(
+                text = category.name,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
@@ -156,30 +243,83 @@ private fun AddCategoryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.onboarding_new_category)) },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text(
+                text = stringResource(Res.string.onboarding_new_category),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.take(24) },
                     label = { Text(stringResource(Res.string.onboarding_category_name_label)) },
+                    textStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        focusedContainerColor = Color.White.copy(alpha = 0.24f),
+                        unfocusedContainerColor = Color.White.copy(alpha = 0.24f),
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = Color.White.copy(alpha = 0.52f),
+                            shape = RoundedCornerShape(16.dp),
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.82f),
+                            shape = RoundedCornerShape(16.dp),
+                        ),
                 )
             }
         },
         confirmButton = {
-            TextButton(
+            OutlinedButton(
                 onClick = { onConfirm(name.trim()) },
                 enabled = name.trim().isNotEmpty(),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             ) {
-                Text(stringResource(Res.string.onboarding_add))
+                Text(
+                    text = stringResource(Res.string.onboarding_add),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.onboarding_cancel))
+                Text(
+                    text = stringResource(Res.string.onboarding_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
     )
+}
+
+@Composable
+private fun categoryBackgroundFor(categoryId: Long): Color {
+    val variants = listOf(
+        Color(0xFFE9F3FF),
+        Color(0xFFEAF8FF),
+        Color(0xFFF0EDFF),
+        Color(0xFFEFFFF5),
+        Color(0xFFFFF1E9),
+        Color(0xFFFBEFFF),
+    )
+    return variants[(kotlin.math.abs(categoryId) % variants.size).toInt()]
 }

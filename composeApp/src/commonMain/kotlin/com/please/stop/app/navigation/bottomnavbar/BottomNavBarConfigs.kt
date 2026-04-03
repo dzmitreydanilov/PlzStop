@@ -5,9 +5,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.sp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.please.stop.app.navigation.routes.MainBottomTabs
+import com.please.stop.app.theme.LocalAppColors
 import kotlinx.collections.immutable.persistentSetOf
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
@@ -35,7 +43,8 @@ fun BottomBarItemLabel(navigableRoute: MainBottomTabs) {
     val labelResId = navigableRoute.toDestination().label
     Text(
         text = stringResource(labelResId),
-        style = TextStyle(fontSize = 12.sp, color = MaterialTheme.colorScheme.primary),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
@@ -46,11 +55,27 @@ fun BottomBarItemIcon(
 ) {
     val destination = navigableRoute.toDestination()
     val icon = if (selected) destination.selectedIcon else destination.unselectedIcon
+    val appColors = LocalAppColors.current
+    val iconTint = animateColorAsState(
+        targetValue = if (selected) appColors.blue500 else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+    )
+    val bgColor = animateColorAsState(
+        targetValue = if (selected) appColors.blue500.copy(alpha = 0.15f) else androidx.compose.ui.graphics.Color.Transparent,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+    )
+
+    Box(
+        modifier = Modifier
+            .background(bgColor.value, RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+    ) {
     Icon(
         painter = painterResource(icon),
         contentDescription = stringResource(destination.label),
-        tint = MaterialTheme.colorScheme.primary,
+        tint = iconTint.value,
     )
+    }
 }
 
 private fun MainBottomTabs.toDestination(): TopLevelDestination = when (this) {

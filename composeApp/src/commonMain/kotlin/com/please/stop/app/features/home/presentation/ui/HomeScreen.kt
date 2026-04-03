@@ -1,5 +1,8 @@
 package com.please.stop.app.features.home.presentation.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,12 +25,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composables.core.SheetDetent
@@ -37,9 +43,11 @@ import com.please.stop.app.features.home.presentation.HomeNavigation
 import com.please.stop.app.features.home.presentation.HomeState
 import com.please.stop.app.features.home.presentation.HomeStateHolder
 import com.please.stop.app.navigation.CollectNavigationFlow
+import com.please.stop.app.theme.LocalAppColors
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -117,7 +125,7 @@ private fun HomeContent(
 ) {
     Scaffold(
         floatingActionButton = {
-            HomeFab(onEvent = onEvent)
+            AnimatedHomeFab(onEvent = onEvent)
         },
     ) { paddingValues ->
         HomeBody(
@@ -138,13 +146,30 @@ private fun HomeContent(
 }
 
 @Composable
-private fun HomeFab(onEvent: (HomeEvent) -> Unit) {
+private fun AnimatedHomeFab(onEvent: (HomeEvent) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    val appColors = LocalAppColors.current
+    val fabScale = remember { Animatable(0f) }
 
-    Box {
+    LaunchedEffect(Unit) {
+        delay(600)
+        fabScale.animateTo(
+            1f,
+            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        )
+    }
+
+    Box(
+        modifier = Modifier.graphicsLayer {
+            scaleX = fabScale.value
+            scaleY = fabScale.value
+        },
+    ) {
         FloatingActionButton(
             onClick = { expanded = true },
             shape = CircleShape,
+            containerColor = appColors.teal500,
+            contentColor = Color.White,
         ) {
             Icon(
                 imageVector = vectorResource(Res.drawable.ic_add),

@@ -1,25 +1,37 @@
 package com.please.stop.app.features.addexpense.presentation.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.addexpense.presentation.CategoryUiModel
 import com.please.stop.app.features.home.presentation.ui.categoryEmojiForKey
+import com.please.stop.app.theme.LocalAppColors
 import kotlinx.collections.immutable.ImmutableList
 
-private const val COLUMNS = 3
+private const val COLUMNS = 2
 
 @Composable
 internal fun CategoryPicker(
@@ -48,7 +60,7 @@ internal fun CategoryPicker(
                     )
                 }
                 repeat(COLUMNS - row.size) {
-                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -62,38 +74,61 @@ private fun CategoryTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appColors = LocalAppColors.current
+    val tileScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isSelected) 1.03f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+        ),
+    )
+
     Card(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.graphicsLayer {
+            scaleX = tileScale
+            scaleY = tileScale
+        },
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
+                appColors.teal500
             } else {
-                MaterialTheme.colorScheme.surfaceContainerLow
+                MaterialTheme.colorScheme.surfaceContainerLowest
             },
         ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isSelected) 4.dp else 1.dp,
+        ),
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = categoryEmojiForKey(category.iconKey),
-                style = MaterialTheme.typography.headlineSmall,
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (isSelected) Color.White.copy(alpha = 0.25f)
+                        else MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = categoryEmojiForKey(category.iconKey),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = category.name,
                 style = MaterialTheme.typography.labelMedium,
-                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = if (isSelected) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
             )
         }
     }
