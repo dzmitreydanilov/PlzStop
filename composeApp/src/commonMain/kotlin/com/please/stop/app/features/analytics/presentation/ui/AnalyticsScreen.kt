@@ -1,8 +1,5 @@
 package com.please.stop.app.features.analytics.presentation.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,13 +30,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.himanshoe.charty.bar.BarChart
-import com.himanshoe.charty.bar.model.BarData
-import com.himanshoe.charty.pie.PieChart
-import com.himanshoe.charty.pie.model.PieChartData
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.columnSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.pie.PieChart
+import com.patrykandpatrick.vico.compose.pie.PieChartHost
+import com.patrykandpatrick.vico.compose.pie.PieSize
+import com.patrykandpatrick.vico.compose.pie.data.PieChartModelProducer
+import com.patrykandpatrick.vico.compose.pie.data.pieSeries
+import com.patrykandpatrick.vico.compose.pie.rememberPieChart
 import com.please.stop.app.features.analytics.presentation.AnalyticsState
 import com.please.stop.app.features.analytics.presentation.AnalyticsStateHolder
-import com.please.stop.app.features.analytics.presentation.LegendItem
+import com.please.stop.app.features.analytics.presentation.SpendingSlice
 import com.please.stop.app.theme.LocalAppColors
 import com.please.stop.app.uicomponents.animation.FadeSlideIn
 import com.please.stop.app.uicomponents.animation.rememberShimmerOffset
@@ -57,6 +63,19 @@ fun AnalyticsScreen() {
     val state by stateHolder.state.collectAsStateWithLifecycle()
 
     val appColors = LocalAppColors.current
+    val pieModelProducer = remember { PieChartModelProducer() }
+    val columnModelProducer = remember { CartesianChartModelProducer() }
+
+    val contentState = state as? AnalyticsState.Content
+    LaunchedEffect(contentState?.spendingSlices) {
+        val slices = contentState?.spendingSlices ?: return@LaunchedEffect
+        pieModelProducer.runTransaction {
+            pieSeries { series(slices.map { it.amount }) }
+        }
+        columnModelProducer.runTransaction {
+            columnSeries { series(slices.map { it.amount }) }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -90,7 +109,11 @@ fun AnalyticsScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         when (val s = state) {
-            is AnalyticsState.Content -> DashboardContent(state = s)
+            is AnalyticsState.Content -> DashboardContent(
+                state = s,
+                pieModelProducer = pieModelProducer,
+                columnModelProducer = columnModelProducer,
+            )
             else -> {
                 Box(
                     modifier = Modifier
@@ -112,7 +135,11 @@ fun AnalyticsScreen() {
 }
 
 @Composable
-private fun DashboardContent(state: AnalyticsState.Content) {
+private fun DashboardContent(
+    state: AnalyticsState.Content,
+    pieModelProducer: PieChartModelProducer,
+    columnModelProducer: CartesianChartModelProducer,
+) {
     val shimmerOffset = rememberShimmerOffset()
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -145,13 +172,13 @@ private fun DashboardContent(state: AnalyticsState.Content) {
             }
         }
 
-        if (state.hasAnyExpenses && state.pieChartData.isNotEmpty()) {
+        if (state.hasAnyExpenses && state.spendingSlices.isNotEmpty()) {
             Spacer(modifier = Modifier.height(20.dp))
 
             FadeSlideIn(delayMillis = 250) {
                 SpendingOverviewCard(
-                    pieChartData = state.pieChartData,
-                    legend = state.legend,
+                    slices = state.spendingSlices,
+                    pieModelProducer = pieModelProducer,
                     shimmerOffset = shimmerOffset,
                 )
             }
@@ -159,7 +186,7 @@ private fun DashboardContent(state: AnalyticsState.Content) {
             Spacer(modifier = Modifier.height(20.dp))
 
             FadeSlideIn(delayMillis = 400) {
-                CategoryBreakdownCard(barChartData = state.barChartData)
+                CategoryBreakdownCard(columnModelProducer = columnModelProducer)
             }
         }
 
@@ -175,8 +202,8 @@ private fun DashboardContent(state: AnalyticsState.Content) {
 
 @Composable
 private fun SpendingOverviewCard(
-    pieChartData: ImmutableList<PieChartData>,
-    legend: ImmutableList<LegendItem>,
+    slices: ImmutableList<SpendingSlice>,
+    pieModelProducer: PieChartModelProducer,
     shimmerOffset: Float,
 ) {
     Card(
@@ -197,25 +224,28 @@ private fun SpendingOverviewCard(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            val pieFraction = animateChartFraction(pieChartData)
-
-            PieChart(
-                data = {
-                    pieChartData.map { it.copy(value = it.value * pieFraction) }
-                },
+            PieChartHost(
+                chart = rememberPieChart(
+                    sliceProvider = PieChart.SliceProvider.series(
+                        slices.map { slice ->
+                            PieChart.Slice(fill = Fill(slice.color))
+                        },
+                    ),
+                    innerSize = PieSize.Inner.fixed(80.dp),
+                ),
+                modelProducer = pieModelProducer,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp),
-                isDonutChart = true,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            legend.forEach { item ->
+            slices.forEach { slice ->
                 LegendRow(
-                    color = item.color,
-                    name = item.name,
-                    value = item.value,
+                    color = slice.color,
+                    name = slice.name,
+                    value = slice.formattedAmount,
                 )
             }
         }
@@ -223,7 +253,7 @@ private fun SpendingOverviewCard(
 }
 
 @Composable
-private fun CategoryBreakdownCard(barChartData: ImmutableList<BarData>) {
+private fun CategoryBreakdownCard(columnModelProducer: CartesianChartModelProducer) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -239,37 +269,19 @@ private fun CategoryBreakdownCard(barChartData: ImmutableList<BarData>) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            val barFraction = animateChartFraction(barChartData)
-
-            BarChart(
-                data = {
-                    barChartData.map { it.copy(yValue = it.yValue * barFraction) }
-                },
+            CartesianChartHost(
+                chart = rememberCartesianChart(
+                    rememberColumnCartesianLayer(),
+                    startAxis = VerticalAxis.rememberStart(),
+                    bottomAxis = HorizontalAxis.rememberBottom(),
+                ),
+                modelProducer = columnModelProducer,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp),
             )
         }
     }
-}
-
-private const val MIN_CHART_FRACTION = 0.01f
-
-@Composable
-private fun animateChartFraction(key: Any): Float {
-    var fraction = remember { mutableFloatStateOf(MIN_CHART_FRACTION) }
-
-    LaunchedEffect(key) {
-        val animatable = Animatable(MIN_CHART_FRACTION)
-        animatable.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
-        ) {
-            fraction.value = value
-        }
-    }
-
-    return fraction.value
 }
 
 @Composable
