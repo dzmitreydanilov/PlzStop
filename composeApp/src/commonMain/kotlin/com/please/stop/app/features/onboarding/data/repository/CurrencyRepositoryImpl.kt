@@ -71,7 +71,6 @@ private data class CurrencyDto(
     val symbol: String,
     val name: String,
     val decimalPlaces: Int,
-    @SerialName("popular") val isPopular: Boolean,
 )
 
 private fun CurrencyDto.toDomain() = Currency(
@@ -79,5 +78,4 @@ private fun CurrencyDto.toDomain() = Currency(
     symbol = symbol,
     name = name,
     decimalPlaces = decimalPlaces,
-    isPopular = isPopular,
 )

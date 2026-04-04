@@ -69,7 +69,6 @@ internal fun HttpClientConfig<*>.configureTimeOut(configuration: HttpClientDataC
 }
 
 internal fun HttpClientConfig<*>.configureDefaultRequest(
-    deviceIdReader: DeviceIdReader,
     port: Int? = null
 ) {
     defaultRequest {
@@ -80,16 +79,6 @@ internal fun HttpClientConfig<*>.configureDefaultRequest(
             }
         }
     }
-
-    install(
-        createClientPlugin("DeviceIdHeader") {
-            onRequest { request, _ ->
-                deviceIdReader.get()?.let { id ->
-                    request.headers.append(HeaderKey.DEVICE_ID.value, id)
-                }
-            }
-        }
-    )
 }
 
 internal fun HttpClientConfig<*>.bearerAuth(tokenStorage: ITokensStorage) {

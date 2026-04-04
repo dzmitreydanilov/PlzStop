@@ -12,11 +12,13 @@ import com.please.stop.app.features.onboarding.domain.repository.CurrencyReposit
 import com.please.stop.app.features.onboarding.domain.repository.OnboardingRepository
 import com.please.stop.app.features.onboarding.domain.repository.SubcategoryRepository
 import com.please.stop.app.features.onboarding.domain.usecase.CompleteOnboardingUseCase
+import com.please.stop.app.features.onboarding.domain.usecase.DetectDeviceCurrencyUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.LoadOnboardingDataUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.ObserveOnboardingCompletedUseCase
 import com.please.stop.app.features.onboarding.presentation.OnboardingState
 import com.please.stop.app.features.onboarding.presentation.OnboardingStateHolder
 import com.please.stop.app.presentation.RootStateHolder
+import com.please.stop.app.uicomponents.sheets.CurrencyPickerViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -62,6 +64,12 @@ val onboardingModule = module {
         )
     }
     factory {
+        DetectDeviceCurrencyUseCase(
+            currencyRepository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+    factory {
         CompleteOnboardingUseCase(
             repository = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
@@ -69,9 +77,16 @@ val onboardingModule = module {
     }
     factory { ObserveOnboardingCompletedUseCase(repository = get()) }
 
+    viewModel {
+        CurrencyPickerViewModel(
+            currencyRepository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
     viewModel { params ->
         OnboardingStateHolder(
             loadOnboardingDataUseCase = get(),
+            detectDeviceCurrencyUseCase = get(),
             completeOnboardingUseCase = get(),
             stateSaver = StateSaverImpl(
                 savedStateHandle = params.get(),

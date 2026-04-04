@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,16 +28,12 @@ import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.ic_backspace
 import plzstop.composeapp.generated.resources.ic_check
-import plzstop.composeapp.generated.resources.ic_schedule
+import plzstop.composeapp.generated.resources.ic_calendar
 
-private val BUTTON_SPACING = 6.dp
+private val BUTTON_SPACING = 8.dp
 private val CORNER_RADIUS = 12.dp
 private val SAVE_BUTTON_STROKE_WIDTH = 2.dp
-private const val LEFT_COLUMNS_WEIGHT = 4f
-private const val SAVE_BUTTON_ASPECT_RATIO = 0.5f
 private const val SAVING_INDICATOR_HEIGHT_FRACTION = 0.3f
-
-// Removed hardcoded glass colors — using theme tokens via LocalAppColors
 
 @Suppress("MagicNumber")
 @Composable
@@ -78,54 +76,65 @@ internal fun NumericKeyboard(
                 modifier = Modifier.weight(1f).aspectRatio(1f),
             ) {
                 Icon(
-                    imageVector = vectorResource(Res.drawable.ic_schedule),
+                    imageVector = vectorResource(Res.drawable.ic_calendar),
                     contentDescription = null,
                 )
             }
         }
-        // Rows 3–4: Save/= spans right column across both rows
+        // Rows 3–4: 5 equal-width columns, save/= spans both rows in the 5th column
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(BUTTON_SPACING),
         ) {
-            // Left 4 columns: rows 3 and 4 stacked
+            // Column 1: -  +
             Column(
-                modifier = Modifier.weight(LEFT_COLUMNS_WEIGHT),
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(BUTTON_SPACING),
             ) {
-                // Row 3: -  1  2  3
-                KeyboardRow {
-                    OperatorButton("-", KeyboardOperator.SUBTRACT, onKey, Modifier.weight(1f).aspectRatio(1f))
-                    DigitButton(1, onKey, Modifier.weight(1f).aspectRatio(1f))
-                    DigitButton(2, onKey, Modifier.weight(1f).aspectRatio(1f))
-                    DigitButton(3, onKey, Modifier.weight(1f).aspectRatio(1f))
-                }
-                // Row 4: +  ¤  0  ,
-                KeyboardRow {
-                    OperatorButton("+", KeyboardOperator.ADD, onKey, Modifier.weight(1f).aspectRatio(1f))
-                    KeyButton(
-                        onClick = { onKey(NumericKey.CurrencySymbol) },
-                        modifier = Modifier.weight(1f).aspectRatio(1f),
-                        enabled = false,
-                    ) {
-                        Text(currencySymbol, style = MaterialTheme.typography.titleMedium)
-                    }
-                    DigitButton(0, onKey, Modifier.weight(1f).aspectRatio(1f))
-                    KeyButton(
-                        onClick = { onKey(NumericKey.Decimal) },
-                        modifier = Modifier.weight(1f).aspectRatio(1f),
-                    ) {
-                        Text(",", style = MaterialTheme.typography.titleMedium)
-                    }
+                OperatorButton("-", KeyboardOperator.SUBTRACT, onKey, Modifier.aspectRatio(1f))
+                OperatorButton("+", KeyboardOperator.ADD, onKey, Modifier.aspectRatio(1f))
+            }
+            // Column 2: 1  ¤
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(BUTTON_SPACING),
+            ) {
+                DigitButton(1, onKey, Modifier.aspectRatio(1f))
+                KeyButton(
+                    onClick = { onKey(NumericKey.CurrencySymbol) },
+                    modifier = Modifier.aspectRatio(1f),
+                ) {
+                    Text(currencySymbol, style = MaterialTheme.typography.titleMedium)
                 }
             }
-            // Right column: Save/= spanning 2 rows
+            // Column 3: 2  0
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(BUTTON_SPACING),
+            ) {
+                DigitButton(2, onKey, Modifier.aspectRatio(1f))
+                DigitButton(0, onKey, Modifier.aspectRatio(1f))
+            }
+            // Column 4: 3  ,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(BUTTON_SPACING),
+            ) {
+                DigitButton(3, onKey, Modifier.aspectRatio(1f))
+                KeyButton(
+                    onClick = { onKey(NumericKey.Decimal) },
+                    modifier = Modifier.aspectRatio(1f),
+                ) {
+                    Text(",", style = MaterialTheme.typography.titleLarge)
+                }
+            }
+            // Column 5: Save/= spanning both rows
             SaveEqualsButton(
                 isInExpressionMode = isInExpressionMode,
                 isSaving = isSaving,
                 isSaveEnabled = isSaveEnabled,
                 onClick = { onKey(NumericKey.Equals) },
-                modifier = Modifier.weight(1f).aspectRatio(SAVE_BUTTON_ASPECT_RATIO),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
             )
         }
     }
@@ -155,7 +164,7 @@ private fun DigitButton(
     ) {
         Text(
             digit.toString(),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineMedium,
         )
     }
 }
@@ -173,7 +182,7 @@ private fun OperatorButton(
     ) {
         Text(
             symbol,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -215,7 +224,7 @@ private fun SaveEqualsButton(
                 strokeWidth = SAVE_BUTTON_STROKE_WIDTH,
                 color = MaterialTheme.colorScheme.onTertiary,
             )
-            isInExpressionMode -> Text("=", style = MaterialTheme.typography.headlineSmall)
+            isInExpressionMode -> Text("=", style = MaterialTheme.typography.headlineMedium)
             else -> Icon(
                 imageVector = vectorResource(Res.drawable.ic_check),
                 contentDescription = null,

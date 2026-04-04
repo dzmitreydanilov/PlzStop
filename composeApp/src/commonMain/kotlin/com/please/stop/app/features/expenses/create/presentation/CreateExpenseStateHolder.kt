@@ -1,6 +1,7 @@
 package com.please.stop.app.features.expenses.create.presentation
 
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
+import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
@@ -13,10 +14,12 @@ class CreateExpenseStateHolder(
     observeFormDataUseCase: ObserveAddExpenseFormDataUseCase,
     saveExpenseUseCase: SaveExpenseUseCase,
     analyzeReceiptUseCase: AnalyzeReceiptUseCase,
+    fetchExchangeRateUseCase: FetchExchangeRateUseCase,
 ) : BaseExpenseStateHolder(
     observeFormDataUseCase = observeFormDataUseCase,
     saveExpenseUseCase = saveExpenseUseCase,
     analyzeReceiptUseCase = analyzeReceiptUseCase,
+    fetchExchangeRateUseCase = fetchExchangeRateUseCase,
 ) {
     override val tag = "CreateExpenseStateHolder"
 

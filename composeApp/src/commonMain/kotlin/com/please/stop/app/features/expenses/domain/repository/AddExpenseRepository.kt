@@ -15,6 +15,9 @@ interface AddExpenseRepository {
         dateEpochMillis: Long,
         notes: String?,
         subcategoryId: Long? = null,
+        originalAmountMinorUnits: Long? = null,
+        originalCurrencyCode: String? = null,
+        conversionRate: Double? = null,
     ): Result<Long>
     suspend fun updateExpense(
         id: Long,
@@ -24,6 +27,9 @@ interface AddExpenseRepository {
         dateEpochMillis: Long,
         notes: String?,
         subcategoryId: Long? = null,
+        originalAmountMinorUnits: Long? = null,
+        originalCurrencyCode: String? = null,
+        conversionRate: Double? = null,
     ): Result<Unit>
     suspend fun deleteExpense(id: Long): Result<Unit>
 }

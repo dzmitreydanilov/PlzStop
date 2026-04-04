@@ -31,8 +31,18 @@ sealed interface AddExpenseEvent {
         }
     }
 
-    data object DismissReceiptError : AddExpenseEvent
     data object DismissDatePicker : AddExpenseEvent
+    data object DismissCurrencyPicker : AddExpenseEvent
+    data class ExpenseCurrencySelected(
+        val currency: com.please.stop.app.features.onboarding.domain.model.Currency,
+    ) : AddExpenseEvent
+
+    data object ShowRateOverrideSheet : AddExpenseEvent
+    data object DismissRateOverrideSheet : AddExpenseEvent
+    data class RateOverrideInputChanged(val input: String) : AddExpenseEvent
+    data object ConfirmRateOverride : AddExpenseEvent
+    data object ResetToFetchedRate : AddExpenseEvent
+    data object ToggleSaveInOriginalCurrency : AddExpenseEvent
 }
 
 enum class KeyboardOperator {

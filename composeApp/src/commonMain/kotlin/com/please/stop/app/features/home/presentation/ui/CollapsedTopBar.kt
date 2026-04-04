@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,12 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.please.stop.app.theme.AppTheme
 import com.please.stop.app.theme.LocalAppColors
 import com.please.stop.app.uicomponents.ANIMATION_DURATION_MS
 import com.please.stop.app.uicomponents.animation.rememberShimmerOffset
@@ -53,13 +55,59 @@ private const val CARD_LABEL_ALPHA = 0.7f
 private const val SHIMMER_ALPHA = 0.08f
 private const val AVATAR_BG_ALPHA = 0.25f
 
+internal val CollapsedBarHeight = 56.dp
+
 @Composable
-internal fun HomeHeader(
+internal fun CollapsingHomeHeader(
     displayName: String?,
     totalSpentFormatted: String,
     onProfileClicked: () -> Unit,
+    currentHeight: Dp,
+    modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val isCollapsed = currentHeight != Dp.Unspecified && currentHeight <= CollapsedBarHeight
+    val fraction = if (isCollapsed) 1f else 0f
+
+    val heightModifier = if (currentHeight == Dp.Unspecified) {
+        Modifier
+    } else {
+        Modifier.height(currentHeight)
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = CollapsedBarHeight)
+            .then(heightModifier)
+            .clipToBounds()
+            .background(appColors.headerGradient),
+    ) {
+        // Expanded content
+        ExpandedContent(
+            displayName = displayName,
+            totalSpentFormatted = totalSpentFormatted,
+            onProfileClicked = onProfileClicked,
+            modifier = Modifier.graphicsLayer { alpha = 1f - fraction },
+        )
+
+        // Collapsed bar pinned to top
+        CollapsedBar(
+            totalSpentFormatted = totalSpentFormatted,
+            displayName = displayName,
+            onProfileClicked = onProfileClicked,
+            modifier = Modifier.graphicsLayer { alpha = fraction },
+        )
+    }
+}
+
+@Composable
+private fun ExpandedContent(
+    displayName: String?,
+    totalSpentFormatted: String,
+    onProfileClicked: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val shimmerOffset = rememberShimmerOffset()
 
     val headerProgress = remember { Animatable(0f) }
@@ -80,10 +128,8 @@ internal fun HomeHeader(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.extraLarge)
-            .background(appColors.headerGradient)
             .padding(horizontal = 20.dp, vertical = 24.dp),
     ) {
         Row(
@@ -111,7 +157,7 @@ internal fun HomeHeader(
                     color = Color.White,
                 )
             }
-            InitialAvatar(name = displayName, onClick = onProfileClicked)
+            InitialAvatar(name = displayName, size = 44, onClick = onProfileClicked)
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -159,14 +205,42 @@ internal fun HomeHeader(
 }
 
 @Composable
+private fun CollapsedBar(
+    totalSpentFormatted: String,
+    displayName: String?,
+    onProfileClicked: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(CollapsedBarHeight)
+            .padding(horizontal = 20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = stringResource(Res.string.home_spent_this_month, totalSpentFormatted),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        InitialAvatar(name = displayName, size = 36, onClick = onProfileClicked)
+    }
+}
+
+@Composable
 private fun InitialAvatar(
     name: String?,
+    size: Int,
     onClick: () -> Unit,
 ) {
     val initial = name?.firstOrNull()?.uppercase() ?: "?"
     Box(
         modifier = Modifier
-            .size(44.dp)
+            .size(size.dp)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = AVATAR_BG_ALPHA))
             .clickable(onClick = onClick),
@@ -174,33 +248,10 @@ private fun InitialAvatar(
     ) {
         Text(
             text = initial,
-            style = MaterialTheme.typography.titleMedium,
+            style = if (size >= 44) MaterialTheme.typography.titleMedium
+            else MaterialTheme.typography.bodyMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun HomeHeaderPreview() {
-    AppTheme {
-        HomeHeader(
-            displayName = "Dmitry",
-            totalSpentFormatted = "$1,234.56",
-            onProfileClicked = {},
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun HomeHeaderNoNamePreview() {
-    AppTheme {
-        HomeHeader(
-            displayName = null,
-            totalSpentFormatted = "$0.00",
-            onProfileClicked = {},
         )
     }
 }

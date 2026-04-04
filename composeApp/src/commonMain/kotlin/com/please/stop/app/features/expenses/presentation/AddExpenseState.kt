@@ -6,6 +6,7 @@ import com.please.stop.app.core.serialization.ImmutableListSerializer
 import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Serializable
 
 @Stable
@@ -20,8 +21,16 @@ sealed interface AddExpenseState {
 
     @Serializable(with = ImmutableListSerializer::class)
     val subcategories: ImmutableList<SubcategoryUiModel>
+    val selectedCategory: CategoryUiModel?
+
+    @Serializable(with = ImmutableListSerializer::class)
+    val titleTags: ImmutableList<String>
+    val dateTime: LocalDateTime
+    val showCurrencyPicker: Boolean
     val status: FormStatus
     val receipt: ReceiptState
+    val conversion: ConversionState
+    val currencyConversionEnabled: Boolean
 
     @Serializable
     data object Loading : AddExpenseState {
@@ -30,8 +39,14 @@ sealed interface AddExpenseState {
         override val form: ExpenseFormInput = ExpenseFormInput(dateEpochMillis = 0L)
         override val categories: ImmutableList<CategoryUiModel> = persistentListOf()
         override val subcategories: ImmutableList<SubcategoryUiModel> = persistentListOf()
+        override val selectedCategory: CategoryUiModel? = null
+        override val titleTags: ImmutableList<String> = persistentListOf()
+        override val dateTime: LocalDateTime = LocalDateTime(2000, 1, 1, 0, 0)
+        override val showCurrencyPicker: Boolean = false
         override val status: FormStatus = FormStatus()
         override val receipt: ReceiptState = ReceiptState()
+        override val conversion: ConversionState = ConversionState()
+        override val currencyConversionEnabled: Boolean = false
     }
 
     @Serializable
@@ -43,13 +58,21 @@ sealed interface AddExpenseState {
         override val categories: ImmutableList<CategoryUiModel>,
         @Serializable(with = ImmutableListSerializer::class)
         override val subcategories: ImmutableList<SubcategoryUiModel>,
+        override val selectedCategory: CategoryUiModel? = null,
+        @Serializable(with = ImmutableListSerializer::class)
+        override val titleTags: ImmutableList<String> = persistentListOf(),
+        override val dateTime: LocalDateTime = LocalDateTime(2000, 1, 1, 0, 0),
+        override val showCurrencyPicker: Boolean = false,
         override val status: FormStatus,
         override val receipt: ReceiptState,
+        override val conversion: ConversionState = ConversionState(),
+        override val currencyConversionEnabled: Boolean = false,
     ) : AddExpenseState
 
     @Serializable
     data class Error(
         val errorType: ErrorType,
+        val receiptError: ReceiptError? = null,
         override val editContext: EditContext,
         override val currency: CurrencyConfig,
         override val form: ExpenseFormInput,
@@ -57,8 +80,15 @@ sealed interface AddExpenseState {
         override val categories: ImmutableList<CategoryUiModel>,
         @Serializable(with = ImmutableListSerializer::class)
         override val subcategories: ImmutableList<SubcategoryUiModel>,
+        override val selectedCategory: CategoryUiModel? = null,
+        @Serializable(with = ImmutableListSerializer::class)
+        override val titleTags: ImmutableList<String> = persistentListOf(),
+        override val dateTime: LocalDateTime = LocalDateTime(2000, 1, 1, 0, 0),
+        override val showCurrencyPicker: Boolean = false,
         override val status: FormStatus,
         override val receipt: ReceiptState,
+        override val conversion: ConversionState = ConversionState(),
+        override val currencyConversionEnabled: Boolean = false,
     ) : AddExpenseState
 }
 
@@ -73,9 +103,11 @@ data class EditContext(
 @Stable
 @Serializable
 data class CurrencyConfig(
+    val code: String = "",
     val symbol: String,
     val decimalPlaces: Int,
 )
+
 
 @Stable
 @Serializable
@@ -105,7 +137,6 @@ data class FormStatus(
 @Serializable
 data class ReceiptState(
     val isAnalyzing: Boolean = false,
-    val error: ReceiptError? = null,
 )
 
 @Stable
@@ -123,4 +154,20 @@ data class SubcategoryUiModel(
     val parentCategoryId: Long,
     val name: String,
     val iconKey: String,
+)
+
+@Stable
+@Serializable
+data class ConversionState(
+    val isLoading: Boolean = false,
+    val rate: Double? = null,
+    val fetchedRate: Double? = null,
+    val isManualOverride: Boolean = false,
+    val showRateEditSheet: Boolean = false,
+    val rateEditInput: String = "",
+    val convertedAmountMinorUnits: Long? = null,
+    val defaultCurrencyCode: String = "",
+    val defaultCurrencySymbol: String = "",
+    val saveInOriginalCurrency: Boolean = false,
+    val hasFetchError: Boolean = false,
 )

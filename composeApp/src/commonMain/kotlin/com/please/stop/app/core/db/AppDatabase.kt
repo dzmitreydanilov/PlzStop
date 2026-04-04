@@ -23,7 +23,7 @@ import com.please.stop.app.core.db.entity.UserProfileEntity
         ExpenseEntity::class,
         SubcategoryEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -105,6 +105,20 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_expense_subcategoryId` ON `expense` (`subcategoryId`)"
+                )
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "ALTER TABLE `expense` ADD COLUMN `originalAmountMinorUnits` INTEGER DEFAULT NULL"
+                )
+                connection.execSQL(
+                    "ALTER TABLE `expense` ADD COLUMN `originalCurrencyCode` TEXT DEFAULT NULL"
+                )
+                connection.execSQL(
+                    "ALTER TABLE `expense` ADD COLUMN `conversionRate` REAL DEFAULT NULL"
                 )
             }
         }

@@ -54,8 +54,9 @@ class AddExpenseRepositoryImpl(
         return combine(
             categoryDao.observeAll(),
             subcategoriesFlow,
-        ) { categories, subcategories ->
-            buildFormData(categories, subcategories)
+            featureFlags.observeCurrencyConversionEnabled(),
+        ) { categories, subcategories, conversionEnabled ->
+            buildFormData(categories, subcategories, conversionEnabled)
         }.flowOn(ioDispatcher)
     }
 
@@ -69,17 +70,20 @@ class AddExpenseRepositoryImpl(
         buildFormData(
             categories = categoryDao.observeAll().first(),
             subcategories = subcategories,
+            currencyConversionEnabled = featureFlags.currencyConversionEnabled(),
         )
     }
 
     private suspend fun buildFormData(
         categories: List<CategoryEntity>,
         subcategories: List<SubcategoryEntity>,
+        currencyConversionEnabled: Boolean,
     ): AddExpenseFormData {
         val profile = userProfileDao.get()
         val currency = resolveCurrency(profile?.currencyCode)
 
         return AddExpenseFormData(
+            currencyCode = currency?.code ?: "",
             currencySymbol = currency?.symbol ?: "$",
             decimalPlaces = currency?.decimalPlaces ?: 2,
             categories = categories.map { entity ->
@@ -90,6 +94,7 @@ class AddExpenseRepositoryImpl(
                 )
             },
             subcategories = subcategories.map { it.toDomain() },
+            currencyConversionEnabled = currencyConversionEnabled,
         )
     }
 
@@ -103,6 +108,9 @@ class AddExpenseRepositoryImpl(
                 dateEpochMillis = entity.dateEpochMillis,
                 notes = entity.notes,
                 subcategoryId = entity.subcategoryId,
+                originalAmountMinorUnits = entity.originalAmountMinorUnits,
+                originalCurrencyCode = entity.originalCurrencyCode,
+                conversionRate = entity.conversionRate,
             )
         }
     }
@@ -115,6 +123,9 @@ class AddExpenseRepositoryImpl(
         dateEpochMillis: Long,
         notes: String?,
         subcategoryId: Long?,
+        originalAmountMinorUnits: Long?,
+        originalCurrencyCode: String?,
+        conversionRate: Double?,
     ): Result<Long> = runCatching {
         expenseDao.insert(
             ExpenseEntity(
@@ -125,6 +136,9 @@ class AddExpenseRepositoryImpl(
                 notes = notes?.takeIf { it.isNotBlank() },
                 createdAtEpochMillis = nowMillis(),
                 subcategoryId = subcategoryId,
+                originalAmountMinorUnits = originalAmountMinorUnits,
+                originalCurrencyCode = originalCurrencyCode,
+                conversionRate = conversionRate,
             )
         )
     }
@@ -137,6 +151,9 @@ class AddExpenseRepositoryImpl(
         dateEpochMillis: Long,
         notes: String?,
         subcategoryId: Long?,
+        originalAmountMinorUnits: Long?,
+        originalCurrencyCode: String?,
+        conversionRate: Double?,
     ): Result<Unit> = runCatching {
         val existing = expenseDao.getById(id) ?: return Result.failure(
             IllegalStateException("Expense with id=$id not found")
@@ -149,6 +166,9 @@ class AddExpenseRepositoryImpl(
                 dateEpochMillis = dateEpochMillis,
                 notes = notes?.takeIf { it.isNotBlank() },
                 subcategoryId = subcategoryId,
+                originalAmountMinorUnits = originalAmountMinorUnits,
+                originalCurrencyCode = originalCurrencyCode,
+                conversionRate = conversionRate,
             )
         )
     }

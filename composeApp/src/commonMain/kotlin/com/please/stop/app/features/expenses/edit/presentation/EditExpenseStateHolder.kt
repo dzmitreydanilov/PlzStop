@@ -3,12 +3,14 @@ package com.please.stop.app.features.expenses.edit.presentation
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.features.expenses.domain.model.ExpenseDetail
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
+import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
 import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
 import com.please.stop.app.features.expenses.edit.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
+import com.please.stop.app.features.expenses.presentation.ConversionState
 import com.please.stop.app.features.expenses.presentation.EditContext
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
 import com.please.stop.app.features.expenses.presentation.ExpenseResult
@@ -25,10 +27,12 @@ class EditExpenseStateHolder(
     saveExpenseUseCase: SaveExpenseUseCase,
     private val deleteExpenseUseCase: DeleteExpenseUseCase,
     analyzeReceiptUseCase: AnalyzeReceiptUseCase,
+    fetchExchangeRateUseCase: FetchExchangeRateUseCase,
 ) : BaseExpenseStateHolder(
     observeFormDataUseCase = observeFormDataUseCase,
     saveExpenseUseCase = saveExpenseUseCase,
     analyzeReceiptUseCase = analyzeReceiptUseCase,
+    fetchExchangeRateUseCase = fetchExchangeRateUseCase,
 ) {
     override val tag = "EditExpenseStateHolder"
 
@@ -96,20 +100,44 @@ class EditExpenseStateHolder(
         expense: ExpenseDetail,
     ): AddExpenseState {
         val content = previous.asContent() ?: return previous
+
+        val hasConversion = expense.originalCurrencyCode != null &&
+            expense.conversionRate != null &&
+            expense.originalAmountMinorUnits != null
+
+        val amountToDisplay = if (hasConversion) {
+            expense.originalAmountMinorUnits
+        } else {
+            expense.amountMinorUnits
+        }
+
         val loadedForm = content.form.copy(
-            amountInput = keyboardCalculator.formatFromMinorUnits(expense.amountMinorUnits),
+            amountInput = keyboardCalculator.formatFromMinorUnits(amountToDisplay),
             title = expense.title,
             selectedCategoryId = expense.categoryId,
             selectedSubcategoryId = expense.subcategoryId,
             dateEpochMillis = expense.dateEpochMillis,
             notes = expense.notes.orEmpty(),
         )
+
+        val conversionState = if (hasConversion) {
+            content.conversion.copy(
+                rate = expense.conversionRate,
+                fetchedRate = expense.conversionRate,
+                isManualOverride = true,
+                convertedAmountMinorUnits = expense.amountMinorUnits,
+            )
+        } else {
+            content.conversion
+        }
+
         return content.copy(
             editContext = content.editContext.copy(
                 existingExpenseId = expense.id,
                 initialForm = loadedForm,
             ),
             form = loadedForm,
+            conversion = conversionState,
         )
     }
 }

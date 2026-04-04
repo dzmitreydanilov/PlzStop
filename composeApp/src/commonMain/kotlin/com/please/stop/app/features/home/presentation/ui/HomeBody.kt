@@ -2,11 +2,8 @@ package com.please.stop.app.features.home.presentation.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -42,22 +39,10 @@ internal fun HomeBody(
     LazyVerticalGrid(
         columns = GridCells.Fixed(columnCount),
         modifier = modifier.padding(horizontal = 8.dp),
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            HomeHeader(
-                displayName = state.displayName,
-                totalSpentFormatted = state.totalSpentFormatted.orEmpty(),
-                onProfileClicked = { onEvent(HomeEvent.ProfileClicked) },
-            )
-        }
-
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
         itemsIndexed(
             items = state.categories,
             key = { _, it -> it.id },
@@ -79,6 +64,43 @@ private fun HomeBodyWithCategoriesPreview() {
         HomeCategoryUiModel(1, "Food", "ic_food", "$120.50", true),
         HomeCategoryUiModel(2, "Transport", "ic_transport", "$45.00", true),
         HomeCategoryUiModel(3, "Entertainment", "ic_entertainment", "$0.00", false),
+        HomeCategoryUiModel(4, "Shopping", "ic_food", "$89.00", true),
+        HomeCategoryUiModel(5, "Health", "ic_food", "$35.00", true),
+        HomeCategoryUiModel(6, "Education", "ic_food", "$50.00", true),
+        HomeCategoryUiModel(7, "Bills", "ic_food", "$200.00", true),
+        HomeCategoryUiModel(8, "Groceries", "ic_food", "$150.00", true),
+        HomeCategoryUiModel(9, "Coffee", "ic_food", "$22.50", true),
+        HomeCategoryUiModel(10, "Gym", "ic_food", "$40.00", true),
+        HomeCategoryUiModel(11, "Clothing", "ic_food", "$75.00", true),
+        HomeCategoryUiModel(12, "Pets", "ic_food", "$30.00", true),
+        HomeCategoryUiModel(13, "Gifts", "ic_food", "$60.00", true),
+        HomeCategoryUiModel(14, "Travel", "ic_food", "$300.00", true),
+        HomeCategoryUiModel(15, "Rent", "ic_food", "$1200.00", true),
+        HomeCategoryUiModel(16, "Insurance", "ic_food", "$180.00", true),
+        HomeCategoryUiModel(17, "Savings", "ic_food", "$500.00", true),
+        HomeCategoryUiModel(18, "Dining Out", "ic_food", "$95.00", true),
+        HomeCategoryUiModel(19, "Streaming", "ic_food", "$15.00", true),
+        HomeCategoryUiModel(20, "Phone", "ic_food", "$55.00", true),
+        HomeCategoryUiModel(21, "Internet", "ic_food", "$60.00", true),
+        HomeCategoryUiModel(22, "Gas", "ic_food", "$70.00", true),
+        HomeCategoryUiModel(23, "Parking", "ic_food", "$25.00", true),
+        HomeCategoryUiModel(24, "Taxi", "ic_food", "$40.00", true),
+        HomeCategoryUiModel(25, "Books", "ic_food", "$18.00", true),
+        HomeCategoryUiModel(26, "Music", "ic_food", "$10.00", true),
+        HomeCategoryUiModel(27, "Games", "ic_food", "$30.00", true),
+        HomeCategoryUiModel(28, "Hobbies", "ic_food", "$45.00", true),
+        HomeCategoryUiModel(29, "Charity", "ic_food", "$20.00", true),
+        HomeCategoryUiModel(30, "Laundry", "ic_food", "$12.00", true),
+        HomeCategoryUiModel(31, "Haircut", "ic_food", "$35.00", true),
+        HomeCategoryUiModel(32, "Dentist", "ic_food", "$100.00", true),
+        HomeCategoryUiModel(33, "Vitamins", "ic_food", "$25.00", true),
+        HomeCategoryUiModel(34, "Electronics", "ic_food", "$200.00", true),
+        HomeCategoryUiModel(35, "Furniture", "ic_food", "$0.00", false),
+        HomeCategoryUiModel(36, "Tools", "ic_food", "$0.00", false),
+        HomeCategoryUiModel(37, "Garden", "ic_food", "$15.00", true),
+        HomeCategoryUiModel(38, "Kids", "ic_food", "$80.00", true),
+        HomeCategoryUiModel(39, "Snacks", "ic_food", "$8.00", true),
+        HomeCategoryUiModel(40, "Alcohol", "ic_food", "$45.00", true),
     )
     AppTheme {
         HomeBody(

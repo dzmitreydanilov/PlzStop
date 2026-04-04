@@ -1,8 +1,11 @@
 package com.please.stop.app.features.expenses.domain.usecase
 
+import com.please.stop.app.core.models.domain.ErrorResult
+import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.features.expenses.data.remote.ReceiptAnalysisException
 import com.please.stop.app.features.expenses.domain.model.ReceiptData
 import com.please.stop.app.features.expenses.domain.model.ReceiptError
+import com.please.stop.app.features.expenses.domain.model.toErrorType
 import com.please.stop.app.features.expenses.domain.repository.AddExpenseRepository
 import com.please.stop.app.features.expenses.domain.repository.ReceiptRepository
 import com.please.stop.app.network.ApplicationException
@@ -19,7 +22,11 @@ class AnalyzeReceiptUseCase(
     suspend operator fun invoke(imageBytes: ByteArray): DomainResult =
         withContext(ioDispatcher) {
             val formData = addExpenseRepository.getFormData().getOrElse {
-                return@withContext Result.Failure(ReceiptError.SERVICE_UNAVAILABLE)
+                val error = ReceiptError.SERVICE_UNAVAILABLE
+                return@withContext Result.Failure(
+                    errorType = error.toErrorType(),
+                    receiptError = error,
+                )
             }
 
             val result = receiptRepository.analyzeReceipt(
@@ -31,13 +38,22 @@ class AnalyzeReceiptUseCase(
 
             result.fold(
                 onSuccess = { Result.Success(it) },
-                onFailure = { Result.Failure(it.toReceiptError()) },
+                onFailure = {
+                    val error = it.toReceiptError()
+                    Result.Failure(
+                        errorType = error.toErrorType(),
+                        receiptError = error,
+                    )
+                },
             )
         }
 
     sealed interface Result : DomainResult {
         data class Success(val data: ReceiptData) : Result
-        data class Failure(val receiptError: ReceiptError) : Result
+        data class Failure(
+            override val errorType: ErrorType,
+            val receiptError: ReceiptError,
+        ) : Result, ErrorResult
     }
 }
 
