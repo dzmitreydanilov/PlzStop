@@ -4,7 +4,7 @@ import com.please.stop.app.core.ApplicationBuildSettings
 import com.please.stop.app.core.buildSettings.AppBuildSettingsProvider
 import com.please.stop.app.core.db.AppDatabaseFactory
 import com.please.stop.app.core.db.PassphraseProvider
-import com.please.stop.app.features.addexpense.scanner.DocumentScanner
+import com.please.stop.app.features.expenses.scanner.DocumentScanner
 import org.koin.core.module.Module
 import org.koin.dsl.module
 

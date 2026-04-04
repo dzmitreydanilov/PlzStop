@@ -8,5 +8,6 @@ enum class DatePattern(val pattern: String) {
     YYYY_MM_DD("yyyy-MM-dd"),
     MMMM_DD("MMMM dd"),
     DD_MMMM("dd MMMM"),
-    D_MMM_EEEE("d MMM, EEEE")
+    D_MMM_EEEE("d MMM, EEEE"),
+    EEEE_MMM_DD("EEEE, MMM dd")
 }

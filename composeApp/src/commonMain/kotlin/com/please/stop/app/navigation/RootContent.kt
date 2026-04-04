@@ -35,8 +35,8 @@ import com.please.stop.app.navigation.routes.OnboardingRoute
 import com.please.stop.app.navigation.routes.CreateExpenseRoute
 import com.please.stop.app.navigation.routes.EditExpenseRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
-import com.please.stop.app.features.addexpense.presentation.ui.CreateExpenseScreen
-import com.please.stop.app.features.addexpense.presentation.ui.EditExpenseScreen
+import com.please.stop.app.features.expenses.presentation.ui.CreateExpenseScreen
+import com.please.stop.app.features.expenses.presentation.ui.EditExpenseScreen
 import com.please.stop.app.features.onboarding.presentation.ui.OnboardingScreen
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic

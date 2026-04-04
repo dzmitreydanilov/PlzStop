@@ -57,16 +57,12 @@ internal fun CategoryTile(
         progress.animateTo(1f, tween(ANIMATION_DURATION_MS, easing = FastOutSlowInEasing))
     }
 
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
-
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = surfaceColor.copy(alpha = progress.value),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (progress.value == 1f) 2.dp else 0.dp,
-        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.graphicsLayer {
             translationY = (1f - progress.value) * SLIDE_OFFSET_PX
@@ -108,7 +104,7 @@ internal fun CategoryTile(
             Text(
                 text = category.spentFormatted,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (category.hasSpending) MaterialTheme.colorScheme.secondary
+                color = if (category.hasSpending) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (category.hasSpending) FontWeight.Medium else FontWeight.Normal,
                 textAlign = TextAlign.Center,
