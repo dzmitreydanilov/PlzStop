@@ -1,7 +1,6 @@
 package com.please.stop.app.network
 
 import com.please.stop.app.core.ITokensStorage
-import com.please.stop.app.core.buildSettings.DeviceIdReader
 import io.ktor.client.HttpClient
 
 private fun createHttpClient(
@@ -19,35 +18,18 @@ private fun createHttpClient(
 
 fun createAuthFreeHttpClient(
     config: HttpClientDataConfig,
-    deviceIdReader: DeviceIdReader
 ): HttpClient {
     return createHttpClient(config).config {
-        configureDefaultRequest(deviceIdReader = deviceIdReader)
+        configureDefaultRequest()
     }
 }
-
-fun createChatHttpClientWithBearerToken(
-    config: HttpClientDataConfig,
-    tokenStorage: ITokensStorage,
-    deviceIdReader: DeviceIdReader
-): HttpClient {
-    return createHttpClient(config).config {
-        bearerAuth(tokenStorage)
-        configureDefaultRequest(
-            deviceIdReader = deviceIdReader,
-            port = config.port
-        )
-    }
-}
-
 
 fun createHttpClientWithBearerToken(
     config: HttpClientDataConfig,
     tokenStorage: ITokensStorage,
-    deviceIdReader: DeviceIdReader
 ): HttpClient {
     return createHttpClient(config).config {
         bearerAuth(tokenStorage)
-        configureDefaultRequest(deviceIdReader = deviceIdReader)
+        configureDefaultRequest()
     }
 }

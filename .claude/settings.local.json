@@ -94,7 +94,8 @@
       "Bash(mkdir -p /tmp/vico31)",
       "Read(//tmp/**)",
       "Bash(npm run:*)",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "Bash(xargs -I{} sh -c \"jar tf \"\"{}\"\" 2>/dev/null | grep -qi backhandler && echo \"\"{}\"\"\")"
     ]
   },
   "enabledMcpjsonServers": [

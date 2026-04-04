@@ -25,10 +25,14 @@
     <string name="onboarding_something_went_wrong">Something went wrong</string>
     <string name="onboarding_app_name">PlzStop</string>
     <string name="onboarding_tagline">Track your spending.\nStop overspending.</string>
-    <string name="onboarding_name_label">Your name (optional)</string>
+    <string name="onboarding_name_label">Your name</string>
+    <string name="onboarding_name_hint">You can always change this later</string>
+    <string name="onboarding_whats_your_name">What\'s your name?</string>
     <string name="onboarding_choose_currency">Choose your currency</string>
+    <string name="onboarding_select_currency">Select currency</string>
+    <string name="onboarding_detecting_currency">Detecting your currency…</string>
     <string name="onboarding_search_currencies">Search currencies...</string>
-    <string name="onboarding_popular">Popular</string>
+    <string name="onboarding_suggested">Suggested</string>
     <string name="onboarding_all_currencies">All currencies</string>
     <string name="onboarding_selected">Selected</string>
     <string name="onboarding_set_budget">Set your monthly budget</string>
@@ -72,6 +76,16 @@
     <string name="add_expense_select_category">Select category</string>
     <string name="add_expense_what_was_it_for">What was it for?</string>
     <string name="add_expense_notes_label">Notes</string>
+    <string name="conversion_fetching_rate">Fetching rate…</string>
+    <string name="conversion_rate_format">1 %1$s = %2$s %3$s</string>
+    <string name="conversion_converted_amount">≈ %1$s %2$s</string>
+    <string name="conversion_rate_unavailable">Rate unavailable — tap to enter manually</string>
+    <string name="conversion_custom_rate">Custom rate</string>
+    <string name="conversion_save_in">Saving in %1$s · tap to switch</string>
+    <string name="conversion_rate_override_title">Enter exchange rate</string>
+    <string name="conversion_rate_override_hint">1 %1$s = ? %2$s</string>
+    <string name="conversion_rate_override_apply">Apply</string>
+    <string name="conversion_reset_rate">Reset</string>
 
     <string name="onboarding_home_coming_soon">Home — coming soon</string>
     <string name="onboarding_analytics_coming_soon">Analytics — coming soon</string>

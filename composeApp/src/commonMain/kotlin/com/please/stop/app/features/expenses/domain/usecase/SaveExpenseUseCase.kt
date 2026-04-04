@@ -21,6 +21,9 @@ class SaveExpenseUseCase(
         dateEpochMillis: Long,
         notes: String?,
         subcategoryId: Long? = null,
+        originalAmountMinorUnits: Long? = null,
+        originalCurrencyCode: String? = null,
+        conversionRate: Double? = null,
     ): DomainResult = withContext(ioDispatcher) {
         val result = if (existingId != null) {
             repository.updateExpense(
@@ -31,6 +34,9 @@ class SaveExpenseUseCase(
                 dateEpochMillis = dateEpochMillis,
                 notes = notes,
                 subcategoryId = subcategoryId,
+                originalAmountMinorUnits = originalAmountMinorUnits,
+                originalCurrencyCode = originalCurrencyCode,
+                conversionRate = conversionRate,
             )
         } else {
             repository.saveExpense(
@@ -40,6 +46,9 @@ class SaveExpenseUseCase(
                 dateEpochMillis = dateEpochMillis,
                 notes = notes,
                 subcategoryId = subcategoryId,
+                originalAmountMinorUnits = originalAmountMinorUnits,
+                originalCurrencyCode = originalCurrencyCode,
+                conversionRate = conversionRate,
             ).map { }
         }
         result.fold(

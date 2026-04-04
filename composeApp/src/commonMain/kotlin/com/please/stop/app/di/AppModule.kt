@@ -12,6 +12,7 @@ internal val appModule = module {
     includes(
         platformModule,
         dispatchersModule,
+        networkModule,
         databaseModule,
         featureFlagsModule,
         onboardingModule,

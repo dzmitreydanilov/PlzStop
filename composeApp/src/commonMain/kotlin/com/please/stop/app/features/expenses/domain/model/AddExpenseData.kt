@@ -1,10 +1,12 @@
 package com.please.stop.app.features.expenses.domain.model
 
 data class AddExpenseFormData(
+    val currencyCode: String,
     val currencySymbol: String,
     val decimalPlaces: Int,
     val categories: List<ExpenseCategory>,
     val subcategories: List<ExpenseSubcategory> = emptyList(),
+    val currencyConversionEnabled: Boolean = false,
 )
 
 data class ExpenseCategory(
@@ -28,4 +30,7 @@ data class ExpenseDetail(
     val dateEpochMillis: Long,
     val notes: String?,
     val subcategoryId: Long? = null,
+    val originalAmountMinorUnits: Long? = null,
+    val originalCurrencyCode: String? = null,
+    val conversionRate: Double? = null,
 )

@@ -33,4 +33,7 @@ data class ExpenseEntity(
     val createdAtEpochMillis: Long,
     val isDeleted: Boolean = false,
     val subcategoryId: Long? = null,
+    val originalAmountMinorUnits: Long? = null,
+    val originalCurrencyCode: String? = null,
+    val conversionRate: Double? = null,
 )

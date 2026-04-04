@@ -9,7 +9,6 @@ data class Currency(
     val symbol: String,
     val name: String,
     val decimalPlaces: Int,
-    val isPopular: Boolean,
 ) {
     fun toCoreCurrency(): CoreCurrency = CoreCurrency(
         code = code,

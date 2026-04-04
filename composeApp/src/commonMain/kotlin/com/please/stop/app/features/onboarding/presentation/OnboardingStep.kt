@@ -4,21 +4,26 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class OnboardingStep {
-    WELCOME, CURRENCY, BUDGET;
+    WELCOME, CURRENCY, NAME, BUDGET;
 
     fun next(): OnboardingStep = when (this) {
         WELCOME -> CURRENCY
-        CURRENCY -> BUDGET
+        CURRENCY -> NAME
+        NAME -> BUDGET
         BUDGET -> BUDGET
     }
 
     /**
      * Returns the previous step, or null if back navigation is not allowed.
-     * Welcome is shown only once — no returning to it.
+     * WELCOME is shown only once — no returning to it from CURRENCY.
      */
     fun previous(): OnboardingStep? = when (this) {
         WELCOME -> null
         CURRENCY -> null
-        BUDGET -> CURRENCY
+        NAME -> CURRENCY
+        BUDGET -> NAME
     }
+
+    val isSkippable: Boolean
+        get() = this == NAME || this == BUDGET
 }

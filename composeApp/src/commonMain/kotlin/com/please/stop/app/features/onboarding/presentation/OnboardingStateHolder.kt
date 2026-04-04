@@ -6,20 +6,21 @@ import com.please.stop.app.core.StateSaver
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.domain.Result
 import com.please.stop.app.core.models.presentation.Navigation
-import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.domain.model.OnboardingData
 import com.please.stop.app.features.onboarding.domain.usecase.CompleteOnboardingUseCase
+import com.please.stop.app.features.onboarding.domain.usecase.DetectDeviceCurrencyUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.LoadOnboardingDataUseCase
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlin.math.pow
+import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 
 class OnboardingStateHolder(
     private val loadOnboardingDataUseCase: LoadOnboardingDataUseCase,
+    private val detectDeviceCurrencyUseCase: DetectDeviceCurrencyUseCase,
     private val completeOnboardingUseCase: CompleteOnboardingUseCase,
     private val stateSaver: StateSaver<OnboardingState>,
 ) : StateHolder<OnboardingState, OnboardingEvent>() {
@@ -48,11 +49,13 @@ class OnboardingStateHolder(
     }
 
     override fun resolveEventResult(event: OnboardingEvent): Flow<Result> = when (event) {
-        is OnboardingEvent.DisplayNameChanged ->
-            flowOf(OnboardingResult.DisplayNameUpdated(event.name.take(OnboardingState.MAX_DISPLAY_NAME_LENGTH)))
-
-        is OnboardingEvent.CurrencySearchQueryChanged ->
-            flowOf(OnboardingResult.CurrencySearchUpdated(event.query))
+        is OnboardingEvent.DisplayNameChanged -> {
+            flowOf(
+                OnboardingResult.DisplayNameUpdated(
+                    event.name.take(OnboardingState.MAX_DISPLAY_NAME_LENGTH)
+                )
+            )
+        }
 
         is OnboardingEvent.CurrencySelected ->
             flowOf(OnboardingResult.CurrencyChosen(event.currency))
@@ -61,19 +64,45 @@ class OnboardingStateHolder(
             flowOf(OnboardingResult.BudgetInputUpdated(event.input))
 
         OnboardingEvent.NextTapped -> handleNext()
+        OnboardingEvent.SkipTapped -> handleSkip()
         OnboardingEvent.BackTapped -> handleBack()
+        OnboardingEvent.SelectCurrencyTapped -> flowOf(OnboardingResult.CurrencySheetOpened)
+        OnboardingEvent.CurrencySheetDismissed -> flowOf(OnboardingResult.CurrencySheetClosed)
         OnboardingEvent.ErrorDismissed -> flowOf(OnboardingResult.ErrorCleared)
         OnboardingEvent.RetryLoadCurrencies -> flow { emit(loadOnboardingDataUseCase()) }
     }
 
     private fun handleNext(): Flow<Result> = flow {
         val state = currentContent() ?: return@flow
-        if (state.currentStep == OnboardingStep.BUDGET) {
-            emit(OnboardingResult.Saving)
-            emit(completeOnboardingUseCase(state.toOnboardingData()))
-        } else {
-            emit(OnboardingResult.StepAdvanced)
+        when {
+            state.currentStep == OnboardingStep.BUDGET -> {
+                emitSaveAndComplete(state)
+            }
+
+            state.currentStep == OnboardingStep.WELCOME && !state.hasAttemptedCurrencyDetection -> {
+                emit(OnboardingResult.StepAdvanced)
+                emit(OnboardingResult.CurrencyDetectionStarted)
+                emit(detectDeviceCurrencyUseCase())
+            }
+
+            else -> emit(OnboardingResult.StepAdvanced)
         }
+    }
+
+    private fun handleSkip(): Flow<Result> = flow {
+        val state = currentContent() ?: return@flow
+        if (state.currentStep.isSkippable) {
+            if (state.currentStep == OnboardingStep.BUDGET) {
+                emitSaveAndComplete(state)
+            } else {
+                emit(OnboardingResult.StepSkipped)
+            }
+        }
+    }
+
+    private suspend fun FlowCollector<Result>.emitSaveAndComplete(state: OnboardingState.Content) {
+        emit(OnboardingResult.Saving)
+        emit(completeOnboardingUseCase(state.toOnboardingData()))
     }
 
     private fun handleBack(): Flow<Result> = flow {
@@ -87,13 +116,31 @@ class OnboardingStateHolder(
         return when (result) {
             is LoadOnboardingDataUseCase.Result.Success -> {
                 val content = (previous as? OnboardingState.Content) ?: OnboardingState.Content()
-                content.copy(
-                    currencies = result.currencies,
-                ).recalculate()
+                content.recalculate()
             }
 
             is LoadOnboardingDataUseCase.Result.Failure -> reduceError(previous, result.errorType)
             is CompleteOnboardingUseCase.Result.Failure -> reduceError(previous, result.errorType)
+
+            is DetectDeviceCurrencyUseCase.Result.Detected -> {
+                val content = previous as? OnboardingState.Content ?: return previous
+                content.copy(
+                    selectedCurrency = result.currency,
+                    currencySymbol = result.currency.symbol,
+                    decimalPlaces = result.currency.decimalPlaces,
+                    deviceCurrencyCode = result.currency.code,
+                    isDetectingCurrency = false,
+                    hasAttemptedCurrencyDetection = true,
+                ).recalculate()
+            }
+
+            is DetectDeviceCurrencyUseCase.Result.NotFound -> {
+                val content = previous as? OnboardingState.Content ?: return previous
+                content.copy(
+                    isDetectingCurrency = false,
+                    hasAttemptedCurrencyDetection = true,
+                )
+            }
 
             else -> {
                 val content = previous as? OnboardingState.Content
@@ -107,29 +154,36 @@ class OnboardingStateHolder(
         when (result) {
             is OnboardingResult.DisplayNameUpdated -> prev.copy(displayName = result.name)
 
-            is OnboardingResult.CurrencySearchUpdated ->
-                prev.copy(currencySearchQuery = result.query).recalculate()
-
             is OnboardingResult.CurrencyChosen ->
                 prev.copy(
                     selectedCurrency = result.currency,
                     currencySymbol = result.currency.symbol,
                     decimalPlaces = result.currency.decimalPlaces,
+                    showCurrencySheet = false,
                 ).recalculate()
 
             is OnboardingResult.BudgetInputUpdated ->
                 prev.copy(monthlyBudgetInput = result.input).recalculate()
 
             is OnboardingResult.StepAdvanced ->
-                prev.copy(
-                    currentStep = prev.currentStep.next(),
-                    currencySearchQuery = "",
-                ).recalculate()
+                prev.copy(currentStep = prev.currentStep.next()).recalculate()
+
+            is OnboardingResult.StepSkipped ->
+                prev.copy(currentStep = prev.currentStep.next()).recalculate()
 
             is OnboardingResult.StepBacked -> {
                 val previousStep = prev.currentStep.previous() ?: return prev
                 prev.copy(currentStep = previousStep).recalculate()
             }
+
+            is OnboardingResult.CurrencySheetOpened ->
+                prev.copy(showCurrencySheet = true)
+
+            is OnboardingResult.CurrencySheetClosed ->
+                prev.copy(showCurrencySheet = false)
+
+            is OnboardingResult.CurrencyDetectionStarted ->
+                prev.copy(isDetectingCurrency = true)
 
             is OnboardingResult.Saving -> prev.copy(isSaving = true, error = null)
             is OnboardingResult.ErrorCleared -> prev.copy(error = null)
@@ -169,17 +223,13 @@ class OnboardingStateHolder(
     }
 
     private fun OnboardingState.Content.recalculate(): OnboardingState.Content {
-        val filtered = filterCurrencies(currencies, currencySearchQuery)
-        return copy(
-            popularCurrencies = filtered.filter { it.isPopular }.toImmutableList(),
-            otherCurrencies = filtered.filter { !it.isPopular }.toImmutableList(),
-            isNextEnabled = computeIsNextEnabled(),
-        )
+        return copy(isNextEnabled = computeIsNextEnabled())
     }
 
     private fun OnboardingState.Content.computeIsNextEnabled(): Boolean = when (currentStep) {
         OnboardingStep.WELCOME -> true
         OnboardingStep.CURRENCY -> selectedCurrency != null
+        OnboardingStep.NAME -> true
         OnboardingStep.BUDGET -> isBudgetValid(monthlyBudgetInput)
     }
 
@@ -190,8 +240,8 @@ class OnboardingStateHolder(
 
     private fun OnboardingState.Content.toOnboardingData(): OnboardingData {
         val currency = checkNotNull(selectedCurrency) { "Currency must be selected" }
-        val budgetValue = monthlyBudgetInput.toDouble()
-        val minorUnits = (budgetValue * 10.0.pow(currency.decimalPlaces)).toLong()
+        val budgetValue = monthlyBudgetInput.toDoubleOrNull() ?: 0.0
+        val minorUnits = (budgetValue * 10.0.pow(currency.decimalPlaces)).roundToLong()
 
         return OnboardingData(
             displayName = displayName.takeIf { it.isNotBlank() },
@@ -202,19 +252,6 @@ class OnboardingStateHolder(
 
     companion object {
         internal const val STATE_KEY = "onboarding_state"
-
-        private fun filterCurrencies(
-            currencies: ImmutableList<Currency>,
-            query: String,
-        ): ImmutableList<Currency> {
-            if (query.isBlank()) return currencies
-            val q = query.trim().lowercase()
-            return currencies.filter {
-                it.code.lowercase().contains(q) ||
-                    it.name.lowercase().contains(q) ||
-                    it.symbol.lowercase().contains(q)
-            }.toImmutableList()
-        }
 
         private fun isBudgetValid(input: String): Boolean {
             if (input.isBlank()) return false

@@ -22,6 +22,14 @@ internal class FeatureFlagsImpl(
         return getFlag(FeatureFlagKey.SUBCATEGORIES_ENABLED)
     }
 
+    override fun observeCurrencyConversionEnabled(): Flow<Boolean> {
+        return observeFlag(FeatureFlagKey.CURRENCY_CONVERSION_ENABLED)
+    }
+
+    override suspend fun currencyConversionEnabled(): Boolean {
+        return getFlag(FeatureFlagKey.CURRENCY_CONVERSION_ENABLED)
+    }
+
     override suspend fun refresh() {
         val updated = FeatureFlagKey.entries.associate { key ->
             key.remoteConfigKey to remoteConfigDataSource.fetchBoolean(key.remoteConfigKey)

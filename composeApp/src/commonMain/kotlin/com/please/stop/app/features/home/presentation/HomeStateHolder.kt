@@ -102,6 +102,46 @@ class HomeStateHolder(
     }
 
     private fun HomeData.toContent(previous: HomeState): HomeState.Content {
+        val realCategories = categories.map { item ->
+            HomeCategoryUiModel(
+                id = item.id,
+                name = item.name,
+                iconKey = item.iconKey,
+                spentFormatted = formatCurrencyAmount(
+                    item.spentMinorUnits,
+                    currency.symbol,
+                    decimalPlaces,
+                ),
+                hasSpending = item.spentMinorUnits > 0,
+            )
+        }
+
+        // TODO: Remove – fake categories for scroll testing
+        val testNames = listOf(
+            "Shopping", "Health", "Education", "Bills", "Groceries",
+            "Coffee", "Gym", "Clothing", "Pets", "Gifts",
+            "Travel", "Rent", "Insurance", "Savings", "Dining Out",
+            "Streaming", "Phone", "Internet", "Gas", "Parking",
+            "Taxi", "Books", "Music", "Games", "Hobbies",
+            "Charity", "Laundry", "Haircut", "Dentist", "Vitamins",
+            "Electronics", "Furniture", "Tools", "Garden", "Kids",
+            "Snacks", "Alcohol", "Flowers", "Car Wash", "Stationery",
+        )
+        val maxRealId = realCategories.maxOfOrNull { it.id } ?: 0L
+        val fakeCategories = testNames.mapIndexed { index, name ->
+            HomeCategoryUiModel(
+                id = maxRealId + index + 1,
+                name = name,
+                iconKey = "ic_other",
+                spentFormatted = formatCurrencyAmount(
+                    (index * 1500L + 500L),
+                    currency.symbol,
+                    decimalPlaces,
+                ),
+                hasSpending = index % 5 != 0,
+            )
+        }
+
         return HomeState.Content(
             displayName = displayName.orEmpty(),
             currency = currency,
@@ -110,19 +150,7 @@ class HomeStateHolder(
                 currency.symbol,
                 decimalPlaces,
             ),
-            categories = categories.map { item ->
-                HomeCategoryUiModel(
-                    id = item.id,
-                    name = item.name,
-                    iconKey = item.iconKey,
-                    spentFormatted = formatCurrencyAmount(
-                        item.spentMinorUnits,
-                        currency.symbol,
-                        decimalPlaces,
-                    ),
-                    hasSpending = item.spentMinorUnits > 0,
-                )
-            }.toImmutableList(),
+            categories = (realCategories + fakeCategories).toImmutableList(),
             hasAnyExpenses = totalSpentMinorUnits > 0,
             showAddCategorySheet = previous.showAddCategorySheet,
         )

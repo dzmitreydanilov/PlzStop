@@ -17,5 +17,9 @@ interface FeatureFlags {
 
     suspend fun subcategoriesEnabled(): Boolean
 
+    fun observeCurrencyConversionEnabled(): Flow<Boolean>
+
+    suspend fun currencyConversionEnabled(): Boolean
+
     suspend fun refresh()
 }

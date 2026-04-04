@@ -37,7 +37,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -53,7 +52,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,18 +66,21 @@ import com.please.stop.app.features.expenses.presentation.AddExpenseEvent
 import com.please.stop.app.features.expenses.presentation.AddExpenseNavigation
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
+import com.please.stop.app.features.expenses.presentation.ConversionState
+import com.please.stop.app.features.expenses.presentation.NumericKey
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.MAX_NOTES_LENGTH
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.MAX_TITLE_LENGTH
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.NOTES_COUNTER_THRESHOLD
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.TITLE_COUNTER_THRESHOLD
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
+import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
 import com.please.stop.app.features.expenses.scanner.rememberDocumentScanner
 import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
-import com.please.stop.app.uicomponents.tagsForCategoryKey
+import com.please.stop.app.uicomponents.sheets.CurrencyPickerSheet
 import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.format
 import com.please.stop.app.utils.date.localDateTimeFromMillis
@@ -85,7 +89,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import plzstop.composeapp.generated.resources.Res
@@ -116,6 +119,18 @@ import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_keyboard_arrow_right
 import plzstop.composeapp.generated.resources.ic_scan
 import plzstop.composeapp.generated.resources.ic_trash_bin
+import plzstop.composeapp.generated.resources.conversion_converted_amount
+import plzstop.composeapp.generated.resources.conversion_custom_rate
+import plzstop.composeapp.generated.resources.conversion_fetching_rate
+import plzstop.composeapp.generated.resources.conversion_rate_format
+import plzstop.composeapp.generated.resources.conversion_rate_override_apply
+import plzstop.composeapp.generated.resources.conversion_rate_override_hint
+import plzstop.composeapp.generated.resources.conversion_rate_override_title
+import plzstop.composeapp.generated.resources.conversion_rate_unavailable
+import plzstop.composeapp.generated.resources.conversion_reset_rate
+import plzstop.composeapp.generated.resources.conversion_save_in
+import plzstop.composeapp.generated.resources.ic_currency_exchange
+import kotlin.math.pow
 import kotlin.time.ExperimentalTime
 
 private val AMOUNT_DISPLAY_HEIGHT = 64.dp
@@ -181,10 +196,20 @@ private fun ExpenseScreenContent(
 
 internal val AddExpenseState.asOverlay: ScreenOverlay?
     @Composable get() = when (this) {
-        is AddExpenseState.Error -> ScreenOverlay.Error(type = errorType)
-
+        is AddExpenseState.Error -> ScreenOverlay.Error(
+            type = errorType,
+            title = receiptError?.toOverlayMessage(),
+        )
         else -> null
     }
+
+@Composable
+private fun ReceiptError.toOverlayMessage(): String = when (this) {
+    ReceiptError.NOT_RECEIPT -> stringResource(Res.string.add_expense_receipt_not_receipt)
+    ReceiptError.UNREADABLE -> stringResource(Res.string.add_expense_receipt_unreadable)
+    ReceiptError.NO_NETWORK -> stringResource(Res.string.add_expense_receipt_no_network)
+    ReceiptError.SERVICE_UNAVAILABLE -> stringResource(Res.string.add_expense_receipt_service_unavailable)
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
 @Composable
@@ -202,13 +227,8 @@ private fun AddExpenseContent(
     val status = state.status
     val receipt = state.receipt
 
-    val selectedCategory = remember(state.categories, form.selectedCategoryId) {
-        state.categories.firstOrNull { it.id == form.selectedCategoryId }
-    }
-
-    val tags = remember(selectedCategory) {
-        selectedCategory?.let { tagsForCategoryKey(it.iconKey) } ?: emptyList()
-    }
+    val selectedCategory = state.selectedCategory
+    val tags = state.titleTags
 
     Scaffold(
         topBar = {
@@ -248,7 +268,6 @@ private fun AddExpenseContent(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            // Scrollable content area
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -256,8 +275,6 @@ private fun AddExpenseContent(
                     .padding(horizontal = 16.dp),
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
-
-                // Scan receipt
                 if (!editContext.isEditMode) {
                     ScanReceiptCard(
                         isAnalyzing = receipt.isAnalyzing,
@@ -272,16 +289,51 @@ private fun AddExpenseContent(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-
-                // Category chip
                 CategoryChip(
                     selectedCategory = selectedCategory,
                     onClick = { showCategorySheet = true },
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                val filteredSubcategories = remember(
+                    state.subcategories,
+                    form.selectedCategoryId,
+                ) {
+                    state.subcategories.filter { it.parentCategoryId == form.selectedCategoryId }
+                }
+                if (filteredSubcategories.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        filteredSubcategories.forEach { sub ->
+                            val isSelected = form.selectedSubcategoryId == sub.id
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    onEvent(
+                                        AddExpenseEvent.SubcategorySelected(
+                                            if (isSelected) null else sub.id,
+                                        ),
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = "${categoryEmojiForKey(sub.iconKey)} ${sub.name}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                ),
+                            )
+                        }
+                    }
+                }
 
-                // "What was it for?" — clickable header for notes
+                Spacer(modifier = Modifier.height(16.dp))
                 NotesSection(
                     title = form.title,
                     notes = form.notes,
@@ -289,8 +341,6 @@ private fun AddExpenseContent(
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Quick tags
                 if (tags.isNotEmpty()) {
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -315,7 +365,6 @@ private fun AddExpenseContent(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Date display
                 val dateTime = remember(form.dateEpochMillis) {
                     localDateTimeFromMillis(form.dateEpochMillis)
                 }
@@ -338,10 +387,13 @@ private fun AddExpenseContent(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Amount display + keyboard (fixed at bottom)
-            AmountDisplay(
-                displayExpression = form.amountDisplayExpression,
-                currencySymbol = state.currency.symbol,
+            AmountSection(
+                state = state,
+                form = form,
+                onCurrencyClick = { onEvent(AddExpenseEvent.KeyPressed(NumericKey.CurrencySymbol)) },
+                onEditRate = { onEvent(AddExpenseEvent.ShowRateOverrideSheet) },
+                onResetRate = { onEvent(AddExpenseEvent.ResetToFetchedRate) },
+                onToggleSaveInOriginal = { onEvent(AddExpenseEvent.ToggleSaveInOriginalCurrency) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -360,7 +412,6 @@ private fun AddExpenseContent(
         }
     }
 
-    // Category bottom sheet
     if (showCategorySheet) {
         ModalBottomSheet(
             onDismissRequest = { showCategorySheet = false },
@@ -376,8 +427,6 @@ private fun AddExpenseContent(
             )
         }
     }
-
-    // Notes bottom sheet
     if (showNotesSheet) {
         ModalBottomSheet(
             onDismissRequest = { showNotesSheet = false },
@@ -394,135 +443,157 @@ private fun AddExpenseContent(
     }
 
     if (status.showDatePicker) {
-        val nowMillis = remember { nowMillis() }
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = form.dateEpochMillis,
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    return utcTimeMillis <= nowMillis
-                }
-            },
-        )
-        DatePickerDialog(
-            onDismissRequest = { onEvent(AddExpenseEvent.DismissDatePicker) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let {
-                            onEvent(AddExpenseEvent.DateChanged(it))
-                        }
-                        onEvent(AddExpenseEvent.DismissDatePicker)
-                    },
-                ) {
-                    Text(stringResource(Res.string.add_expense_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onEvent(AddExpenseEvent.DismissDatePicker) }) {
-                    Text(stringResource(Res.string.add_expense_cancel))
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        DatePicker(form, onEvent)
     }
 
     if (status.showDiscardDialog) {
-        AlertDialog(
-            onDismissRequest = { onEvent(AddExpenseEvent.DismissDiscardDialog) },
-            title = { Text(stringResource(Res.string.add_expense_discard_title)) },
-            text = { Text(stringResource(Res.string.add_expense_discard_message)) },
-            confirmButton = {
-                TextButton(onClick = { onEvent(AddExpenseEvent.ConfirmDiscard) }) {
-                    Text(stringResource(Res.string.add_expense_discard))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onEvent(AddExpenseEvent.DismissDiscardDialog) }) {
-                    Text(stringResource(Res.string.add_expense_cancel))
-                }
-            },
-        )
+        DiscardDialog(onEvent)
     }
 
     if (status.showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { onEvent(AddExpenseEvent.DismissDeleteDialog) },
-            title = { Text(stringResource(Res.string.add_expense_delete_title)) },
-            text = { Text(stringResource(Res.string.add_expense_delete_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = { onEvent(AddExpenseEvent.ConfirmDelete) },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
-                ) {
-                    Text(stringResource(Res.string.add_expense_delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onEvent(AddExpenseEvent.DismissDeleteDialog) }) {
-                    Text(stringResource(Res.string.add_expense_cancel))
-                }
-            },
-        )
+        DeleteDialog(onEvent)
     }
 
     if (receipt.isAnalyzing) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(Res.string.add_expense_analyzing_receipt),
-                    color = MaterialTheme.colorScheme.inverseOnSurface,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-        }
+        AnalyzingInProgress()
     }
 
-    if (receipt.error != null) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            Snackbar(
-                modifier = Modifier.padding(16.dp),
-                action = {
-                    TextButton(onClick = { onEvent(AddExpenseEvent.DismissReceiptError) }) {
-                        Text(stringResource(Res.string.add_expense_confirm))
+    if (state.showCurrencyPicker) {
+        CurrencyPickerSheet(
+            selectedCurrencyCode = state.currency.code,
+            deviceCurrencyCode = null,
+            onCurrencySelected = { onEvent(AddExpenseEvent.ExpenseCurrencySelected(it)) },
+            onDismiss = { onEvent(AddExpenseEvent.DismissCurrencyPicker) },
+        )
+    }
+
+    if (state.conversion.showRateEditSheet) {
+        RateOverrideSheet(
+            input = state.conversion.rateEditInput,
+            fromCode = state.currency.code,
+            toCode = state.conversion.defaultCurrencyCode,
+            onInputChanged = { onEvent(AddExpenseEvent.RateOverrideInputChanged(it)) },
+            onConfirm = { onEvent(AddExpenseEvent.ConfirmRateOverride) },
+            onDismiss = { onEvent(AddExpenseEvent.DismissRateOverrideSheet) },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DatePicker(
+    form: ExpenseFormInput,
+    onEvent: (AddExpenseEvent) -> Unit
+) {
+    val nowMillis = remember { nowMillis() }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = form.dateEpochMillis,
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                return utcTimeMillis <= nowMillis
+            }
+        },
+    )
+    DatePickerDialog(
+        onDismissRequest = { onEvent(AddExpenseEvent.DismissDatePicker) },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        onEvent(AddExpenseEvent.DateChanged(it))
                     }
+                    onEvent(AddExpenseEvent.DismissDatePicker)
                 },
             ) {
-                Text(text = receipt.error.toMessage())
+                Text(stringResource(Res.string.add_expense_confirm))
             }
-        }
+        },
+        dismissButton = {
+            TextButton(onClick = { onEvent(AddExpenseEvent.DismissDatePicker) }) {
+                Text(stringResource(Res.string.add_expense_cancel))
+            }
+        },
+    ) {
+        DatePicker(state = datePickerState)
     }
 }
 
 @Composable
-private fun ReceiptError.toMessage(): String = when (this) {
-    ReceiptError.NOT_RECEIPT -> stringResource(Res.string.add_expense_receipt_not_receipt)
-    ReceiptError.UNREADABLE -> stringResource(Res.string.add_expense_receipt_unreadable)
-    ReceiptError.NO_NETWORK -> stringResource(Res.string.add_expense_receipt_no_network)
-    ReceiptError.SERVICE_UNAVAILABLE -> stringResource(Res.string.add_expense_receipt_service_unavailable)
+private fun DiscardDialog(onEvent: (AddExpenseEvent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onEvent(AddExpenseEvent.DismissDiscardDialog) },
+        title = { Text(stringResource(Res.string.add_expense_discard_title)) },
+        text = { Text(stringResource(Res.string.add_expense_discard_message)) },
+        confirmButton = {
+            TextButton(onClick = { onEvent(AddExpenseEvent.ConfirmDiscard) }) {
+                Text(stringResource(Res.string.add_expense_discard))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onEvent(AddExpenseEvent.DismissDiscardDialog) }) {
+                Text(stringResource(Res.string.add_expense_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun DeleteDialog(onEvent: (AddExpenseEvent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onEvent(AddExpenseEvent.DismissDeleteDialog) },
+        title = { Text(stringResource(Res.string.add_expense_delete_title)) },
+        text = { Text(stringResource(Res.string.add_expense_delete_message)) },
+        confirmButton = {
+            TextButton(
+                onClick = { onEvent(AddExpenseEvent.ConfirmDelete) },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+            ) {
+                Text(stringResource(Res.string.add_expense_delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onEvent(AddExpenseEvent.DismissDeleteDialog) }) {
+                Text(stringResource(Res.string.add_expense_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun AnalyzingInProgress() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(Res.string.add_expense_analyzing_receipt),
+                color = MaterialTheme.colorScheme.inverseOnSurface,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    }
 }
 
 @Suppress("ModifierHeightWithText")
 @Composable
-private fun AmountDisplay(
-    displayExpression: String,
-    currencySymbol: String,
+private fun AmountSection(
+    state: AddExpenseState,
+    form: ExpenseFormInput,
+    onCurrencyClick: () -> Unit,
+    onEditRate: () -> Unit,
+    onResetRate: () -> Unit,
+    onToggleSaveInOriginal: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isEmpty = displayExpression.isEmpty()
-    val displayText = if (isEmpty) "0 $currencySymbol" else displayExpression
+    val isEmpty = form.amountDisplayExpression.isEmpty()
+    val displayText = if (isEmpty) "0 ${state.currency.symbol}" else form.amountDisplayExpression
 
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isEmpty) 1f else 1.02f,
@@ -531,28 +602,198 @@ private fun AmountDisplay(
         ),
     )
 
-    Box(
-        modifier = modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .height(AMOUNT_DISPLAY_HEIGHT)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center,
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = displayText,
-            style = MaterialTheme.typography.displaySmall,
-            color = if (isEmpty) {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .height(AMOUNT_DISPLAY_HEIGHT),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = displayText,
+                style = MaterialTheme.typography.displaySmall,
+                color = if (isEmpty) {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            val isForeignCurrency = state.currencyConversionEnabled &&
+                state.currency.code != state.conversion.defaultCurrencyCode &&
+                state.currency.code.isNotEmpty() &&
+                state.conversion.defaultCurrencyCode.isNotEmpty()
+            if (isForeignCurrency) {
+                Spacer(modifier = Modifier.width(8.dp))
+                CurrencyChip(
+                    currencyCode = state.currency.code,
+                    conversion = state.conversion,
+                    onClick = onCurrencyClick,
+                )
+            }
+        }
+
+        ConversionInfo(
+            conversion = state.conversion,
+            selectedCurrencyCode = state.currency.code,
+            onEditRate = onEditRate,
+            onResetRate = onResetRate,
+            onToggleSaveInOriginal = onToggleSaveInOriginal,
         )
+    }
+}
+
+@Composable
+private fun CurrencyChip(
+    currencyCode: String,
+    conversion: ConversionState,
+    onClick: () -> Unit,
+) {
+    val isForeign = currencyCode != conversion.defaultCurrencyCode &&
+        currencyCode.isNotEmpty() &&
+        conversion.defaultCurrencyCode.isNotEmpty()
+
+    AssistChip(
+        onClick = onClick,
+        label = {
+            Text(
+                text = currencyCode,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        },
+        leadingIcon = if (isForeign) {
+            {
+                Icon(
+                    imageVector = vectorResource(Res.drawable.ic_currency_exchange),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        } else {
+            null
+        },
+        shape = RoundedCornerShape(20.dp),
+        colors = if (isForeign) {
+            AssistChipDefaults.assistChipColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                leadingIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        } else {
+            AssistChipDefaults.assistChipColors()
+        },
+    )
+}
+
+@Composable
+private fun ConversionInfo(
+    conversion: ConversionState,
+    selectedCurrencyCode: String,
+    onEditRate: () -> Unit,
+    onResetRate: () -> Unit,
+    onToggleSaveInOriginal: () -> Unit,
+) {
+    val isVisible = (conversion.isLoading || conversion.rate != null || conversion.hasFetchError) &&
+        selectedCurrencyCode != conversion.defaultCurrencyCode &&
+        selectedCurrencyCode.isNotEmpty() &&
+        conversion.defaultCurrencyCode.isNotEmpty()
+
+    if (!isVisible) return
+
+    when {
+        conversion.isLoading -> {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(12.dp),
+                    strokeWidth = 1.5.dp,
+                )
+                Text(
+                    text = stringResource(Res.string.conversion_fetching_rate),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        conversion.rate != null -> {
+            val rateFormatted = conversion.rate.toString()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(
+                        Res.string.conversion_rate_format,
+                        selectedCurrencyCode,
+                        rateFormatted,
+                        conversion.defaultCurrencyCode,
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable(onClick = onEditRate),
+                )
+                if (conversion.isManualOverride) {
+                    Text(
+                        text = stringResource(Res.string.conversion_custom_rate),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                    if (conversion.fetchedRate != null) {
+                        Text(
+                            text = stringResource(Res.string.conversion_reset_rate),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable(onClick = onResetRate),
+                        )
+                    }
+                }
+            }
+            if (conversion.convertedAmountMinorUnits != null) {
+                val convertedDisplay = formatMinorUnitsForDisplay(
+                    conversion.convertedAmountMinorUnits,
+                )
+                Text(
+                    text = stringResource(
+                        Res.string.conversion_converted_amount,
+                        convertedDisplay,
+                        conversion.defaultCurrencySymbol,
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            val saveCurrencyCode = if (conversion.saveInOriginalCurrency) {
+                selectedCurrencyCode
+            } else {
+                conversion.defaultCurrencyCode
+            }
+            Text(
+                text = stringResource(Res.string.conversion_save_in, saveCurrencyCode),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable(onClick = onToggleSaveInOriginal),
+            )
+        }
+        else -> {
+            Text(
+                text = stringResource(Res.string.conversion_rate_unavailable),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.clickable(onClick = onEditRate),
+            )
+        }
     }
 }
 
@@ -679,6 +920,11 @@ private fun CategoryChip(
         },
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+        border = null,
         elevation = AssistChipDefaults.assistChipElevation(elevation = 2.dp),
     )
 }
@@ -822,6 +1068,65 @@ private fun NotesInputSheet(
             modifier = Modifier.align(Alignment.End),
         ) {
             Text(stringResource(Res.string.add_expense_done))
+        }
+    }
+}
+
+private fun formatMinorUnitsForDisplay(minorUnits: Long, decimalPlaces: Int = 2): String {
+    val multiplier = 10.0.pow(decimalPlaces).toLong()
+    val intPart = minorUnits / multiplier
+    val fracPart = (minorUnits % multiplier).toString().padStart(decimalPlaces, '0')
+    return "$intPart.$fracPart"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RateOverrideSheet(
+    input: String,
+    fromCode: String,
+    toCode: String,
+    onInputChanged: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Text(
+                text = stringResource(Res.string.conversion_rate_override_title),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+            OutlinedTextField(
+                value = input,
+                onValueChange = onInputChanged,
+                label = {
+                    Text(
+                        stringResource(
+                            Res.string.conversion_rate_override_hint,
+                            fromCode,
+                            toCode,
+                        ),
+                    )
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(
+                onClick = onConfirm,
+                enabled = input.toDoubleOrNull()?.let { it > 0 } == true,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringResource(Res.string.conversion_rate_override_apply))
+            }
         }
     }
 }
