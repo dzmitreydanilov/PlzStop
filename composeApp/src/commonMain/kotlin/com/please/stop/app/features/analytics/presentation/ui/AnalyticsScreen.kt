@@ -57,6 +57,8 @@ import org.koin.compose.viewmodel.koinViewModel
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.analytics_tab
 
+private const val LEGEND_DOT_CORNER_PERCENT = 50
+
 @Composable
 fun AnalyticsScreen() {
     val stateHolder = koinViewModel<AnalyticsStateHolder>()
@@ -331,7 +333,7 @@ private fun LegendRow(color: Color, name: String, value: String) {
         Box(
             modifier = Modifier
                 .size(10.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(RoundedCornerShape(LEGEND_DOT_CORNER_PERCENT))
                 .background(color),
         )
         Spacer(modifier = Modifier.padding(start = 8.dp))

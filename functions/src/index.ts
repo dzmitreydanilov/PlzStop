@@ -1,5 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { VertexAI, GenerativeModel } from "@google-cloud/vertexai";
+import { checkRateLimit } from "./rateLimit";
+import { validateAndSanitize, Subcategory } from "./validation";
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || "";
 
@@ -20,17 +22,18 @@ function getModel(): GenerativeModel {
   return cachedModel;
 }
 
-const SYSTEM_PROMPT = `Extract data from receipt, invoice, or bill images. Accept any format and country. If the image is not a financial document, return status "unreadable".
+const SYSTEM_PROMPT = `Extract data from receipt, invoice, or bill images. Accept any format and country.
 
 Response JSON:
 {
-  "status": "success" | "partial" | "unreadable",
+  "status": "success" | "partial" | "not_receipt" | "unreadable",
   "data": {
     "merchantName": "string | null",
     "totalAmount": "number | null (decimal, e.g. 42.99)",
     "currency": "string | null (ISO 4217)",
     "date": "string | null (YYYY-MM-DD)",
-    "categoryId": "number | null"
+    "categoryId": "number | null",
+    "subcategoryId": "number | null"
   },
   "message": "string | null"
 }
@@ -39,22 +42,33 @@ Rules:
 - totalAmount: use the FINAL total (including tax/tips), not the subtotal.
 - currency: infer from the receipt's country or symbols if not printed.
 - categoryId: the user provides a list of expense categories with IDs. Analyze the merchant name and purchased items on the receipt to pick the best matching category ID. Only use IDs from the provided list. Return null if no category fits.
-- status: "success" if merchantName AND totalAmount extracted, "partial" if valid receipt but either is missing, "unreadable" if not a financial document.
+- subcategoryId: if subcategories are provided under a category, pick the best matching subcategory ID within the chosen category. Only use subcategory IDs listed under that specific category. Return null if no subcategory fits or if no subcategories are provided.
+- status:
+  - "success": merchantName AND totalAmount extracted.
+  - "partial": valid receipt/invoice/bill but merchantName or totalAmount is missing.
+  - "not_receipt": the image is NOT a financial document (e.g. selfie, screenshot, random photo).
+  - "unreadable": the image looks like a receipt but is too blurry, cropped, or damaged to extract data.
 - Return null for any uncertain or unreadable field.`;
 
-interface Category {
-  id: number;
-  name: string;
-}
+type ReceiptStatus = "success" | "partial" | "not_receipt" | "unreadable" | "error";
+
+const VALID_STATUSES: ReadonlySet<string> = new Set<ReceiptStatus>([
+  "success",
+  "partial",
+  "not_receipt",
+  "unreadable",
+  "error",
+]);
 
 interface ReceiptResponse {
-  status: "success" | "partial" | "unreadable";
+  status: ReceiptStatus;
   data: {
     merchantName: string | null;
     totalAmount: number | null;
     currency: string | null;
     date: string | null;
     categoryId: number | null;
+    subcategoryId: number | null;
   } | null;
   message: string | null;
 }
@@ -65,29 +79,34 @@ export const analyzeReceipt = onCall(
     region: "europe-west1",
     timeoutSeconds: 120,
     memory: "512MiB",
+    maxInstances: 10,
   },
   async (request) => {
-    const { imageBase64, categories } = request.data as {
-      imageBase64?: string;
-      categories?: Category[];
-    };
+    const clientIp = request.rawRequest.ip ?? "unknown";
+    checkRateLimit(clientIp);
 
-    if (!imageBase64 || typeof imageBase64 !== "string") {
-      throw new HttpsError("invalid-argument", "INVALID_REQUEST: Missing imageBase64");
-    }
+    const { imageBase64, categories, subcategories } =
+      validateAndSanitize(request.data);
 
-    if (!categories || !Array.isArray(categories) || categories.length === 0) {
-      throw new HttpsError("invalid-argument", "INVALID_REQUEST: Missing or empty categories");
-    }
-
-    // Check base64 decoded size (~5MB limit)
-    const estimatedBytes = (imageBase64.length * 3) / 4;
-    if (estimatedBytes > 5 * 1024 * 1024) {
-      throw new HttpsError("invalid-argument", "IMAGE_TOO_LARGE: Image exceeds 5MB limit");
+    const subcategoryMap = new Map<number, Subcategory[]>();
+    for (const sub of subcategories) {
+      const list = subcategoryMap.get(sub.parentCategoryId) ?? [];
+      list.push(sub);
+      subcategoryMap.set(sub.parentCategoryId, list);
     }
 
     const categoriesText = categories
-      .map((c) => `- ID: ${c.id}, Name: "${c.name}"`)
+      .map((c) => {
+        const subs = subcategoryMap.get(c.id);
+        const line = `- ID: ${c.id}, Name: "${c.name}"`;
+        if (subs && subs.length > 0) {
+          const subList = subs
+            .map((s) => `[ID: ${s.id} "${s.name}"]`)
+            .join(", ");
+          return `${line}\n  Subcategories: ${subList}`;
+        }
+        return line;
+      })
       .join("\n");
 
     const userPrompt = `Categories:\n${categoriesText}`;
@@ -117,9 +136,9 @@ export const analyzeReceipt = onCall(
 
       if (!responseText) {
         return {
-          status: "unreadable",
+          status: "error",
           data: null,
-          message: "Could not process the image.",
+          message: "Model returned an empty response.",
         } satisfies ReceiptResponse;
       }
 
@@ -136,24 +155,45 @@ export const analyzeReceipt = onCall(
           parsed = JSON.parse(cleaned);
         } catch {
           return {
-            status: "unreadable",
+            status: "error",
             data: null,
-            message: "Could not parse the receipt data.",
+            message: "Could not parse model response.",
           } satisfies ReceiptResponse;
         }
       }
 
-      // Validate and normalize the response
-      if (parsed.status === "unreadable") {
+      // Normalize status from model — it may return unexpected values
+      const normalizedStatus: ReceiptStatus =
+        typeof parsed.status === "string" && VALID_STATUSES.has(parsed.status)
+          ? (parsed.status as ReceiptStatus)
+          : "error";
+
+      if (normalizedStatus === "not_receipt") {
+        return {
+          status: "not_receipt",
+          data: null,
+          message: parsed.message ?? null,
+        } satisfies ReceiptResponse;
+      }
+
+      if (normalizedStatus === "unreadable") {
         return {
           status: "unreadable",
           data: null,
-          message: parsed.message || "Couldn't read this receipt.",
+          message: parsed.message ?? null,
+        } satisfies ReceiptResponse;
+      }
+
+      if (normalizedStatus === "error") {
+        return {
+          status: "error",
+          data: null,
+          message: parsed.message ?? "Unexpected model response.",
         } satisfies ReceiptResponse;
       }
 
       return {
-        status: parsed.status === "partial" ? "partial" : "success",
+        status: normalizedStatus === "partial" ? "partial" : "success",
         data: {
           merchantName: parsed.data?.merchantName ?? null,
           totalAmount:
@@ -165,6 +205,10 @@ export const analyzeReceipt = onCall(
           categoryId:
             typeof parsed.data?.categoryId === "number"
               ? parsed.data.categoryId
+              : null,
+          subcategoryId:
+            typeof parsed.data?.subcategoryId === "number"
+              ? parsed.data.subcategoryId
               : null,
         },
         message: parsed.message ?? null,

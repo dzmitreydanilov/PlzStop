@@ -50,7 +50,6 @@ private const val CARD_INITIAL_SCALE = 0.92f
 private const val HEADER_SLIDE_OFFSET_PX = 20
 private const val SUBTITLE_ALPHA = 0.8f
 private const val CARD_LABEL_ALPHA = 0.7f
-private const val CARD_CONTAINER_ALPHA = 0.18f
 private const val SHIMMER_ALPHA = 0.08f
 private const val AVATAR_BG_ALPHA = 0.25f
 
@@ -119,9 +118,10 @@ internal fun HomeHeader(
 
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = CARD_CONTAINER_ALPHA),
+                containerColor = Color.White.copy(alpha = 0.15f),
             ),
             shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier = Modifier
                 .graphicsLayer {
                     alpha = cardAlpha.value

@@ -11,11 +11,24 @@ struct ComposeView: UIViewControllerRepresentable {
 }
 
 struct ContentView: View {
+    @State private var isComposeReady = false
+
     var body: some View {
-        ComposeView()
-            .ignoresSafeArea()
+        ZStack {
+            ComposeView()
+                .ignoresSafeArea()
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            isComposeReady = true
+                        }
+                    }
+                }
+
+            if !isComposeReady {
+                SplashScreenView()
+                    .transition(.opacity)
+            }
+        }
     }
 }
-
-
-

@@ -1,8 +1,6 @@
 package com.please.stop.app.navigation.tabs
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,11 +37,15 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.theme.LocalAppColors
-import com.please.stop.app.uicomponents.animation.FadeSlideIn
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.settings_tab
+
+private const val HEADER_ANIMATION_DURATION_MS = 400
+private const val HEADER_INITIAL_OFFSET_PX = -20f
+private const val SECTION_ANIMATION_DURATION_MS = 400
+private const val SECTION_INITIAL_OFFSET_PX = -20f
 
 internal fun EntryProviderScope<NavKey>.settingsTabEntries() {
     entry<MainBottomTabs.Settings> {
@@ -56,13 +58,13 @@ private fun SettingsScreen() {
     val appColors = LocalAppColors.current
 
     val headerAlpha = remember { Animatable(0f) }
-    val headerOffset = remember { Animatable(-20f) }
+    val headerOffset = remember { Animatable(HEADER_INITIAL_OFFSET_PX) }
 
     LaunchedEffect(Unit) {
-        headerAlpha.animateTo(1f, tween(400))
+        headerAlpha.animateTo(1f, tween(HEADER_ANIMATION_DURATION_MS))
     }
     LaunchedEffect(Unit) {
-        headerOffset.animateTo(0f, tween(400))
+        headerOffset.animateTo(0f, tween(HEADER_ANIMATION_DURATION_MS))
     }
 
     Column(
@@ -148,7 +150,11 @@ private fun SettingsScreen() {
             AnimatedSettingsSection(title = "Preferences", delayMillis = 300) {
                 SettingsItem(emoji = "\uD83D\uDD14", title = "Notifications", subtitle = "Budget alerts and reminders")
                 SettingsItem(emoji = "\uD83C\uDF19", title = "Appearance", subtitle = "Dark mode and display settings")
-                SettingsItem(emoji = "\uD83D\uDCE4", title = "Export Data", subtitle = "Download your financial reports")
+                SettingsItem(
+                    emoji = "\uD83D\uDCE4",
+                    title = "Export Data",
+                    subtitle = "Download your financial reports"
+                )
             }
 
             AnimatedSettingsSection(title = "About", delayMillis = 450) {
@@ -169,15 +175,15 @@ private fun AnimatedSettingsSection(
     content: @Composable () -> Unit,
 ) {
     val alpha = remember { Animatable(0f) }
-    val offsetX = remember { Animatable(-20f) }
+    val offsetX = remember { Animatable(SECTION_INITIAL_OFFSET_PX) }
 
     LaunchedEffect(Unit) {
         delay(delayMillis.toLong())
-        alpha.animateTo(1f, tween(400))
+        alpha.animateTo(1f, tween(SECTION_ANIMATION_DURATION_MS))
     }
     LaunchedEffect(Unit) {
         delay(delayMillis.toLong())
-        offsetX.animateTo(0f, tween(400))
+        offsetX.animateTo(0f, tween(SECTION_ANIMATION_DURATION_MS))
     }
 
     Column(

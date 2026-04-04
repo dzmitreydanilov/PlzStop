@@ -23,14 +23,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Composable function to display a messenger box with customizable content and animations. This function uses a [com.please.stop.app.uicomponents.snackbar.core.SnackbarComponent]
+ * Composable function to display a messenger box with customizable content and animations.
+ * This function uses a [com.please.stop.app.uicomponents.snackbar.core.SnackbarComponent]
  * to manage the state and display of messages.
  *
- * @param component the [com.please.stop.app.uicomponents.snackbar.core.SnackbarComponent] responsible for managing and displaying messages.
+ * @param component the [com.please.stop.app.uicomponents.snackbar.core.SnackbarComponent]
+ *   responsible for managing and displaying messages.
  * @param snackbarContent the composable content for display message.
  * @param modifier the modifier to apply to the messenger box.
  * @param defaultAlignment fallback alignment when no message has been shown yet.
- *   Each message carries its own alignment via [com.please.stop.app.uicomponents.snackbar.core.SnackbarContent.alignment].
+ *   Each message carries its own alignment via
+ *   [com.please.stop.app.uicomponents.snackbar.core.SnackbarContent.alignment].
  * @param windowInsets the window insets to apply to the padding.
  * @param bottomPadding additional bottom padding between the snackbar and bottom edge (e.g., bottom bar).
  * @param onDismiss callback invoked when the snackbar disappears.
@@ -53,7 +56,8 @@ fun <T> SnackbarBox(
     val layoutDirection = LocalLayoutDirection.current
 
     val messageAlignment = when (val state = componentState) {
-        is com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden -> state.previousMessageContent?.alignment ?: defaultAlignment
+        is com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden ->
+            state.previousMessageContent?.alignment ?: defaultAlignment
         is com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Shown -> state.messageContent.alignment
     }
 
@@ -87,7 +91,8 @@ fun <T> SnackbarBox(
                 ),
             ) {
                 val message = when (val state = componentState) {
-                    is com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden -> state.previousMessageContent
+                    is com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden ->
+                        state.previousMessageContent
                     is com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Shown -> state.messageContent
                 }
                 val messageContent = message?.content

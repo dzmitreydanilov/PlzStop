@@ -17,6 +17,9 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
+import com.please.stop.app.features.expenses.presentation.ui.CreateExpenseScreen
+import com.please.stop.app.features.expenses.presentation.ui.EditExpenseScreen
+import com.please.stop.app.features.onboarding.presentation.ui.OnboardingScreen
 import com.please.stop.app.navigation.animation.LocalSharedTransitionScope
 import com.please.stop.app.navigation.animation.predictivePopTransitionSpec
 import com.please.stop.app.navigation.animation.slideInTransitionSpec
@@ -30,14 +33,11 @@ import com.please.stop.app.navigation.deeplink.DeepLinkResult
 import com.please.stop.app.navigation.deeplink.parseDeepLinkUri
 import com.please.stop.app.navigation.nav3.Nav3Host
 import com.please.stop.app.navigation.nav3.Router
-import com.please.stop.app.navigation.routes.MainBottomTabs
-import com.please.stop.app.navigation.routes.OnboardingRoute
 import com.please.stop.app.navigation.routes.CreateExpenseRoute
 import com.please.stop.app.navigation.routes.EditExpenseRoute
+import com.please.stop.app.navigation.routes.MainBottomTabs
+import com.please.stop.app.navigation.routes.OnboardingRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
-import com.please.stop.app.features.addexpense.presentation.ui.CreateExpenseScreen
-import com.please.stop.app.features.addexpense.presentation.ui.EditExpenseScreen
-import com.please.stop.app.features.onboarding.presentation.ui.OnboardingScreen
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 

@@ -14,8 +14,14 @@ import androidx.room.PrimaryKey
             childColumns = ["categoryId"],
             onDelete = ForeignKey.NO_ACTION,
         ),
+        ForeignKey(
+            entity = SubcategoryEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["subcategoryId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index("categoryId"), Index("dateEpochMillis")],
+    indices = [Index("categoryId"), Index("dateEpochMillis"), Index("subcategoryId")],
 )
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -26,4 +32,5 @@ data class ExpenseEntity(
     val notes: String?,
     val createdAtEpochMillis: Long,
     val isDeleted: Boolean = false,
+    val subcategoryId: Long? = null,
 )

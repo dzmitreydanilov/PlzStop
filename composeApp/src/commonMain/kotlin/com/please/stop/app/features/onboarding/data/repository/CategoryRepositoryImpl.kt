@@ -1,6 +1,5 @@
 package com.please.stop.app.features.onboarding.data.repository
 
-import co.touchlab.kermit.Logger
 import com.please.stop.app.core.logger.logDebugWithTag
 import com.please.stop.app.core.logger.logErrorWithTag
 import com.please.stop.app.features.onboarding.domain.repository.CategoryRepository
@@ -35,6 +34,7 @@ class CategoryRepositoryImpl(
             }
         }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun loadCategories(): List<CategoryUiModel> {
         val remoteJson =
             remoteConfigDataSource.fetchString(RemoteConfigDataSource.KEY_DEFAULT_CATEGORIES)

@@ -8,8 +8,6 @@ sealed interface OnboardingResult : Result {
     data class CurrencySearchUpdated(val query: String) : OnboardingResult
     data class CurrencyChosen(val currency: Currency) : OnboardingResult
     data class BudgetInputUpdated(val input: String) : OnboardingResult
-    data class CategoryToggled(val categoryId: Long) : OnboardingResult
-    data class CustomCategoryAdded(val category: CategoryUiModel) : OnboardingResult
     data object StepAdvanced : OnboardingResult
     data object StepBacked : OnboardingResult
     data object Saving : OnboardingResult

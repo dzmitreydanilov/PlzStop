@@ -6,9 +6,11 @@ import com.please.stop.app.di.dispatchers.DispatchersQualifiers
 import com.please.stop.app.features.onboarding.data.repository.CategoryRepositoryImpl
 import com.please.stop.app.features.onboarding.data.repository.CurrencyRepositoryImpl
 import com.please.stop.app.features.onboarding.data.repository.OnboardingRepositoryImpl
+import com.please.stop.app.features.onboarding.data.repository.SubcategoryRepositoryImpl
 import com.please.stop.app.features.onboarding.domain.repository.CategoryRepository
 import com.please.stop.app.features.onboarding.domain.repository.CurrencyRepository
 import com.please.stop.app.features.onboarding.domain.repository.OnboardingRepository
+import com.please.stop.app.features.onboarding.domain.repository.SubcategoryRepository
 import com.please.stop.app.features.onboarding.domain.usecase.CompleteOnboardingUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.LoadOnboardingDataUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.ObserveOnboardingCompletedUseCase
@@ -41,6 +43,14 @@ val onboardingModule = module {
         OnboardingRepositoryImpl(
             userProfileDao = get<AppDatabase>().userProfileDao(),
             categoryDao = get<AppDatabase>().categoryDao(),
+            categoryRepository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+    single<SubcategoryRepository> {
+        SubcategoryRepositoryImpl(
+            subcategoryDao = get<AppDatabase>().subcategoryDao(),
+            remoteConfigDataSource = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }
@@ -48,7 +58,6 @@ val onboardingModule = module {
     factory {
         LoadOnboardingDataUseCase(
             currencyRepository = get(),
-            categoryRepository = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }

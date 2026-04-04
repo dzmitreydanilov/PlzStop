@@ -4,13 +4,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class OnboardingStep {
-    WELCOME, CURRENCY, BUDGET, CATEGORIES;
+    WELCOME, CURRENCY, BUDGET;
 
     fun next(): OnboardingStep = when (this) {
         WELCOME -> CURRENCY
         CURRENCY -> BUDGET
-        BUDGET -> CATEGORIES
-        CATEGORIES -> CATEGORIES
+        BUDGET -> BUDGET
     }
 
     /**
@@ -21,6 +20,5 @@ enum class OnboardingStep {
         WELCOME -> null
         CURRENCY -> null
         BUDGET -> CURRENCY
-        CATEGORIES -> BUDGET
     }
 }

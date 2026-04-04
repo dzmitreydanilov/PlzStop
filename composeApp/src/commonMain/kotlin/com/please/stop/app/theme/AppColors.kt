@@ -27,57 +27,59 @@ data class AppColors(
     val categoryGradients: ImmutableList<Brush>,
 )
 
+// ── Light theme ──
 val LightAppColors = AppColors(
-    onboardingBackground = Color(0xFFF6FAFF),
-    onboardingGradientTop = Color(0xFF60A5FA),
-    onboardingGradientMid = Color(0xFFEAF3FF),
-    cardGlass = Color(0xCCFFFFFF),
-    cardGlassBorder = Color(0x33FFFFFF),
+    onboardingBackground = Color(0xFFFAF8F5),
+    onboardingGradientTop = Color(0xFF6B8F71),
+    onboardingGradientMid = Color(0xFFEEF3EF),
+    cardGlass = Color(0x14000000),
+    cardGlassBorder = Color(0x0A000000),
     chartColors = persistentListOf(
-        Color(0xFF14B8A6), // teal
-        Color(0xFF3B82F6), // blue
-        Color(0xFF8B5CF6), // purple
-        Color(0xFF10B981), // emerald
-        Color(0xFFF59E0B), // amber
-        Color(0xFFEC4899), // pink
+        Color(0xFF6B8F71), // sage
+        Color(0xFFA07855), // clay
+        Color(0xFFC4A265), // wheat
+        Color(0xFF7A8FA6), // dusty blue
+        Color(0xFF9B8EA6), // lavender
+        Color(0xFFB87D6E), // rose
     ),
     headerGradient = Brush.linearGradient(
-        listOf(Color(0xFF4A8FFF), Color(0xFF2E73F0), Color(0xFF1756CC)),
+        listOf(Color(0xFF6B8F71), Color(0xFF5A7D60), Color(0xFF4A6B50)),
     ),
     categoryGradients = persistentListOf(
-        Brush.linearGradient(listOf(Color(0xFFFF8A65), Color(0xFFEF5350))),
-        Brush.linearGradient(listOf(Color(0xFFEC407A), Color(0xFF8B5CF6))),
-        Brush.linearGradient(listOf(Color(0xFF42A5F5), Color(0xFF26C6DA))),
-        Brush.linearGradient(listOf(Color(0xFF66BB6A), Color(0xFF26A69A))),
-        Brush.linearGradient(listOf(Color(0xFFFFA726), Color(0xFFFFEE58))),
-        Brush.linearGradient(listOf(Color(0xFF7E57C2), Color(0xFFEC407A))),
+        Brush.linearGradient(listOf(Color(0xFF6B8F71), Color(0xFF5A7D60))),
+        Brush.linearGradient(listOf(Color(0xFFA07855), Color(0xFF8B6545))),
+        Brush.linearGradient(listOf(Color(0xFFC4A265), Color(0xFFB09050))),
+        Brush.linearGradient(listOf(Color(0xFF7A8FA6), Color(0xFF6A7D94))),
+        Brush.linearGradient(listOf(Color(0xFF9B8EA6), Color(0xFF887A94))),
+        Brush.linearGradient(listOf(Color(0xFFB87D6E), Color(0xFFA06A5C))),
     ),
 )
 
+// ── Dark theme ──
 val DarkAppColors = AppColors(
-    onboardingBackground = Color(0xFF0F172A),
-    onboardingGradientTop = Color(0xFF1E3A5F),
-    onboardingGradientMid = Color(0xFF162844),
-    cardGlass = Color(0xCC1E293B),
-    cardGlassBorder = Color(0x33FFFFFF),
+    onboardingBackground = Color(0xFF1C1B18),
+    onboardingGradientTop = Color(0xFF31302D),
+    onboardingGradientMid = Color(0xFF252420),
+    cardGlass = Color(0x0DFFFFFF),
+    cardGlassBorder = Color(0x14FFFFFF),
     chartColors = persistentListOf(
-        Color(0xFF2DD4BF), // teal
-        Color(0xFF60A5FA), // blue
-        Color(0xFFA78BFA), // purple
-        Color(0xFF34D399), // emerald
-        Color(0xFFFBBF24), // amber
-        Color(0xFFF472B6), // pink
+        Color(0xFF9CC6A1), // sage (light)
+        Color(0xFFD4A87A), // clay (light)
+        Color(0xFFC4A265), // wheat
+        Color(0xFF9BB1C6), // dusty blue (light)
+        Color(0xFFB8AAC6), // lavender (light)
+        Color(0xFFD49A8C), // rose (light)
     ),
     headerGradient = Brush.linearGradient(
-        listOf(Color(0xFF1E3A5F), Color(0xFF1A2E4A), Color(0xFF0F172A)),
+        listOf(Color(0xFF302F2B), Color(0xFF252420), Color(0xFF1C1B18)),
     ),
     categoryGradients = persistentListOf(
-        Brush.linearGradient(listOf(Color(0xFFD4603A), Color(0xFFC0392B))),
-        Brush.linearGradient(listOf(Color(0xFFBF3060), Color(0xFF7C3AED))),
-        Brush.linearGradient(listOf(Color(0xFF2B7DE9), Color(0xFF0EA5E9))),
-        Brush.linearGradient(listOf(Color(0xFF22C55E), Color(0xFF0D9488))),
-        Brush.linearGradient(listOf(Color(0xFFD97706), Color(0xFFEAB308))),
-        Brush.linearGradient(listOf(Color(0xFF6D28D9), Color(0xFFBF3060))),
+        Brush.linearGradient(listOf(Color(0xFF9CC6A1), Color(0xFF7AAF80))),
+        Brush.linearGradient(listOf(Color(0xFFD4A87A), Color(0xFFBF9060))),
+        Brush.linearGradient(listOf(Color(0xFFC4A265), Color(0xFFAE8E50))),
+        Brush.linearGradient(listOf(Color(0xFF9BB1C6), Color(0xFF809AB0))),
+        Brush.linearGradient(listOf(Color(0xFFB8AAC6), Color(0xFF9F90B0))),
+        Brush.linearGradient(listOf(Color(0xFFD49A8C), Color(0xFFBF8070))),
     ),
 )
 

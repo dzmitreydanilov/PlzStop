@@ -1,21 +1,20 @@
 package com.please.stop.app.navigation.bottomnavbar
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.navigation.routes.MainBottomTabs
-
 import kotlinx.collections.immutable.persistentSetOf
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
@@ -61,7 +60,8 @@ fun BottomBarItemIcon(
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
     )
     val bgColor = animateColorAsState(
-        targetValue = if (selected) colorScheme.primary.copy(alpha = 0.15f) else androidx.compose.ui.graphics.Color.Transparent,
+        targetValue = if (selected) colorScheme.primary.copy(alpha = 0.15f)
+        else androidx.compose.ui.graphics.Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
     )
 
@@ -70,11 +70,11 @@ fun BottomBarItemIcon(
             .background(bgColor.value, RoundedCornerShape(12.dp))
             .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
-    Icon(
-        painter = painterResource(icon),
-        contentDescription = stringResource(destination.label),
-        tint = iconTint.value,
-    )
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = stringResource(destination.label),
+            tint = iconTint.value,
+        )
     }
 }
 

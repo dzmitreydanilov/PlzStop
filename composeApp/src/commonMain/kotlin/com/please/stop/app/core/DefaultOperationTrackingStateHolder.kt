@@ -1,7 +1,7 @@
 package com.please.stop.app.core
 
-import kotlinx.coroutines.flow.Flow
 import com.please.stop.app.core.models.domain.Result
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 /**

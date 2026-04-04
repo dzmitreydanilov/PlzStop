@@ -12,7 +12,8 @@ import androidx.compose.ui.Alignment
 interface SnackbarContent<T> {
     /**
      * The duration for which the snackbar should be displayed.
-     * This can be a predefined duration like [com.please.stop.app.uicomponents.snackbar.core.SnackbarDuration.Short] or a custom duration.
+     * This can be a predefined duration like
+     * [com.please.stop.app.uicomponents.snackbar.core.SnackbarDuration.Short] or a custom duration.
      */
     val duration: com.please.stop.app.uicomponents.snackbar.core.SnackbarDuration
 

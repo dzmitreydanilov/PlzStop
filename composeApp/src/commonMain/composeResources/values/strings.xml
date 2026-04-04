@@ -64,9 +64,14 @@
     <string name="add_expense_done">Done</string>
     <string name="add_expense_scan_receipt">Scan Receipt</string>
     <string name="add_expense_analyzing_receipt">Analyzing receipt…</string>
-    <string name="add_expense_receipt_unreadable">Couldn\'t read this receipt. Try again or enter manually.</string>
+    <string name="add_expense_receipt_not_receipt">This doesn\'t look like a receipt. Try a different photo.</string>
+    <string name="add_expense_receipt_unreadable">Couldn\'t read this receipt. Try a clearer photo or enter manually.</string>
     <string name="add_expense_receipt_no_network">Receipt scan requires an internet connection.</string>
     <string name="add_expense_receipt_service_unavailable">Service temporarily unavailable. Enter manually.</string>
+    <string name="add_expense_scan_receipt_hint">Snap a photo to auto-fill</string>
+    <string name="add_expense_select_category">Select category</string>
+    <string name="add_expense_what_was_it_for">What was it for?</string>
+    <string name="add_expense_notes_label">Notes</string>
 
     <string name="onboarding_home_coming_soon">Home — coming soon</string>
     <string name="onboarding_analytics_coming_soon">Analytics — coming soon</string>

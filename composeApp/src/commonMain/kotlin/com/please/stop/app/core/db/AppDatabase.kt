@@ -9,14 +9,21 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 import com.please.stop.app.core.db.dao.CategoryDao
 import com.please.stop.app.core.db.dao.ExpenseDao
+import com.please.stop.app.core.db.dao.SubcategoryDao
 import com.please.stop.app.core.db.dao.UserProfileDao
 import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.db.entity.ExpenseEntity
+import com.please.stop.app.core.db.entity.SubcategoryEntity
 import com.please.stop.app.core.db.entity.UserProfileEntity
 
 @Database(
-    entities = [UserProfileEntity::class, CategoryEntity::class, ExpenseEntity::class],
-    version = 3,
+    entities = [
+        UserProfileEntity::class,
+        CategoryEntity::class,
+        ExpenseEntity::class,
+        SubcategoryEntity::class,
+    ],
+    version = 4,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -25,6 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userProfileDao(): UserProfileDao
     abstract fun categoryDao(): CategoryDao
     abstract fun expenseDao(): ExpenseDao
+    abstract fun subcategoryDao(): SubcategoryDao
 
     companion object {
         const val NAME = "plzstop.db"
@@ -71,6 +79,32 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_expense_dateEpochMillis` ON `expense` (`dateEpochMillis`)"
+                )
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `subcategory` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`parentCategoryId` INTEGER NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`iconKey` TEXT NOT NULL, " +
+                        "`isDefault` INTEGER NOT NULL, " +
+                        "`sortOrder` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`parentCategoryId`) REFERENCES `category`(`id`) ON DELETE CASCADE)"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_subcategory_parentCategoryId`" +
+                        " ON `subcategory` (`parentCategoryId`)"
+                )
+                connection.execSQL(
+                    "ALTER TABLE `expense` ADD COLUMN `subcategoryId` INTEGER DEFAULT NULL " +
+                        "REFERENCES `subcategory`(`id`) ON DELETE SET NULL"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_expense_subcategoryId` ON `expense` (`subcategoryId`)"
                 )
             }
         }

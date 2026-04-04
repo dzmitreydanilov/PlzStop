@@ -1,8 +1,8 @@
 package com.please.stop.app.core
 
+import com.please.stop.app.core.models.domain.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
-import com.please.stop.app.core.models.domain.Result
 
 /**
  * Extension function to safely handle retry with proper type casting.

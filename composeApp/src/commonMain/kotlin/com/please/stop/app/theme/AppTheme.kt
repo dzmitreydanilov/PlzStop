@@ -27,13 +27,15 @@ fun AppTheme(
         else -> CompactDimens
     }
 
+    val typography = AppTypography()
+
     CompositionLocalProvider(
         LocalAppDimens provides remember { dimens },
         LocalAppColors provides appColors,
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme,
-            typography = AppTypography,
+            typography = typography,
             shapes = AppShapes,
             content = content,
         )

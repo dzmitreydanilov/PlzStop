@@ -26,8 +26,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.please.stop.app.uicomponents.icons.CloseIconButton
 import com.please.stop.app.uicomponents.error.MessageType
+import com.please.stop.app.uicomponents.icons.CloseIconButton
 import com.please.stop.app.uicomponents.snackbar.ui.models.BannerMessage
 import com.please.stop.app.uicomponents.snackbar.ui.models.ErrorBannerMessage
 import com.please.stop.app.uicomponents.snackbar.ui.models.InfoBannerMessage
@@ -43,20 +43,22 @@ fun BottomBannerContent(
     modifier: Modifier = Modifier
 ) {
     when (message) {
-        is com.please.stop.app.uicomponents.snackbar.ui.models.ErrorBannerMessage -> com.please.stop.app.uicomponents.snackbar.ui.ErrorBannerMessageContent(
-            modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            title = message.title,
-            subtitle = message.subtitle,
-            onCloseClick = { message.onCloseClick() }
-        )
+        is com.please.stop.app.uicomponents.snackbar.ui.models.ErrorBannerMessage ->
+            com.please.stop.app.uicomponents.snackbar.ui.ErrorBannerMessageContent(
+                modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                title = message.title,
+                subtitle = message.subtitle,
+                onCloseClick = { message.onCloseClick() }
+            )
 
-        is com.please.stop.app.uicomponents.snackbar.ui.models.InfoBannerMessage -> com.please.stop.app.uicomponents.snackbar.ui.InfoBannerMessageContent(
-            modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            title = message.title,
-            type = com.please.stop.app.uicomponents.error.MessageType.Success,
-            subtitle = message.subtitle,
-            onCloseClick = { message.onCloseClick() }
-        )
+        is com.please.stop.app.uicomponents.snackbar.ui.models.InfoBannerMessage ->
+            com.please.stop.app.uicomponents.snackbar.ui.InfoBannerMessageContent(
+                modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                title = message.title,
+                type = com.please.stop.app.uicomponents.error.MessageType.Success,
+                subtitle = message.subtitle,
+                onCloseClick = { message.onCloseClick() }
+            )
     }
 }
 
@@ -194,9 +196,9 @@ private fun AutoSizedTitle(text: String) {
 private fun InfoBottomBannerContentPreview() {
     com.please.stop.app.uicomponents.snackbar.ui.BottomBannerContent(
         message = com.please.stop.app.uicomponents.snackbar.ui.models.InfoBannerMessage(
-                    title = "Title",
-                    subtitle = "Subtitle"
-                )
+            title = "Title",
+            subtitle = "Subtitle"
+        )
     )
 }
 
@@ -205,9 +207,9 @@ private fun InfoBottomBannerContentPreview() {
 private fun ErrorBottomBannerContentPreview() {
     com.please.stop.app.uicomponents.snackbar.ui.BottomBannerContent(
         message = com.please.stop.app.uicomponents.snackbar.ui.models.ErrorBannerMessage(
-                    title = "Title",
-                    subtitle = "Subtitle",
-                    onCloseClick = {}
-                )
+            title = "Title",
+            subtitle = "Subtitle",
+            onCloseClick = {}
+        )
     )
 }

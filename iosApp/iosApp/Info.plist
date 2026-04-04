@@ -6,5 +6,10 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access is needed to scan receipts</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>SplashBackground</string>
+	</dict>
 </dict>
 </plist>

@@ -33,7 +33,8 @@ interface SnackbarComponent<T> {
      *
      * If a message is already being displayed, it will be replaced with the new message.
      *
-     * @param message The [com.please.stop.app.uicomponents.snackbar.core.SnackbarContent] containing the content and duration to be displayed.
+     * @param message The [com.please.stop.app.uicomponents.snackbar.core.SnackbarContent]
+     *   containing the content and duration to be displayed.
      */
     fun show(message: com.please.stop.app.uicomponents.snackbar.core.SnackbarContent<T>)
 

@@ -7,6 +7,7 @@ class FirebaseRemoteConfigDataSource(
     private val remoteConfig: FirebaseRemoteConfig,
 ) : RemoteConfigDataSource {
 
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun fetchString(key: String): String? {
         return try {
             remoteConfig.fetchAndActivate()
@@ -19,6 +20,21 @@ class FirebaseRemoteConfigDataSource(
                 throwable = e,
             )
             null
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    override suspend fun fetchBoolean(key: String): Boolean {
+        return try {
+            remoteConfig.fetchAndActivate()
+            remoteConfig.getValue(key).asBoolean()
+        } catch (e: Exception) {
+            logErrorWithTag(
+                tag = TAG,
+                message = "Remote Config fetchBoolean failed for key=$key",
+                throwable = e,
+            )
+            false
         }
     }
 

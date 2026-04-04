@@ -34,6 +34,15 @@ fun LocalDateTime.format(datePattern: DatePattern): String {
             "$monthName $dayOfMonth"
         }
 
+        DatePattern.EEEE_MMM_DD -> {
+            val monthNamesRes = stringArrayResource(Res.array.month_names_short)
+            val daysNamesRes = stringArrayResource(Res.array.day_of_week)
+            val dayOfMonth = localDate.day
+            val monthName = monthNamesRes[localDate.month.number - 1]
+            val dayName = daysNamesRes[localDate.dayOfWeek.ordinal]
+            "$dayName, $monthName $dayOfMonth"
+        }
+
         else -> {
             localDate.format(LocalDate.Format { byUnicodePattern(datePattern.pattern) })
         }

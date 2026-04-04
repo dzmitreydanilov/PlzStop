@@ -42,8 +42,9 @@ internal class DefaultSnackbarComponent<T>(
         when (val currentState = state.value) {
             is com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden<T> -> Unit
             is com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Shown<T> -> {
-                state.value =
-                    com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden(previousMessageContent = currentState.messageContent)
+                state.value = com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden(
+                    previousMessageContent = currentState.messageContent
+                )
             }
         }
     }
@@ -59,7 +60,9 @@ internal class DefaultSnackbarComponent<T>(
         if (dismissingJob?.isActive == true) return
 
         dismissingJob = coroutineScope.launch {
-            state.value = com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden(previousMessageContent = previousMessageContent)
+            state.value = com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden(
+                previousMessageContent = previousMessageContent
+            )
             delay(animationDuration)
             showMessage(message = message)
         }
@@ -72,7 +75,9 @@ internal class DefaultSnackbarComponent<T>(
             val appliedState = com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Shown(message)
             state.value = appliedState
             delay(message.duration.timeInMillis)
-            state.value = com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden(previousMessageContent = appliedState.messageContent)
+            state.value = com.please.stop.app.uicomponents.snackbar.core.SnackbarState.Hidden(
+                previousMessageContent = appliedState.messageContent
+            )
         }
     }
 }

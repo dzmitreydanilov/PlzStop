@@ -9,7 +9,6 @@ import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
 import com.please.stop.app.features.onboarding.presentation.ui.steps.BudgetStep
-import com.please.stop.app.features.onboarding.presentation.ui.steps.CategoriesStep
 import com.please.stop.app.features.onboarding.presentation.ui.steps.CurrencyStep
 import com.please.stop.app.features.onboarding.presentation.ui.steps.WelcomeStep
 
@@ -36,7 +35,6 @@ fun OnboardingContent(
             OnboardingStep.WELCOME -> WelcomeStep(state = state, onEvent = onEvent)
             OnboardingStep.CURRENCY -> CurrencyStep(state = state, onEvent = onEvent)
             OnboardingStep.BUDGET -> BudgetStep(state = state, onEvent = onEvent)
-            OnboardingStep.CATEGORIES -> CategoriesStep(state = state, onEvent = onEvent)
         }
     }
 }

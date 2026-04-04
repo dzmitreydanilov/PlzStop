@@ -77,8 +77,10 @@ object SnackbarBoxDefaults {
      * Creates animated [PaddingValues] based on the specified [alignment].
      *
      * This function calculates the appropriate padding to apply based on the alignment and any
-     * registered offsets from composables using the [com.please.stop.app.uicomponents.snackbar.core.noOverlapTopContentBySnackbar] or
-     * [com.please.stop.app.uicomponents.snackbar.core.noOverlapBottomContentBySnackbar] modifiers. The padding is animated to provide a smooth
+     * registered offsets from composables using the
+     * [com.please.stop.app.uicomponents.snackbar.core.noOverlapTopContentBySnackbar] or
+     * [com.please.stop.app.uicomponents.snackbar.core.noOverlapBottomContentBySnackbar] modifiers.
+     * The padding is animated to provide a smooth
      * transition when the offset changes.
      *
      * @param alignment The alignment indicating the vertical position (top or bottom).
