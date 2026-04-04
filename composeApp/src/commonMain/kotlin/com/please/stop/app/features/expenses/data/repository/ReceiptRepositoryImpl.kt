@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import com.please.stop.app.features.expenses.data.remote.FirebaseCallableFunctions
 import com.please.stop.app.features.expenses.data.remote.ReceiptAnalysisException
 import com.please.stop.app.features.expenses.domain.model.ExpenseCategory
+import com.please.stop.app.features.expenses.domain.model.ExpenseSubcategory
 import com.please.stop.app.features.expenses.domain.model.ReceiptData
 import com.please.stop.app.features.expenses.domain.repository.ReceiptRepository
 import kotlinx.coroutines.withTimeout
@@ -21,6 +22,7 @@ class ReceiptRepositoryImpl(
         imageBytes: ByteArray,
         categories: List<ExpenseCategory>,
         decimalPlaces: Int,
+        subcategories: List<ExpenseSubcategory>,
     ): Result<ReceiptData> = runCatching {
         val imageBase64 = Base64.encode(imageBytes)
         log.d { "Image size: ${imageBytes.size} bytes, base64 length: ${imageBase64.length}" }
@@ -30,10 +32,21 @@ class ReceiptRepositoryImpl(
         }
         log.d { "Sending ${categoriesData.size} categories: $categoriesData" }
 
-        val requestData = mapOf(
-            "imageBase64" to imageBase64,
-            "categories" to categoriesData,
-        )
+        val requestData = buildMap<String, Any> {
+            put("imageBase64", imageBase64)
+            put("categories", categoriesData)
+            if (subcategories.isNotEmpty()) {
+                val subcategoriesData = subcategories.map { sub ->
+                    mapOf(
+                        "id" to sub.id,
+                        "parentCategoryId" to sub.parentCategoryId,
+                        "name" to sub.name,
+                    )
+                }
+                put("subcategories", subcategoriesData)
+                log.d { "Sending ${subcategoriesData.size} subcategories" }
+            }
+        }
 
         log.d { "Calling analyzeReceipt..." }
         val callResult = withTimeout(TIMEOUT_MS) {
@@ -44,16 +57,23 @@ class ReceiptRepositoryImpl(
         val response = callResult.getOrThrow()
         log.d { "Response: $response" }
 
-        val status = response["status"] as? String
+        val statusRaw = response["status"] as? String
         val data = response["data"] as? Map<*, *>
         val message = response["message"] as? String
+        val status = ResponseStatus.fromValue(statusRaw)
         log.d { "Parsed: status=$status, data=$data, message=$message" }
 
         when (status) {
-            "unreadable" -> throw ReceiptAnalysisException.Unreadable(
+            ResponseStatus.NOT_RECEIPT -> throw ReceiptAnalysisException.NotReceipt(
+                message ?: "Image is not a receipt."
+            )
+            ResponseStatus.UNREADABLE -> throw ReceiptAnalysisException.Unreadable(
                 message ?: "Couldn't read this receipt."
             )
-            "success", "partial" -> {
+            ResponseStatus.ERROR, ResponseStatus.UNKNOWN -> throw ReceiptAnalysisException.ServiceUnavailable(
+                message ?: "Service error processing receipt."
+            )
+            ResponseStatus.SUCCESS, ResponseStatus.PARTIAL -> {
                 val totalAmount = (data?.get("totalAmount") as? Number)?.toDouble()
                 val totalAmountMinorUnits = totalAmount?.let {
                     (it * 10.0.pow(decimalPlaces)).roundToLong()
@@ -65,13 +85,25 @@ class ReceiptRepositoryImpl(
                     currency = data?.get("currency") as? String,
                     date = data?.get("date") as? String,
                     categoryId = (data?.get("categoryId") as? Number)?.toLong(),
-                    isPartial = status == "partial",
+                    subcategoryId = (data?.get("subcategoryId") as? Number)?.toLong(),
+                    isPartial = status == ResponseStatus.PARTIAL,
                     message = message,
                 )
             }
-            else -> throw ReceiptAnalysisException.Unreadable(
-                message ?: "Unexpected response from server."
-            )
+        }
+    }
+
+    private enum class ResponseStatus(val value: String) {
+        SUCCESS("success"),
+        PARTIAL("partial"),
+        NOT_RECEIPT("not_receipt"),
+        UNREADABLE("unreadable"),
+        ERROR("error"),
+        UNKNOWN("");
+
+        companion object {
+            fun fromValue(value: String?): ResponseStatus =
+                entries.firstOrNull { it.value == value } ?: UNKNOWN
         }
     }
 

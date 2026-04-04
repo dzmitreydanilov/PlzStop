@@ -4,10 +4,18 @@ data class AddExpenseFormData(
     val currencySymbol: String,
     val decimalPlaces: Int,
     val categories: List<ExpenseCategory>,
+    val subcategories: List<ExpenseSubcategory> = emptyList(),
 )
 
 data class ExpenseCategory(
     val id: Long,
+    val name: String,
+    val iconKey: String,
+)
+
+data class ExpenseSubcategory(
+    val id: Long,
+    val parentCategoryId: Long,
     val name: String,
     val iconKey: String,
 )
@@ -19,4 +27,5 @@ data class ExpenseDetail(
     val categoryId: Long,
     val dateEpochMillis: Long,
     val notes: String?,
+    val subcategoryId: Long? = null,
 )

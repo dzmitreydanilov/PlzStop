@@ -4,5 +4,4 @@ data class OnboardingData(
     val displayName: String?,
     val currency: Currency,
     val monthlyBudgetMinorUnits: Long,
-    val selectedCategories: List<Category>,
 )

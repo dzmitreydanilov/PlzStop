@@ -25,19 +25,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
-import com.please.stop.app.uicomponents.GlassTextField
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingCenteredContent
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingPrimaryButton
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingSecondaryTextButton
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingStepIndicator
+import com.please.stop.app.uicomponents.GlassTextField
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
@@ -49,6 +49,9 @@ import plzstop.composeapp.generated.resources.onboarding_search_currencies
 import plzstop.composeapp.generated.resources.onboarding_selected
 import plzstop.composeapp.generated.resources.skip
 
+private const val LIST_HEIGHT_FRACTION = 0.5f
+private const val CURRENCIES_SCROLL_THRESHOLD = 6
+
 @Composable
 fun CurrencyStep(
     state: Content,
@@ -56,7 +59,7 @@ fun CurrencyStep(
 ) {
     OnboardingCenteredContent(scrollable = false) {
         BoxWithConstraints {
-            val listHeight = maxHeight * 0.5f
+            val listHeight = maxHeight * LIST_HEIGHT_FRACTION
             Column(
                 modifier = Modifier.padding(vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -85,7 +88,7 @@ fun CurrencyStep(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 val hintColor = MaterialTheme.colorScheme.onSurfaceVariant
-                val isScrollable = (state.popularCurrencies.size + state.otherCurrencies.size) > 6
+                val isScrollable = (state.popularCurrencies.size + state.otherCurrencies.size) > CURRENCIES_SCROLL_THRESHOLD
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(18.dp),

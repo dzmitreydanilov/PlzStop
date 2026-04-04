@@ -1,8 +1,5 @@
 package com.please.stop.app.features.home.presentation.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,13 +13,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,31 +24,18 @@ import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.home.presentation.HomeCategoryUiModel
 import com.please.stop.app.theme.AppTheme
 import com.please.stop.app.theme.LocalAppColors
-import com.please.stop.app.uicomponents.ANIMATION_DURATION_MS
 import com.please.stop.app.uicomponents.categoryEmojiForKey
-import kotlinx.coroutines.delay
-
-private const val STAGGER_DELAY_MS = 50L
-private const val INITIAL_SCALE = 0.9f
-private const val SLIDE_OFFSET_PX = 40
 
 @Composable
 internal fun CategoryTile(
     category: HomeCategoryUiModel,
-    index: Int = 0,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
     val gradients = appColors.categoryGradients
     val gradientIndex = category.name.hashCode()
         .let { (it % gradients.size + gradients.size) % gradients.size }
-
-    val progress = remember { Animatable(0f) }
-
-    LaunchedEffect(category.id) {
-        delay(index * STAGGER_DELAY_MS)
-        progress.animateTo(1f, tween(ANIMATION_DURATION_MS, easing = FastOutSlowInEasing))
-    }
 
     Card(
         onClick = onClick,
@@ -64,17 +44,11 @@ internal fun CategoryTile(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.graphicsLayer {
-            translationY = (1f - progress.value) * SLIDE_OFFSET_PX
-            val scale = INITIAL_SCALE + (1f - INITIAL_SCALE) * progress.value
-            scaleX = scale
-            scaleY = scale
-        },
+        modifier = modifier,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { alpha = progress.value }
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

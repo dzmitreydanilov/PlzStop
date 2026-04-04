@@ -5,9 +5,9 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // ── Earth-tone brand tokens ──
-internal val Sage = Color(0xFF6B8F71)        // primary — muted sage green
-internal val Clay = Color(0xFFA07855)         // secondary — warm clay
-internal val Wheat = Color(0xFFC4A265)        // tertiary — soft gold
+internal val Sage = Color(0xFF6B8F71) // primary — muted sage green
+internal val Clay = Color(0xFFA07855) // secondary — warm clay
+internal val Wheat = Color(0xFFC4A265) // tertiary — soft gold
 
 // ── Light Color Scheme ──
 internal val LightColorScheme = lightColorScheme(
@@ -45,11 +45,11 @@ internal val LightColorScheme = lightColorScheme(
 
 // ── Dark Color Scheme ──
 internal val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF9CC6A1),              // lighter sage for dark bg
+    primary = Color(0xFF9CC6A1), // lighter sage for dark bg
     onPrimary = Color(0xFF1B3620),
     primaryContainer = Color(0xFF3A5C3F),
     onPrimaryContainer = Color(0xFFD6EADA),
-    secondary = Color(0xFFD4A87A),            // lighter clay for dark bg
+    secondary = Color(0xFFD4A87A), // lighter clay for dark bg
     onSecondary = Color(0xFF3A2512),
     secondaryContainer = Color(0xFF6B5138),
     onSecondaryContainer = Color(0xFFEEDDD0),

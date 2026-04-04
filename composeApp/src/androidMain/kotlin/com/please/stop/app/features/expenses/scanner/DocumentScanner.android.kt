@@ -1,12 +1,13 @@
 package com.please.stop.app.features.expenses.scanner
 
 import android.app.Activity
-import android.content.Context
-import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
@@ -14,6 +15,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import kotlin.coroutines.resume
+
+@Composable
+actual fun rememberDocumentScanner(): DocumentScanner {
+    val activity = LocalContext.current as ComponentActivity
+    return remember(activity) { DocumentScanner(activity) }
+}
 
 actual class DocumentScanner(
     private val activity: ComponentActivity,

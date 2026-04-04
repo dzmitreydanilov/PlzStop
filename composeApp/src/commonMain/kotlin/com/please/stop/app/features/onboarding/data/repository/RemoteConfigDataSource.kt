@@ -14,8 +14,11 @@ interface RemoteConfigDataSource {
 
     suspend fun fetchString(key: String): String?
 
+    suspend fun fetchBoolean(key: String): Boolean
+
     companion object {
         const val KEY_CURRENCIES = "currencies"
         const val KEY_DEFAULT_CATEGORIES = "default_categories"
+        const val KEY_DEFAULT_SUBCATEGORIES = "default_subcategories"
     }
 }

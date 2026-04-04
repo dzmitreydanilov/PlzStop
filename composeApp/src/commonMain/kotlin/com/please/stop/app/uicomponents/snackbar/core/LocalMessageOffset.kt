@@ -73,13 +73,15 @@ private class LocalMessengerOffsetModifierNode(
             when (alignment) {
                 com.please.stop.app.uicomponents.snackbar.core.ContentAlignment.Top -> {
                     val topOffset = (coordinates.size.height + y).toInt().coerceAtMost(rootHeight)
-                    val localMessageOffsets = currentValueOf(com.please.stop.app.uicomponents.snackbar.core.LocalTopMessengerOffset)
+                    val localMessageOffsets =
+                        currentValueOf(com.please.stop.app.uicomponents.snackbar.core.LocalTopMessengerOffset)
                     localMessageOffsets[key] = topOffset
                 }
 
                 com.please.stop.app.uicomponents.snackbar.core.ContentAlignment.Bottom -> {
                     val bottomOffset = (rootHeight - y).toInt().coerceAtLeast(0)
-                    val localMessageOffsets = currentValueOf(com.please.stop.app.uicomponents.snackbar.core.LocalBottomMessengerOffset)
+                    val localMessageOffsets =
+                        currentValueOf(com.please.stop.app.uicomponents.snackbar.core.LocalBottomMessengerOffset)
                     localMessageOffsets[key] = bottomOffset
                 }
             }
@@ -87,8 +89,10 @@ private class LocalMessengerOffsetModifierNode(
     }
 
     override fun onDetach() {
-        val localBottomMessageOffsets = currentValueOf(com.please.stop.app.uicomponents.snackbar.core.LocalBottomMessengerOffset)
-        val localTopMessageOffsets = currentValueOf(com.please.stop.app.uicomponents.snackbar.core.LocalTopMessengerOffset)
+        val localBottomMessageOffsets =
+            currentValueOf(com.please.stop.app.uicomponents.snackbar.core.LocalBottomMessengerOffset)
+        val localTopMessageOffsets =
+            currentValueOf(com.please.stop.app.uicomponents.snackbar.core.LocalTopMessengerOffset)
         localBottomMessageOffsets.remove(key)
         localTopMessageOffsets.remove(key)
     }

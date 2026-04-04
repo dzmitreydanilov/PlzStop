@@ -2,9 +2,9 @@ package com.please.stop.app.features.expenses.domain.usecase
 
 import com.please.stop.app.features.expenses.data.remote.ReceiptAnalysisException
 import com.please.stop.app.features.expenses.domain.model.ReceiptData
+import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.features.expenses.domain.repository.AddExpenseRepository
 import com.please.stop.app.features.expenses.domain.repository.ReceiptRepository
-import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.network.ApplicationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -26,6 +26,7 @@ class AnalyzeReceiptUseCase(
                 imageBytes = imageBytes,
                 categories = formData.categories,
                 decimalPlaces = formData.decimalPlaces,
+                subcategories = formData.subcategories,
             )
 
             result.fold(
@@ -41,6 +42,7 @@ class AnalyzeReceiptUseCase(
 }
 
 private fun Throwable.toReceiptError(): ReceiptError = when (this) {
+    is ReceiptAnalysisException.NotReceipt -> ReceiptError.NOT_RECEIPT
     is ReceiptAnalysisException.Unreadable -> ReceiptError.UNREADABLE
     is ReceiptAnalysisException.ServiceUnavailable -> ReceiptError.SERVICE_UNAVAILABLE
     is ApplicationException.NetworkException -> ReceiptError.NO_NETWORK

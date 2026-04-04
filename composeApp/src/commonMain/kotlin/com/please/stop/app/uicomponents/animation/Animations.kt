@@ -81,6 +81,7 @@ fun ScaleIn(
     }
 }
 
+@Suppress("UnusedParameter")
 @Composable
 fun PulseGlow(
     color: Color = Color.White.copy(alpha = 0.3f),

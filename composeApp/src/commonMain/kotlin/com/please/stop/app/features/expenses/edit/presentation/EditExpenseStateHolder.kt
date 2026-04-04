@@ -1,17 +1,17 @@
 package com.please.stop.app.features.expenses.edit.presentation
 
 import com.please.stop.app.core.models.domain.ErrorType
+import com.please.stop.app.features.expenses.domain.model.ExpenseDetail
+import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
+import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
+import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
+import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
+import com.please.stop.app.features.expenses.edit.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
 import com.please.stop.app.features.expenses.presentation.EditContext
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
 import com.please.stop.app.features.expenses.presentation.ExpenseResult
-import com.please.stop.app.features.expenses.domain.model.ExpenseDetail
-import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
-import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
-import com.please.stop.app.features.expenses.edit.domain.usecase.GetExpenseByIdUseCase
-import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
-import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -100,6 +100,7 @@ class EditExpenseStateHolder(
             amountInput = keyboardCalculator.formatFromMinorUnits(expense.amountMinorUnits),
             title = expense.title,
             selectedCategoryId = expense.categoryId,
+            selectedSubcategoryId = expense.subcategoryId,
             dateEpochMillis = expense.dateEpochMillis,
             notes = expense.notes.orEmpty(),
         )

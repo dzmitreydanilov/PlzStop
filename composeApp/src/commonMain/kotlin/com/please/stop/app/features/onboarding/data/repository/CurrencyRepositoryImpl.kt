@@ -34,6 +34,7 @@ class CurrencyRepositoryImpl(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun loadCurrencies(): List<Currency> {
         val remoteJson = remoteConfigDataSource.fetchString(RemoteConfigDataSource.KEY_CURRENCIES)
         if (remoteJson != null) {
@@ -43,7 +44,7 @@ class CurrencyRepositoryImpl(
                     logDebugWithTag(tag = TAG, message = "Loaded ${dtos.size} currencies from Remote Config")
                     return dtos.map { it.toDomain() }
                 }
-            } catch (e: Exception) {
+            }  catch (e: Exception) {
                 logErrorWithTag(tag = TAG, message = "Failed to parse Remote Config currencies", throwable = e)
             }
         }

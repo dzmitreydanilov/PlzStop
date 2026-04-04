@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
@@ -58,36 +57,54 @@ fun App() {
     }
 }
 
+private const val LOGO_INITIAL_SCALE = 0.5f
+private const val LOGO_FADE_DURATION_MS = 400
+private const val TEXT_VISIBLE_DELAY_MS = 200L
+private const val PROGRESS_VISIBLE_DELAY_MS = 400L
+private const val TEXT_FADE_DURATION_MS = 500
+private const val PROGRESS_FADE_DURATION_MS = 400
+private val LOGO_SIZE = 88.dp
+private val LOGO_CORNER_RADIUS = 26.dp
+private val LOGO_BOTTOM_SPACER = 28.dp
+private val TAGLINE_BOTTOM_SPACER = 8.dp
+private val PROGRESS_BOTTOM_SPACER = 48.dp
+private val PROGRESS_HEIGHT = 3.dp
+private val PROGRESS_CORNER_RADIUS = 2.dp
+private const val PROGRESS_WIDTH_FRACTION = 0.4f
+private const val LOGO_BG_ALPHA = 0.2f
+private const val TAGLINE_ALPHA = 0.8f
+private const val PROGRESS_TRACK_ALPHA = 0.2f
+
 @Composable
 private fun SplashScreen() {
     val appColors = LocalAppColors.current
 
-    val logoScale = remember { Animatable(0.5f) }
+    val logoScale = remember { Animatable(LOGO_INITIAL_SCALE) }
     val logoAlpha = remember { Animatable(0f) }
     var textVisible by remember { mutableStateOf(false) }
     var progressVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        logoAlpha.animateTo(1f, tween(400))
+        logoAlpha.animateTo(1f, tween(LOGO_FADE_DURATION_MS))
     }
     LaunchedEffect(Unit) {
         logoScale.animateTo(
             1f,
             spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         )
-        delay(200)
+        delay(TEXT_VISIBLE_DELAY_MS)
         textVisible = true
-        delay(400)
+        delay(PROGRESS_VISIBLE_DELAY_MS)
         progressVisible = true
     }
 
     val textAlpha by animateFloatAsState(
         targetValue = if (textVisible) 1f else 0f,
-        animationSpec = tween(500),
+        animationSpec = tween(TEXT_FADE_DURATION_MS),
     )
     val progressAlpha by animateFloatAsState(
         targetValue = if (progressVisible) 1f else 0f,
-        animationSpec = tween(400),
+        animationSpec = tween(PROGRESS_FADE_DURATION_MS),
     )
 
     Box(
@@ -107,9 +124,9 @@ private fun SplashScreen() {
                         scaleY = logoScale.value
                         alpha = logoAlpha.value
                     }
-                    .size(88.dp)
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(Color.White.copy(alpha = 0.2f)),
+                    .size(LOGO_SIZE)
+                    .clip(RoundedCornerShape(LOGO_CORNER_RADIUS))
+                    .background(Color.White.copy(alpha = LOGO_BG_ALPHA)),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -118,7 +135,7 @@ private fun SplashScreen() {
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(LOGO_BOTTOM_SPACER))
 
             Text(
                 text = stringResource(Res.string.onboarding_app_name),
@@ -128,25 +145,25 @@ private fun SplashScreen() {
                 modifier = Modifier.graphicsLayer { alpha = textAlpha },
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(TAGLINE_BOTTOM_SPACER))
 
             Text(
                 text = stringResource(Res.string.onboarding_tagline),
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.8f),
+                color = Color.White.copy(alpha = TAGLINE_ALPHA),
                 modifier = Modifier.graphicsLayer { alpha = textAlpha },
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(PROGRESS_BOTTOM_SPACER))
 
             LinearProgressIndicator(
                 modifier = Modifier
-                    .fillMaxWidth(0.4f)
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp))
+                    .fillMaxWidth(PROGRESS_WIDTH_FRACTION)
+                    .height(PROGRESS_HEIGHT)
+                    .clip(RoundedCornerShape(PROGRESS_CORNER_RADIUS))
                     .graphicsLayer { alpha = progressAlpha },
                 color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.2f),
+                trackColor = Color.White.copy(alpha = PROGRESS_TRACK_ALPHA),
             )
         }
     }

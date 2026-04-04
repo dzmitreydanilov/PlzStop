@@ -2,8 +2,8 @@ package com.please.stop.app.features.expenses.presentation
 
 import androidx.compose.runtime.Stable
 import com.please.stop.app.core.models.domain.ErrorType
-import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.core.serialization.ImmutableListSerializer
+import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.Serializable
@@ -17,6 +17,9 @@ sealed interface AddExpenseState {
 
     @Serializable(with = ImmutableListSerializer::class)
     val categories: ImmutableList<CategoryUiModel>
+
+    @Serializable(with = ImmutableListSerializer::class)
+    val subcategories: ImmutableList<SubcategoryUiModel>
     val status: FormStatus
     val receipt: ReceiptState
 
@@ -26,6 +29,7 @@ sealed interface AddExpenseState {
         override val currency: CurrencyConfig = CurrencyConfig(symbol = "", decimalPlaces = 0)
         override val form: ExpenseFormInput = ExpenseFormInput(dateEpochMillis = 0L)
         override val categories: ImmutableList<CategoryUiModel> = persistentListOf()
+        override val subcategories: ImmutableList<SubcategoryUiModel> = persistentListOf()
         override val status: FormStatus = FormStatus()
         override val receipt: ReceiptState = ReceiptState()
     }
@@ -37,6 +41,8 @@ sealed interface AddExpenseState {
         override val form: ExpenseFormInput,
         @Serializable(with = ImmutableListSerializer::class)
         override val categories: ImmutableList<CategoryUiModel>,
+        @Serializable(with = ImmutableListSerializer::class)
+        override val subcategories: ImmutableList<SubcategoryUiModel>,
         override val status: FormStatus,
         override val receipt: ReceiptState,
     ) : AddExpenseState
@@ -49,6 +55,8 @@ sealed interface AddExpenseState {
         override val form: ExpenseFormInput,
         @Serializable(with = ImmutableListSerializer::class)
         override val categories: ImmutableList<CategoryUiModel>,
+        @Serializable(with = ImmutableListSerializer::class)
+        override val subcategories: ImmutableList<SubcategoryUiModel>,
         override val status: FormStatus,
         override val receipt: ReceiptState,
     ) : AddExpenseState
@@ -77,6 +85,7 @@ data class ExpenseFormInput(
     val isInExpressionMode: Boolean = false,
     val title: String = "",
     val selectedCategoryId: Long? = null,
+    val selectedSubcategoryId: Long? = null,
     val dateEpochMillis: Long,
     val notes: String = "",
 )
@@ -103,6 +112,15 @@ data class ReceiptState(
 @Serializable
 data class CategoryUiModel(
     val id: Long,
+    val name: String,
+    val iconKey: String,
+)
+
+@Stable
+@Serializable
+data class SubcategoryUiModel(
+    val id: Long,
+    val parentCategoryId: Long,
     val name: String,
     val iconKey: String,
 )

@@ -23,16 +23,16 @@ import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
-import com.please.stop.app.uicomponents.GlassTextField
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingCenteredContent
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingPrimaryButton
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingSecondaryTextButton
 import com.please.stop.app.features.onboarding.presentation.ui.components.OnboardingStepIndicator
+import com.please.stop.app.uicomponents.GlassTextField
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.onboarding_back
 import plzstop.composeapp.generated.resources.onboarding_budget_hint
 import plzstop.composeapp.generated.resources.onboarding_budget_label
-import plzstop.composeapp.generated.resources.onboarding_back
 import plzstop.composeapp.generated.resources.onboarding_set_budget
 
 @Composable

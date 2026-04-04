@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.expenses.presentation.KeyboardOperator
 import com.please.stop.app.features.expenses.presentation.NumericKey
-
 import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.ic_backspace
@@ -31,9 +30,14 @@ import plzstop.composeapp.generated.resources.ic_schedule
 
 private val BUTTON_SPACING = 6.dp
 private val CORNER_RADIUS = 12.dp
+private val SAVE_BUTTON_STROKE_WIDTH = 2.dp
+private const val LEFT_COLUMNS_WEIGHT = 4f
+private const val SAVE_BUTTON_ASPECT_RATIO = 0.5f
+private const val SAVING_INDICATOR_HEIGHT_FRACTION = 0.3f
 
 // Removed hardcoded glass colors — using theme tokens via LocalAppColors
 
+@Suppress("MagicNumber")
 @Composable
 internal fun NumericKeyboard(
     currencySymbol: String,
@@ -86,7 +90,7 @@ internal fun NumericKeyboard(
         ) {
             // Left 4 columns: rows 3 and 4 stacked
             Column(
-                modifier = Modifier.weight(4f),
+                modifier = Modifier.weight(LEFT_COLUMNS_WEIGHT),
                 verticalArrangement = Arrangement.spacedBy(BUTTON_SPACING),
             ) {
                 // Row 3: -  1  2  3
@@ -121,7 +125,7 @@ internal fun NumericKeyboard(
                 isSaving = isSaving,
                 isSaveEnabled = isSaveEnabled,
                 onClick = { onKey(NumericKey.Equals) },
-                modifier = Modifier.weight(1f).aspectRatio(0.5f),
+                modifier = Modifier.weight(1f).aspectRatio(SAVE_BUTTON_ASPECT_RATIO),
             )
         }
     }
@@ -138,6 +142,7 @@ private fun KeyboardRow(
     )
 }
 
+@Suppress("MagicNumber")
 @Composable
 private fun DigitButton(
     digit: Int,
@@ -206,8 +211,8 @@ private fun SaveEqualsButton(
     ) {
         when {
             isSaving -> CircularProgressIndicator(
-                modifier = Modifier.fillMaxHeight(0.3f).aspectRatio(1f),
-                strokeWidth = 2.dp,
+                modifier = Modifier.fillMaxHeight(SAVING_INDICATOR_HEIGHT_FRACTION).aspectRatio(1f),
+                strokeWidth = SAVE_BUTTON_STROKE_WIDTH,
                 color = MaterialTheme.colorScheme.onTertiary,
             )
             isInExpressionMode -> Text("=", style = MaterialTheme.typography.headlineSmall)

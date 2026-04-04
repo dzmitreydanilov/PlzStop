@@ -6,13 +6,11 @@ import com.please.stop.app.core.StateSaver
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.domain.Result
 import com.please.stop.app.core.models.presentation.Navigation
-import com.please.stop.app.features.onboarding.domain.model.Category
 import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.domain.model.OnboardingData
 import com.please.stop.app.features.onboarding.domain.usecase.CompleteOnboardingUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.LoadOnboardingDataUseCase
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toPersistentSet
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -62,21 +60,6 @@ class OnboardingStateHolder(
         is OnboardingEvent.BudgetInputChanged ->
             flowOf(OnboardingResult.BudgetInputUpdated(event.input))
 
-        is OnboardingEvent.CategoryToggled ->
-            flowOf(OnboardingResult.CategoryToggled(event.categoryId))
-
-        is OnboardingEvent.CustomCategoryAdded ->
-            flowOf(
-                OnboardingResult.CustomCategoryAdded(
-                    CategoryUiModel(
-                        id = generateTempId(),
-                        name = event.name,
-                        iconKey = event.iconKey,
-                        isDefault = false,
-                    )
-                )
-            )
-
         OnboardingEvent.NextTapped -> handleNext()
         OnboardingEvent.BackTapped -> handleBack()
         OnboardingEvent.ErrorDismissed -> flowOf(OnboardingResult.ErrorCleared)
@@ -85,7 +68,7 @@ class OnboardingStateHolder(
 
     private fun handleNext(): Flow<Result> = flow {
         val state = currentContent() ?: return@flow
-        if (state.currentStep == OnboardingStep.CATEGORIES) {
+        if (state.currentStep == OnboardingStep.BUDGET) {
             emit(OnboardingResult.Saving)
             emit(completeOnboardingUseCase(state.toOnboardingData()))
         } else {
@@ -100,14 +83,12 @@ class OnboardingStateHolder(
         }
     }
 
-    @Suppress("CyclomaticComplexMethod")
     override fun getStateByResult(previous: OnboardingState, result: Result): OnboardingState {
         return when (result) {
             is LoadOnboardingDataUseCase.Result.Success -> {
                 val content = (previous as? OnboardingState.Content) ?: OnboardingState.Content()
                 content.copy(
                     currencies = result.currencies,
-                    availableCategories = result.categories,
                 ).recalculate()
             }
 
@@ -138,17 +119,6 @@ class OnboardingStateHolder(
 
             is OnboardingResult.BudgetInputUpdated ->
                 prev.copy(monthlyBudgetInput = result.input).recalculate()
-
-            is OnboardingResult.CategoryToggled -> {
-                val mutable = prev.selectedCategoryIds.toMutableSet()
-                if (result.categoryId in mutable) mutable.remove(result.categoryId) else mutable.add(result.categoryId)
-                prev.copy(selectedCategoryIds = mutable.toPersistentSet()).recalculate()
-            }
-
-            is OnboardingResult.CustomCategoryAdded ->
-                prev.copy(
-                    customCategories = (prev.customCategories + result.category).toImmutableList(),
-                ).recalculate()
 
             is OnboardingResult.StepAdvanced ->
                 prev.copy(
@@ -204,7 +174,6 @@ class OnboardingStateHolder(
             popularCurrencies = filtered.filter { it.isPopular }.toImmutableList(),
             otherCurrencies = filtered.filter { !it.isPopular }.toImmutableList(),
             isNextEnabled = computeIsNextEnabled(),
-            canAddCustomCategory = customCategories.size < OnboardingState.MAX_CUSTOM_CATEGORIES,
         )
     }
 
@@ -212,7 +181,6 @@ class OnboardingStateHolder(
         OnboardingStep.WELCOME -> true
         OnboardingStep.CURRENCY -> selectedCurrency != null
         OnboardingStep.BUDGET -> isBudgetValid(monthlyBudgetInput)
-        OnboardingStep.CATEGORIES -> selectedCategoryIds.size >= OnboardingState.MIN_CATEGORIES
     }
 
     private fun currentContent(): OnboardingState.Content? {
@@ -225,28 +193,15 @@ class OnboardingStateHolder(
         val budgetValue = monthlyBudgetInput.toDouble()
         val minorUnits = (budgetValue * 10.0.pow(currency.decimalPlaces)).toLong()
 
-        val allCategories = availableCategories + customCategories
-        val selected = allCategories.filter { it.id in selectedCategoryIds }
-
         return OnboardingData(
             displayName = displayName.takeIf { it.isNotBlank() },
             currency = currency,
             monthlyBudgetMinorUnits = minorUnits,
-            selectedCategories = selected.map {
-                Category(
-                    id = it.id,
-                    name = it.name,
-                    iconKey = it.iconKey,
-                    isDefault = it.isDefault,
-                )
-            },
         )
     }
 
     companion object {
         internal const val STATE_KEY = "onboarding_state"
-        private var tempIdCounter = -1L
-        private fun generateTempId(): Long = tempIdCounter--
 
         private fun filterCurrencies(
             currencies: ImmutableList<Currency>,

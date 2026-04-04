@@ -2,8 +2,8 @@ package com.please.stop.app.features.expenses.scanner
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import java.io.ByteArrayOutputStream
 import androidx.core.graphics.scale
+import java.io.ByteArrayOutputStream
 
 actual fun compressImage(imageBytes: ByteArray, maxWidthPx: Int, quality: Int): ByteArray {
     val options = BitmapFactory.Options().apply {

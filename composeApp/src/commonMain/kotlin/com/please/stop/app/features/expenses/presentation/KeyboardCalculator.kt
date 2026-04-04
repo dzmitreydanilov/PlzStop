@@ -97,9 +97,9 @@ class KeyboardCalculator(
     private fun handleOperator(op: KeyboardOperator): KeyboardState {
         didJustEvaluate = false
 
-        val isExpressionEmpty = pendingOperator == null
-            && currentOperand.isEmpty()
-            && !isNegativePrefix
+        val isExpressionEmpty = pendingOperator == null &&
+            currentOperand.isEmpty() &&
+            !isNegativePrefix
 
         if (op == KeyboardOperator.SUBTRACT && isExpressionEmpty) {
             isNegativePrefix = true

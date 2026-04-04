@@ -6,8 +6,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,9 +39,14 @@ import com.please.stop.app.theme.LocalAppColors
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.onboarding_bg_network
 import plzstop.composeapp.generated.resources.onboarding_get_started
 import plzstop.composeapp.generated.resources.onboarding_next
-import plzstop.composeapp.generated.resources.onboarding_bg_network
+
+private val CONTENT_MAX_WIDTH = 460.dp
+private val CONTENT_WIDTH_FRACTION = 0.85f
+private val BUTTON_HEIGHT = 52.dp
+private val BUTTON_CORNER_RADIUS = 16.dp
 
 @Composable
 fun OnboardingCenteredContent(
@@ -77,8 +82,8 @@ fun OnboardingCenteredContent(
         )
         Box(
             modifier = Modifier
-                .widthIn(max = 460.dp)
-                .fillMaxWidth(0.85f)
+                .widthIn(max = CONTENT_MAX_WIDTH)
+                .fillMaxWidth(CONTENT_WIDTH_FRACTION)
                 .then(
                     if (scrollable) Modifier.verticalScroll(rememberScrollState())
                     else Modifier
@@ -139,8 +144,8 @@ fun OnboardingPrimaryButton(
         enabled = isEnabled && !isSaving,
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp),
-        shape = RoundedCornerShape(16.dp),
+            .height(BUTTON_HEIGHT),
+        shape = RoundedCornerShape(BUTTON_CORNER_RADIUS),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.secondary,
             contentColor = Color.White,
@@ -153,7 +158,7 @@ fun OnboardingPrimaryButton(
             )
         } else {
             Text(
-                text = if (currentStep == OnboardingStep.CATEGORIES) {
+                text = if (currentStep == OnboardingStep.BUDGET) {
                     stringResource(Res.string.onboarding_get_started)
                 } else {
                     stringResource(Res.string.onboarding_next)
@@ -207,7 +212,7 @@ private fun OnboardingStepIndicatorBudgetPreview() {
 @Composable
 private fun OnboardingStepIndicatorCategoriesPreview() {
     MaterialTheme {
-        OnboardingStepIndicator(currentStep = OnboardingStep.CATEGORIES)
+        OnboardingStepIndicator(currentStep = OnboardingStep.BUDGET)
     }
 }
 
@@ -242,7 +247,7 @@ private fun OnboardingPrimaryButtonDisabledPreview() {
 private fun OnboardingPrimaryButtonSavingPreview() {
     MaterialTheme {
         OnboardingPrimaryButton(
-            currentStep = OnboardingStep.CATEGORIES,
+            currentStep = OnboardingStep.BUDGET,
             isEnabled = true,
             isSaving = true,
             onClick = {},
@@ -255,7 +260,7 @@ private fun OnboardingPrimaryButtonSavingPreview() {
 private fun OnboardingPrimaryButtonGetStartedPreview() {
     MaterialTheme {
         OnboardingPrimaryButton(
-            currentStep = OnboardingStep.CATEGORIES,
+            currentStep = OnboardingStep.BUDGET,
             isEnabled = true,
             isSaving = false,
             onClick = {},

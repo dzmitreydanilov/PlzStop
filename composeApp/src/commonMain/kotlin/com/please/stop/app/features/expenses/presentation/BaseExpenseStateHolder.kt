@@ -82,6 +82,8 @@ abstract class BaseExpenseStateHolder(
                     keyboardCalculator.setFromAmount(newAmountInput)
                 }
                 val kbState = keyboardCalculator.getState()
+                val newCategoryId = data.categoryId ?: content.form.selectedCategoryId
+                val categoryChanged = newCategoryId != content.form.selectedCategoryId
                 content.copy(
                     receipt = ReceiptState(),
                     form = content.form.copy(
@@ -89,7 +91,11 @@ abstract class BaseExpenseStateHolder(
                         amountInput = newAmountInput,
                         amountDisplayExpression = kbState.displayExpression,
                         isInExpressionMode = kbState.isInExpressionMode,
-                        selectedCategoryId = data.categoryId ?: content.form.selectedCategoryId,
+                        selectedCategoryId = newCategoryId,
+                        selectedSubcategoryId = when {
+                            categoryChanged -> data.subcategoryId
+                            else -> data.subcategoryId ?: content.form.selectedSubcategoryId
+                        },
                         dateEpochMillis = data.date?.toEpochMillis() ?: content.form.dateEpochMillis,
                     ),
                 )
@@ -115,7 +121,12 @@ abstract class BaseExpenseStateHolder(
             updateContent { copy(form = form.copy(title = event.text.take(MAX_TITLE_LENGTH))) }
         )
         is AddExpenseEvent.CategorySelected -> flowOf(
-            updateContent { copy(form = form.copy(selectedCategoryId = event.categoryId)) }
+            updateContent {
+                copy(form = form.copy(selectedCategoryId = event.categoryId, selectedSubcategoryId = null))
+            }
+        )
+        is AddExpenseEvent.SubcategorySelected -> flowOf(
+            updateContent { copy(form = form.copy(selectedSubcategoryId = event.subcategoryId)) }
         )
         is AddExpenseEvent.DateChanged -> flowOf(handleDateChange(event.epochMillis))
         is AddExpenseEvent.TimeChanged -> flowOf(handleTimeChange(event.hour, event.minute))
@@ -174,17 +185,28 @@ abstract class BaseExpenseStateHolder(
             )
         }.toImmutableList()
 
+        val subcategories = data.subcategories.map { sub ->
+            SubcategoryUiModel(
+                id = sub.id,
+                parentCategoryId = sub.parentCategoryId,
+                name = sub.name,
+                iconKey = sub.iconKey,
+            )
+        }.toImmutableList()
+
         val content = previous.asContent() ?: AddExpenseState.Content(
             editContext = editContext,
             currency = currency,
             form = buildInitialForm(),
             categories = persistentListOf(),
+            subcategories = persistentListOf(),
             status = FormStatus(),
             receipt = ReceiptState(),
         )
         return content.copy(
             currency = currency,
             categories = categories,
+            subcategories = subcategories,
         )
     }
 
@@ -267,6 +289,7 @@ abstract class BaseExpenseStateHolder(
             categoryId = categoryId,
             dateEpochMillis = content.form.dateEpochMillis,
             notes = content.form.notes.trim().takeIf { it.isNotBlank() },
+            subcategoryId = content.form.selectedSubcategoryId,
         )
         emit(result)
         if (result is SaveExpenseUseCase.Result.Success) {
@@ -315,6 +338,7 @@ abstract class BaseExpenseStateHolder(
             currency = currency,
             form = form,
             categories = categories,
+            subcategories = subcategories,
             status = status,
             receipt = receipt,
         )
@@ -325,6 +349,7 @@ abstract class BaseExpenseStateHolder(
             currency = currency,
             form = form,
             categories = categories,
+            subcategories = subcategories,
             status = status,
             receipt = receipt,
         )
@@ -338,6 +363,7 @@ abstract class BaseExpenseStateHolder(
             currency = currency,
             form = form,
             categories = categories,
+            subcategories = subcategories,
             status = status,
             receipt = receipt,
         )

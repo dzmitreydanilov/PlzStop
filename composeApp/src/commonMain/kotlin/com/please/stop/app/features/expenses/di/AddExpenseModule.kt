@@ -2,16 +2,16 @@ package com.please.stop.app.features.expenses.di
 
 import com.please.stop.app.core.db.AppDatabase
 import com.please.stop.app.di.dispatchers.DispatchersQualifiers
+import com.please.stop.app.features.expenses.create.presentation.CreateExpenseStateHolder
 import com.please.stop.app.features.expenses.data.repository.AddExpenseRepositoryImpl
 import com.please.stop.app.features.expenses.data.repository.ReceiptRepositoryImpl
 import com.please.stop.app.features.expenses.domain.repository.AddExpenseRepository
 import com.please.stop.app.features.expenses.domain.repository.ReceiptRepository
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
-import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
-import com.please.stop.app.features.expenses.edit.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
-import com.please.stop.app.features.expenses.create.presentation.CreateExpenseStateHolder
+import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
+import com.please.stop.app.features.expenses.edit.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.expenses.edit.presentation.EditExpenseStateHolder
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
@@ -29,8 +29,11 @@ val addExpenseModule = module {
         AddExpenseRepositoryImpl(
             userProfileDao = get<AppDatabase>().userProfileDao(),
             categoryDao = get<AppDatabase>().categoryDao(),
+            subcategoryDao = get<AppDatabase>().subcategoryDao(),
             expenseDao = get<AppDatabase>().expenseDao(),
             currencyRepository = get(),
+            subcategoryRepository = get(),
+            featureFlags = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }

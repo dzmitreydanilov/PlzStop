@@ -6,6 +6,7 @@ data class ReceiptData(
     val currency: String?,
     val date: String?,
     val categoryId: Long?,
+    val subcategoryId: Long? = null,
     val isPartial: Boolean,
     val message: String?,
 )

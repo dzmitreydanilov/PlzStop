@@ -1,16 +1,23 @@
 package com.please.stop.app.features.expenses.scanner
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import com.please.stop.app.utils.toByteArray
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.UIKit.UIApplication
 import platform.UIKit.UIImageJPEGRepresentation
+import platform.VisionKit.VNDocumentCameraScan
 import platform.VisionKit.VNDocumentCameraViewController
 import platform.VisionKit.VNDocumentCameraViewControllerDelegateProtocol
-import platform.VisionKit.VNDocumentCameraScan
 import platform.darwin.NSObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+
+@Composable
+actual fun rememberDocumentScanner(): DocumentScanner {
+    return remember { DocumentScanner() }
+}
 
 actual class DocumentScanner {
 

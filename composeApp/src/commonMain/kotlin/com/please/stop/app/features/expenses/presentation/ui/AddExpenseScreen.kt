@@ -40,11 +40,9 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,19 +58,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.please.stop.app.features.expenses.create.presentation.CreateExpenseStateHolder
+import com.please.stop.app.features.expenses.domain.model.ReceiptError
+import com.please.stop.app.features.expenses.edit.presentation.EditExpenseStateHolder
 import com.please.stop.app.features.expenses.presentation.AddExpenseEvent
 import com.please.stop.app.features.expenses.presentation.AddExpenseNavigation
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
-import com.please.stop.app.features.expenses.presentation.CategoryUiModel
-import com.please.stop.app.features.expenses.create.presentation.CreateExpenseStateHolder
-import com.please.stop.app.features.expenses.edit.presentation.EditExpenseStateHolder
-import com.please.stop.app.features.expenses.domain.model.ReceiptError
-import com.please.stop.app.features.expenses.scanner.DocumentScanner
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.MAX_NOTES_LENGTH
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.MAX_TITLE_LENGTH
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.NOTES_COUNTER_THRESHOLD
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.TITLE_COUNTER_THRESHOLD
+import com.please.stop.app.features.expenses.presentation.CategoryUiModel
+import com.please.stop.app.features.expenses.scanner.rememberDocumentScanner
 import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.uicomponents.error.ScreenOverlay
@@ -85,7 +83,6 @@ import com.please.stop.app.utils.date.localDateTimeFromMillis
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
-import kotlin.time.ExperimentalTime
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.koinInject
@@ -94,6 +91,7 @@ import org.koin.core.parameter.parametersOf
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.add_expense_analyzing_receipt
 import plzstop.composeapp.generated.resources.add_expense_cancel
+import plzstop.composeapp.generated.resources.add_expense_category
 import plzstop.composeapp.generated.resources.add_expense_confirm
 import plzstop.composeapp.generated.resources.add_expense_delete
 import plzstop.composeapp.generated.resources.add_expense_delete_message
@@ -101,24 +99,28 @@ import plzstop.composeapp.generated.resources.add_expense_delete_title
 import plzstop.composeapp.generated.resources.add_expense_discard
 import plzstop.composeapp.generated.resources.add_expense_discard_message
 import plzstop.composeapp.generated.resources.add_expense_discard_title
+import plzstop.composeapp.generated.resources.add_expense_done
+import plzstop.composeapp.generated.resources.add_expense_notes_label
 import plzstop.composeapp.generated.resources.add_expense_receipt_no_network
+import plzstop.composeapp.generated.resources.add_expense_receipt_not_receipt
 import plzstop.composeapp.generated.resources.add_expense_receipt_service_unavailable
 import plzstop.composeapp.generated.resources.add_expense_receipt_unreadable
-import plzstop.composeapp.generated.resources.add_expense_notes_label
+import plzstop.composeapp.generated.resources.add_expense_scan_receipt
+import plzstop.composeapp.generated.resources.add_expense_scan_receipt_hint
 import plzstop.composeapp.generated.resources.add_expense_select_category
 import plzstop.composeapp.generated.resources.add_expense_title
 import plzstop.composeapp.generated.resources.add_expense_title_edit
 import plzstop.composeapp.generated.resources.add_expense_title_label
 import plzstop.composeapp.generated.resources.add_expense_what_was_it_for
-import plzstop.composeapp.generated.resources.add_expense_category
-import plzstop.composeapp.generated.resources.add_expense_done
-import plzstop.composeapp.generated.resources.add_expense_scan_receipt
-import plzstop.composeapp.generated.resources.add_expense_scan_receipt_hint
 import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_keyboard_arrow_right
 import plzstop.composeapp.generated.resources.ic_scan
 import plzstop.composeapp.generated.resources.ic_trash_bin
+import kotlin.time.ExperimentalTime
 
+private val AMOUNT_DISPLAY_HEIGHT = 64.dp
+private val SCAN_LINE_TRAVEL_PX = 40.dp
+private const val CATEGORY_GRID_COLUMNS = 3
 
 @Composable
 fun CreateExpenseScreen(
@@ -191,7 +193,7 @@ private fun AddExpenseContent(
     onEvent: (AddExpenseEvent) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val documentScanner = koinInject<DocumentScanner>()
+    val documentScanner = rememberDocumentScanner()
     var showCategorySheet by remember { mutableStateOf(false) }
     var showNotesSheet by remember { mutableStateOf(false) }
 
@@ -367,7 +369,7 @@ private fun AddExpenseContent(
             CategoryGridSheet(
                 categories = state.categories,
                 selectedCategoryId = form.selectedCategoryId,
-                onCategorySelected = { id ->
+                onSelectCategory = { id ->
                     onEvent(AddExpenseEvent.CategorySelected(id))
                     showCategorySheet = false
                 },
@@ -384,8 +386,8 @@ private fun AddExpenseContent(
             NotesInputSheet(
                 title = form.title,
                 notes = form.notes,
-                onTitleChanged = { onEvent(AddExpenseEvent.TitleChanged(it)) },
-                onNotesChanged = { onEvent(AddExpenseEvent.NotesChanged(it)) },
+                onChangeTitle = { onEvent(AddExpenseEvent.TitleChanged(it)) },
+                onChangeNotes = { onEvent(AddExpenseEvent.NotesChanged(it)) },
                 onDone = { showNotesSheet = false },
             )
         }
@@ -506,11 +508,13 @@ private fun AddExpenseContent(
 
 @Composable
 private fun ReceiptError.toMessage(): String = when (this) {
+    ReceiptError.NOT_RECEIPT -> stringResource(Res.string.add_expense_receipt_not_receipt)
     ReceiptError.UNREADABLE -> stringResource(Res.string.add_expense_receipt_unreadable)
     ReceiptError.NO_NETWORK -> stringResource(Res.string.add_expense_receipt_no_network)
     ReceiptError.SERVICE_UNAVAILABLE -> stringResource(Res.string.add_expense_receipt_service_unavailable)
 }
 
+@Suppress("ModifierHeightWithText")
 @Composable
 private fun AmountDisplay(
     displayExpression: String,
@@ -533,7 +537,7 @@ private fun AmountDisplay(
                 scaleX = scale
                 scaleY = scale
             }
-            .height(64.dp)
+            .height(AMOUNT_DISPLAY_HEIGHT)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -645,7 +649,7 @@ private fun ScanReceiptCard(
                         .padding(start = 8.dp)
                         .size(width = 32.dp, height = 2.dp)
                         .graphicsLayer {
-                            translationY = (scanLineOffset - 0.5f) * 40.dp.toPx()
+                            translationY = (scanLineOffset - 0.5f) * SCAN_LINE_TRAVEL_PX.toPx()
                         }
                         .background(
                             MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
@@ -716,7 +720,7 @@ private fun NotesSection(
 private fun CategoryGridSheet(
     categories: ImmutableList<CategoryUiModel>,
     selectedCategoryId: Long?,
-    onCategorySelected: (Long) -> Unit,
+    onSelectCategory: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(16.dp)) {
@@ -726,7 +730,7 @@ private fun CategoryGridSheet(
             modifier = Modifier.padding(bottom = 16.dp),
         )
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            columns = GridCells.Fixed(CATEGORY_GRID_COLUMNS),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -739,7 +743,7 @@ private fun CategoryGridSheet(
                             if (isSelected) MaterialTheme.colorScheme.primaryContainer
                             else MaterialTheme.colorScheme.surfaceContainerLow,
                         )
-                        .clickable { onCategorySelected(category.id) }
+                        .clickable { onSelectCategory(category.id) }
                         .padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -771,8 +775,8 @@ private fun CategoryGridSheet(
 private fun NotesInputSheet(
     title: String,
     notes: String,
-    onTitleChanged: (String) -> Unit,
-    onNotesChanged: (String) -> Unit,
+    onChangeTitle: (String) -> Unit,
+    onChangeNotes: (String) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -788,7 +792,7 @@ private fun NotesInputSheet(
         )
         OutlinedTextField(
             value = title,
-            onValueChange = { onTitleChanged(it.take(MAX_TITLE_LENGTH)) },
+            onValueChange = { onChangeTitle(it.take(MAX_TITLE_LENGTH)) },
             label = { Text(stringResource(Res.string.add_expense_title_label)) },
             singleLine = true,
             supportingText = if (title.length > TITLE_COUNTER_THRESHOLD) {
@@ -801,7 +805,7 @@ private fun NotesInputSheet(
         Spacer(modifier = Modifier.height(12.dp))
         OutlinedTextField(
             value = notes,
-            onValueChange = { onNotesChanged(it.take(MAX_NOTES_LENGTH)) },
+            onValueChange = { onChangeNotes(it.take(MAX_NOTES_LENGTH)) },
             label = { Text(stringResource(Res.string.add_expense_notes_label)) },
             minLines = 3,
             maxLines = 6,

@@ -20,6 +20,7 @@ class SaveExpenseUseCase(
         categoryId: Long,
         dateEpochMillis: Long,
         notes: String?,
+        subcategoryId: Long? = null,
     ): DomainResult = withContext(ioDispatcher) {
         val result = if (existingId != null) {
             repository.updateExpense(
@@ -29,6 +30,7 @@ class SaveExpenseUseCase(
                 categoryId = categoryId,
                 dateEpochMillis = dateEpochMillis,
                 notes = notes,
+                subcategoryId = subcategoryId,
             )
         } else {
             repository.saveExpense(
@@ -37,6 +39,7 @@ class SaveExpenseUseCase(
                 categoryId = categoryId,
                 dateEpochMillis = dateEpochMillis,
                 notes = notes,
+                subcategoryId = subcategoryId,
             ).map { }
         }
         result.fold(

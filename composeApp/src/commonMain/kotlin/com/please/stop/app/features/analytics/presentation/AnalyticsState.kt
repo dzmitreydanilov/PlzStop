@@ -3,7 +3,6 @@ package com.please.stop.app.features.analytics.presentation
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 
 @Stable
 sealed interface AnalyticsState {

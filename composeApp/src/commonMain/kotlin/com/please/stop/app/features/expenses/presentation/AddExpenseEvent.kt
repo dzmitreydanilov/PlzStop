@@ -4,6 +4,7 @@ sealed interface AddExpenseEvent {
     data class KeyPressed(val key: NumericKey) : AddExpenseEvent
     data class TitleChanged(val text: String) : AddExpenseEvent
     data class CategorySelected(val categoryId: Long) : AddExpenseEvent
+    data class SubcategorySelected(val subcategoryId: Long?) : AddExpenseEvent
     data class DateChanged(val epochMillis: Long) : AddExpenseEvent
     data class TimeChanged(val hour: Int, val minute: Int) : AddExpenseEvent
     data class NotesChanged(val text: String) : AddExpenseEvent
