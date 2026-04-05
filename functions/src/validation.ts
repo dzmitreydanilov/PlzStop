@@ -54,10 +54,16 @@ export function validateAndSanitize(data: Record<string, unknown>): ValidatedInp
     throw new HttpsError("invalid-argument", "IMAGE_TOO_LARGE: Image exceeds 5MB limit");
   }
 
-  const sanitizedCategories: Category[] = categories.map((c) => ({
-    id: c.id,
-    name: sanitizeName(c.name),
-  }));
+  if (imageBase64.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64)) {
+    throw new HttpsError("invalid-argument", "INVALID_REQUEST: Invalid base64 encoding");
+  }
+
+  const sanitizedCategories: Category[] = categories.map((c) => {
+    if (typeof c.id !== "number" || !Number.isInteger(c.id)) {
+      throw new HttpsError("invalid-argument", "INVALID_REQUEST: Category ID must be an integer");
+    }
+    return { id: c.id, name: sanitizeName(c.name) };
+  });
 
   const sanitizedSubcategories: Subcategory[] = [];
   if (subcategories && Array.isArray(subcategories)) {
@@ -65,6 +71,12 @@ export function validateAndSanitize(data: Record<string, unknown>): ValidatedInp
       throw new HttpsError("invalid-argument", "INVALID_REQUEST: Too many subcategories");
     }
     for (const sub of subcategories) {
+      if (typeof sub.id !== "number" || !Number.isInteger(sub.id)) {
+        throw new HttpsError("invalid-argument", "INVALID_REQUEST: Subcategory ID must be an integer");
+      }
+      if (typeof sub.parentCategoryId !== "number" || !Number.isInteger(sub.parentCategoryId)) {
+        throw new HttpsError("invalid-argument", "INVALID_REQUEST: Subcategory parentCategoryId must be an integer");
+      }
       sanitizedSubcategories.push({
         id: sub.id,
         parentCategoryId: sub.parentCategoryId,

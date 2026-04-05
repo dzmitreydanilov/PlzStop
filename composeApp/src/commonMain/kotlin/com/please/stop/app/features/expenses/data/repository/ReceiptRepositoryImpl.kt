@@ -6,6 +6,7 @@ import com.please.stop.app.features.expenses.data.remote.ReceiptAnalysisExceptio
 import com.please.stop.app.features.expenses.domain.model.ExpenseCategory
 import com.please.stop.app.features.expenses.domain.model.ExpenseSubcategory
 import com.please.stop.app.features.expenses.domain.model.ReceiptData
+import com.please.stop.app.features.expenses.domain.model.ReceiptItem
 import com.please.stop.app.features.expenses.domain.repository.ReceiptRepository
 import kotlinx.coroutines.withTimeout
 import kotlin.io.encoding.Base64
@@ -79,6 +80,19 @@ class ReceiptRepositoryImpl(
                     (it * 10.0.pow(decimalPlaces)).roundToLong()
                 }
 
+                val itemsRaw = data?.get("items") as? List<*>
+                val items = itemsRaw?.mapNotNull { entry ->
+                    val map = entry as? Map<*, *> ?: return@mapNotNull null
+                    val name = map["name"] as? String ?: return@mapNotNull null
+                    val amount = (map["amount"] as? Number)?.toDouble() ?: return@mapNotNull null
+                    ReceiptItem(
+                        name = name,
+                        amountMinorUnits = (amount * 10.0.pow(decimalPlaces)).roundToLong(),
+                        categoryId = (map["categoryId"] as? Number)?.toLong(),
+                        subcategoryId = (map["subcategoryId"] as? Number)?.toLong(),
+                    )
+                } ?: emptyList()
+
                 ReceiptData(
                     merchantName = data?.get("merchantName") as? String,
                     totalAmountMinorUnits = totalAmountMinorUnits,
@@ -88,6 +102,7 @@ class ReceiptRepositoryImpl(
                     subcategoryId = (data?.get("subcategoryId") as? Number)?.toLong(),
                     isPartial = status == ResponseStatus.PARTIAL,
                     message = message,
+                    items = items,
                 )
             }
         }

@@ -42,6 +42,7 @@ sealed interface AddExpenseEvent {
     data object ConfirmRateOverride : AddExpenseEvent
     data object ResetToFetchedRate : AddExpenseEvent
     data object ToggleSaveInOriginalCurrency : AddExpenseEvent
+    data object CreateReceiptClicked : AddExpenseEvent
 }
 
 enum class KeyboardOperator {

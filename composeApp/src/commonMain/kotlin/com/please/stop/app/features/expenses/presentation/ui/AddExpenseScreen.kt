@@ -65,6 +65,7 @@ import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.features.expenses.edit.presentation.EditExpenseStateHolder
 import com.please.stop.app.features.expenses.presentation.AddExpenseEvent
 import com.please.stop.app.features.expenses.presentation.AddExpenseNavigation
+import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
 import com.please.stop.app.features.expenses.presentation.ConversionState
@@ -142,12 +143,17 @@ private const val CATEGORY_GRID_COLUMNS = 3
 fun CreateExpenseScreen(
     categoryId: Long?,
     onGoBack: () -> Unit,
+    onOpenReceiptItems: (ReceiptItemsRoute) -> Unit = {},
 ) {
     val stateHolder = koinViewModel<CreateExpenseStateHolder>(
         key = "create_expense_$categoryId",
     ) { parametersOf(categoryId) }
 
-    ExpenseScreenContent(stateHolder = stateHolder, onGoBack = onGoBack)
+    ExpenseScreenContent(
+        stateHolder = stateHolder,
+        onGoBack = onGoBack,
+        onOpenReceiptItems = onOpenReceiptItems,
+    )
 }
 
 @Composable
@@ -166,6 +172,7 @@ fun EditExpenseScreen(
 private fun ExpenseScreenContent(
     stateHolder: BaseExpenseStateHolder,
     onGoBack: () -> Unit,
+    onOpenReceiptItems: (ReceiptItemsRoute) -> Unit = {},
 ) {
     val state by stateHolder.state.collectAsStateWithLifecycle()
 
@@ -179,6 +186,7 @@ private fun ExpenseScreenContent(
     ) { navigation ->
         when (navigation) {
             AddExpenseNavigation.GoBack -> onGoBack()
+            is AddExpenseNavigation.OpenReceiptItems -> onOpenReceiptItems(navigation.route)
         }
     }
 
@@ -318,6 +326,13 @@ private fun AddExpenseContent(
                             }
                         },
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { onEvent(AddExpenseEvent.CreateReceiptClicked) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Add receipt manually")
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
                 CategoryChip(

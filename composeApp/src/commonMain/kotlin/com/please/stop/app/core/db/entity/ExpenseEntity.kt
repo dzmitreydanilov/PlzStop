@@ -20,8 +20,14 @@ import androidx.room.PrimaryKey
             childColumns = ["subcategoryId"],
             onDelete = ForeignKey.SET_NULL,
         ),
+        ForeignKey(
+            entity = ReceiptEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["receiptId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index("categoryId"), Index("dateEpochMillis"), Index("subcategoryId")],
+    indices = [Index("categoryId"), Index("dateEpochMillis"), Index("subcategoryId"), Index("receiptId")],
 )
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -36,4 +42,5 @@ data class ExpenseEntity(
     val originalAmountMinorUnits: Long? = null,
     val originalCurrencyCode: String? = null,
     val conversionRate: Double? = null,
+    val receiptId: Long? = null,
 )

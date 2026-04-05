@@ -14,6 +14,7 @@ import com.please.stop.app.features.expenses.presentation.ConversionState
 import com.please.stop.app.features.expenses.presentation.EditContext
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
 import com.please.stop.app.features.expenses.presentation.ExpenseResult
+import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -28,11 +29,13 @@ class EditExpenseStateHolder(
     private val deleteExpenseUseCase: DeleteExpenseUseCase,
     analyzeReceiptUseCase: AnalyzeReceiptUseCase,
     fetchExchangeRateUseCase: FetchExchangeRateUseCase,
+    receiptItemsArgsHolder: ReceiptItemsArgsHolder,
 ) : BaseExpenseStateHolder(
     observeFormDataUseCase = observeFormDataUseCase,
     saveExpenseUseCase = saveExpenseUseCase,
     analyzeReceiptUseCase = analyzeReceiptUseCase,
     fetchExchangeRateUseCase = fetchExchangeRateUseCase,
+    receiptItemsArgsHolder = receiptItemsArgsHolder,
 ) {
     override val tag = "EditExpenseStateHolder"
 
