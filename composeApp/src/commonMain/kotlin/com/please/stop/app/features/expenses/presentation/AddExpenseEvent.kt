@@ -6,7 +6,6 @@ sealed interface AddExpenseEvent {
     data class CategorySelected(val categoryId: Long) : AddExpenseEvent
     data class SubcategorySelected(val subcategoryId: Long?) : AddExpenseEvent
     data class DateChanged(val epochMillis: Long) : AddExpenseEvent
-    data class TimeChanged(val hour: Int, val minute: Int) : AddExpenseEvent
     data class NotesChanged(val text: String) : AddExpenseEvent
     data object SaveClicked : AddExpenseEvent
     data object DeleteClicked : AddExpenseEvent
@@ -56,5 +55,6 @@ sealed interface NumericKey {
     data class Operator(val op: KeyboardOperator) : NumericKey
     data object Equals : NumericKey
     data object Calendar : NumericKey
+    data object Notes : NumericKey
     data object CurrencySymbol : NumericKey
 }

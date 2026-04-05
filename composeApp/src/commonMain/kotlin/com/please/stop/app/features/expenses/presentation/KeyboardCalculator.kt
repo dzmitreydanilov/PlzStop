@@ -24,6 +24,7 @@ class KeyboardCalculator(
         is NumericKey.Operator -> handleOperator(key.op)
         is NumericKey.Equals -> handleEquals()
         is NumericKey.Calendar,
+        is NumericKey.Notes,
         is NumericKey.CurrencySymbol -> getState()
     }
 

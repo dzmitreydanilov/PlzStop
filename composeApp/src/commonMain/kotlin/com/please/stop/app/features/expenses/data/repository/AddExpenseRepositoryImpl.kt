@@ -2,11 +2,9 @@ package com.please.stop.app.features.expenses.data.repository
 
 import com.please.stop.app.core.db.dao.CategoryDao
 import com.please.stop.app.core.db.dao.ExpenseDao
-import com.please.stop.app.core.db.dao.SubcategoryDao
 import com.please.stop.app.core.db.dao.UserProfileDao
 import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.db.entity.ExpenseEntity
-import com.please.stop.app.core.db.entity.SubcategoryEntity
 import com.please.stop.app.core.featureflags.FeatureFlags
 import com.please.stop.app.features.expenses.domain.model.AddExpenseFormData
 import com.please.stop.app.features.expenses.domain.model.ExpenseCategory
@@ -14,15 +12,13 @@ import com.please.stop.app.features.expenses.domain.model.ExpenseDetail
 import com.please.stop.app.features.expenses.domain.model.ExpenseSubcategory
 import com.please.stop.app.features.expenses.domain.repository.AddExpenseRepository
 import com.please.stop.app.features.onboarding.domain.model.Currency
+import com.please.stop.app.features.onboarding.domain.model.Subcategory
 import com.please.stop.app.features.onboarding.domain.repository.CurrencyRepository
 import com.please.stop.app.features.onboarding.domain.repository.SubcategoryRepository
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlin.time.ExperimentalTime
@@ -30,7 +26,6 @@ import kotlin.time.ExperimentalTime
 class AddExpenseRepositoryImpl(
     private val userProfileDao: UserProfileDao,
     private val categoryDao: CategoryDao,
-    private val subcategoryDao: SubcategoryDao,
     private val expenseDao: ExpenseDao,
     private val currencyRepository: CurrencyRepository,
     private val subcategoryRepository: SubcategoryRepository,
@@ -41,42 +36,36 @@ class AddExpenseRepositoryImpl(
     private var currencyCache: List<Currency>? = null
 
     override fun observeFormData(): Flow<AddExpenseFormData> {
-        val subcategoriesFlow = featureFlags.observeSubcategoriesEnabled()
-            .flatMapLatest { enabled ->
-                if (enabled) {
-                    subcategoryRepository.ensureSeeded()
-                    subcategoryDao.observeAll()
-                } else {
-                    flowOf(emptyList())
-                }
+        return categoryDao.observeAll()
+            .map { categories ->
+                buildFormData(
+                    categories = categories,
+                    subcategories = resolveSubcategories(),
+                    currencyConversionEnabled = featureFlags.currencyConversionEnabled(),
+                )
             }
-
-        return combine(
-            categoryDao.observeAll(),
-            subcategoriesFlow,
-            featureFlags.observeCurrencyConversionEnabled(),
-        ) { categories, subcategories, conversionEnabled ->
-            buildFormData(categories, subcategories, conversionEnabled)
-        }.flowOn(ioDispatcher)
+            .flowOn(ioDispatcher)
     }
 
     override suspend fun getFormData(): Result<AddExpenseFormData> = runCatching {
-        val subcategories = if (featureFlags.subcategoriesEnabled()) {
-            subcategoryRepository.ensureSeeded()
-            subcategoryDao.observeAll().first()
-        } else {
-            emptyList()
-        }
         buildFormData(
             categories = categoryDao.observeAll().first(),
-            subcategories = subcategories,
+            subcategories = resolveSubcategories(),
             currencyConversionEnabled = featureFlags.currencyConversionEnabled(),
         )
     }
 
+    private suspend fun resolveSubcategories(): List<ExpenseSubcategory> {
+        return if (featureFlags.subcategoriesEnabled()) {
+            subcategoryRepository.ensureSeeded().map { it.toExpenseSubcategory() }
+        } else {
+            emptyList()
+        }
+    }
+
     private suspend fun buildFormData(
         categories: List<CategoryEntity>,
-        subcategories: List<SubcategoryEntity>,
+        subcategories: List<ExpenseSubcategory>,
         currencyConversionEnabled: Boolean,
     ): AddExpenseFormData {
         val profile = userProfileDao.get()
@@ -93,7 +82,7 @@ class AddExpenseRepositoryImpl(
                     iconKey = entity.iconKey,
                 )
             },
-            subcategories = subcategories.map { it.toDomain() },
+            subcategories = subcategories,
             currencyConversionEnabled = currencyConversionEnabled,
         )
     }
@@ -187,7 +176,7 @@ class AddExpenseRepositoryImpl(
     }
 }
 
-private fun SubcategoryEntity.toDomain() = ExpenseSubcategory(
+private fun Subcategory.toExpenseSubcategory() = ExpenseSubcategory(
     id = id,
     parentCategoryId = parentCategoryId,
     name = name,

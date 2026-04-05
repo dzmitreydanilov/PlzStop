@@ -8,6 +8,7 @@ import com.please.stop.app.features.onboarding.domain.model.Subcategory
 import com.please.stop.app.features.onboarding.domain.repository.SubcategoryRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -50,23 +51,25 @@ class SubcategoryRepositoryImpl(
             }
         }
 
-    override suspend fun ensureSeeded(): Unit = withContext(ioDispatcher) {
-        if (seeded) return@withContext
-
-        mutex.withLock {
-            if (seeded) return@withLock
-
-            val count = subcategoryDao.count()
-            if (count > 0) {
-                seeded = true
-                return@withLock
+    override suspend fun ensureSeeded(): List<Subcategory> = withContext(ioDispatcher) {
+        if (!seeded) {
+            mutex.withLock {
+                if (!seeded) {
+                    val count = subcategoryDao.count()
+                    if (count == 0) {
+                        val defaults = runCatching {
+                            cache ?: loadSubcategories().also { cache = it }
+                        }.getOrNull()
+                        if (defaults != null) {
+                            subcategoryDao.insertAll(defaults.map { it.toEntity() })
+                            logDebugWithTag(tag = TAG, message = "Seeded ${defaults.size} default subcategories")
+                        }
+                    }
+                    seeded = true
+                }
             }
-
-            val defaults = getDefaultSubcategories().getOrNull() ?: return@withLock
-            subcategoryDao.insertAll(defaults.map { it.toEntity() })
-            seeded = true
-            logDebugWithTag(tag = TAG, message = "Seeded ${defaults.size} default subcategories")
         }
+        subcategoryDao.observeAll().first().map { it.toDomain() }
     }
 
     @Suppress("TooGenericExceptionCaught")

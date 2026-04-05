@@ -28,7 +28,7 @@ import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.ic_backspace
 import plzstop.composeapp.generated.resources.ic_check
-import plzstop.composeapp.generated.resources.ic_calendar
+import plzstop.composeapp.generated.resources.ic_add_note
 
 private val BUTTON_SPACING = 8.dp
 private val CORNER_RADIUS = 12.dp
@@ -72,11 +72,11 @@ internal fun NumericKeyboard(
             DigitButton(5, onKey, Modifier.weight(1f).aspectRatio(1f))
             DigitButton(6, onKey, Modifier.weight(1f).aspectRatio(1f))
             KeyButton(
-                onClick = { onKey(NumericKey.Calendar) },
+                onClick = { onKey(NumericKey.Notes) },
                 modifier = Modifier.weight(1f).aspectRatio(1f),
             ) {
                 Icon(
-                    imageVector = vectorResource(Res.drawable.ic_calendar),
+                    imageVector = vectorResource(Res.drawable.ic_add_note),
                     contentDescription = null,
                 )
             }

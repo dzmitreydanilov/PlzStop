@@ -41,7 +41,6 @@ val addExpenseModule = module {
         AddExpenseRepositoryImpl(
             userProfileDao = get<AppDatabase>().userProfileDao(),
             categoryDao = get<AppDatabase>().categoryDao(),
-            subcategoryDao = get<AppDatabase>().subcategoryDao(),
             expenseDao = get<AppDatabase>().expenseDao(),
             currencyRepository = get(),
             subcategoryRepository = get(),
