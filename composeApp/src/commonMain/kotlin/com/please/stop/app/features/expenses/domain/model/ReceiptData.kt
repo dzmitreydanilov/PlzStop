@@ -9,4 +9,5 @@ data class ReceiptData(
     val subcategoryId: Long? = null,
     val isPartial: Boolean,
     val message: String?,
+    val items: List<ReceiptItem> = emptyList(),
 )

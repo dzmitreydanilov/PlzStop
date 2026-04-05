@@ -72,6 +72,31 @@ fun now(): Instant {
 data class EpochMillisRange(val fromMillis: Long, val toMillis: Long)
 
 @OptIn(ExperimentalTime::class)
+fun formatDayLabel(
+    epochMillis: Long,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): String {
+    val date = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(timeZone).date
+    val dayOfWeek = date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+    val month = date.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+    return "$dayOfWeek, $month ${date.dayOfMonth}"
+}
+
+@OptIn(ExperimentalTime::class)
+fun monthMillisRange(
+    year: Int,
+    month: Int,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): EpochMillisRange {
+    val monthStart = LocalDate(year, month, 1)
+    val nextMonthStart = monthStart.plus(1, DateTimeUnit.MONTH)
+    return EpochMillisRange(
+        fromMillis = monthStart.atStartOfDayIn(timeZone).toEpochMilliseconds(),
+        toMillis = nextMonthStart.atStartOfDayIn(timeZone).toEpochMilliseconds(),
+    )
+}
+
+@OptIn(ExperimentalTime::class)
 fun currentMonthMillisRange(
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): EpochMillisRange {

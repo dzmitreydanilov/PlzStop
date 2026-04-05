@@ -19,6 +19,7 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.please.stop.app.features.expenses.presentation.ui.CreateExpenseScreen
 import com.please.stop.app.features.expenses.presentation.ui.EditExpenseScreen
+import com.please.stop.app.features.expenses.receiptitems.presentation.ui.ReceiptItemsScreen
 import com.please.stop.app.features.onboarding.presentation.ui.OnboardingScreen
 import com.please.stop.app.navigation.animation.LocalSharedTransitionScope
 import com.please.stop.app.navigation.animation.predictivePopTransitionSpec
@@ -37,6 +38,7 @@ import com.please.stop.app.navigation.routes.CreateExpenseRoute
 import com.please.stop.app.navigation.routes.EditExpenseRoute
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.navigation.routes.OnboardingRoute
+import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -166,6 +168,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
             },
             onNavigateToSettings = {},
             onNavigateToCreateExpense = { router.push(CreateExpenseRoute()) },
+            onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
         )
     }
 
@@ -173,6 +176,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
         CreateExpenseScreen(
             categoryId = route.categoryId,
             onGoBack = { router.pop() },
+            onOpenReceiptItems = { receiptRoute -> router.push(receiptRoute) },
         )
     }
 
@@ -180,6 +184,14 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
         EditExpenseScreen(
             expenseId = route.expenseId,
             onGoBack = { router.pop() },
+        )
+    }
+
+    entry<ReceiptItemsRoute> { route ->
+        ReceiptItemsScreen(
+            route = route,
+            onGoBack = { router.pop() },
+            onSaved = { router.pop(); router.pop() },
         )
     }
 }

@@ -50,6 +50,20 @@ interface ExpenseDao {
         fromEpochMillis: Long,
         toEpochMillis: Long,
     ): Flow<Long?>
+
+    @Query(
+        """
+        SELECT * FROM expense
+        WHERE isDeleted = 0
+          AND dateEpochMillis >= :fromEpochMillis
+          AND dateEpochMillis < :toEpochMillis
+        ORDER BY dateEpochMillis DESC
+        """
+    )
+    fun observeExpensesInRange(
+        fromEpochMillis: Long,
+        toEpochMillis: Long,
+    ): Flow<List<ExpenseEntity>>
 }
 
 data class CategorySpending(

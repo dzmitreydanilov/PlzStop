@@ -7,16 +7,21 @@ import com.please.stop.app.features.expenses.data.remote.ExchangeRateApiService
 import com.please.stop.app.features.expenses.data.repository.AddExpenseRepositoryImpl
 import com.please.stop.app.features.expenses.data.repository.ExchangeRateRepositoryImpl
 import com.please.stop.app.features.expenses.data.repository.ReceiptRepositoryImpl
+import com.please.stop.app.features.expenses.data.repository.ReceiptSaveRepositoryImpl
 import com.please.stop.app.features.expenses.domain.repository.AddExpenseRepository
 import com.please.stop.app.features.expenses.domain.repository.ExchangeRateRepository
 import com.please.stop.app.features.expenses.domain.repository.ReceiptRepository
+import com.please.stop.app.features.expenses.domain.repository.ReceiptSaveRepository
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
 import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
+import com.please.stop.app.features.expenses.domain.usecase.SaveReceiptExpensesUseCase
 import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
 import com.please.stop.app.features.expenses.edit.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.expenses.edit.presentation.EditExpenseStateHolder
+import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
+import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemsStateHolder
 import com.please.stop.app.network.configureContent
 import com.please.stop.app.network.contentEncoding
 import com.please.stop.app.network.httpEngine
@@ -31,9 +36,18 @@ import org.koin.dsl.module
 
 val addExpenseModule = module {
 
+    single { ReceiptItemsArgsHolder() }
+
     single<ReceiptRepository> {
         ReceiptRepositoryImpl(
             callableFunctions = get(),
+        )
+    }
+
+    single<ReceiptSaveRepository> {
+        ReceiptSaveRepositoryImpl(
+            receiptDao = get<AppDatabase>().receiptDao(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }
 
@@ -118,6 +132,13 @@ val addExpenseModule = module {
         )
     }
 
+    factory {
+        SaveReceiptExpensesUseCase(
+            repository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+
     viewModel { params ->
         CreateExpenseStateHolder(
             preselectedCategoryId = params.getOrNull(),
@@ -125,6 +146,7 @@ val addExpenseModule = module {
             saveExpenseUseCase = get(),
             analyzeReceiptUseCase = get(),
             fetchExchangeRateUseCase = get(),
+            receiptItemsArgsHolder = get(),
         )
     }
 
@@ -137,6 +159,17 @@ val addExpenseModule = module {
             deleteExpenseUseCase = get(),
             analyzeReceiptUseCase = get(),
             fetchExchangeRateUseCase = get(),
+            receiptItemsArgsHolder = get(),
+        )
+    }
+
+    viewModel { params ->
+        ReceiptItemsStateHolder(
+            route = params.get(),
+            argsHolder = get(),
+            saveReceiptExpensesUseCase = get(),
+            observeFormDataUseCase = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }
 }

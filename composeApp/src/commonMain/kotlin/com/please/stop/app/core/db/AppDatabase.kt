@@ -9,10 +9,12 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 import com.please.stop.app.core.db.dao.CategoryDao
 import com.please.stop.app.core.db.dao.ExpenseDao
+import com.please.stop.app.core.db.dao.ReceiptDao
 import com.please.stop.app.core.db.dao.SubcategoryDao
 import com.please.stop.app.core.db.dao.UserProfileDao
 import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.db.entity.ExpenseEntity
+import com.please.stop.app.core.db.entity.ReceiptEntity
 import com.please.stop.app.core.db.entity.SubcategoryEntity
 import com.please.stop.app.core.db.entity.UserProfileEntity
 
@@ -22,8 +24,9 @@ import com.please.stop.app.core.db.entity.UserProfileEntity
         CategoryEntity::class,
         ExpenseEntity::class,
         SubcategoryEntity::class,
+        ReceiptEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -33,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun subcategoryDao(): SubcategoryDao
+    abstract fun receiptDao(): ReceiptDao
 
     companion object {
         const val NAME = "plzstop.db"
@@ -119,6 +123,26 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 connection.execSQL(
                     "ALTER TABLE `expense` ADD COLUMN `conversionRate` REAL DEFAULT NULL"
+                )
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `receipt` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`merchantName` TEXT, " +
+                        "`dateEpochMillis` INTEGER, " +
+                        "`currency` TEXT, " +
+                        "`createdAtEpochMillis` INTEGER NOT NULL)"
+                )
+                connection.execSQL(
+                    "ALTER TABLE `expense` ADD COLUMN `receiptId` INTEGER DEFAULT NULL " +
+                        "REFERENCES `receipt`(`id`) ON DELETE SET NULL"
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_expense_receiptId` ON `expense` (`receiptId`)"
                 )
             }
         }
