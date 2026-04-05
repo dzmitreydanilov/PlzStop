@@ -71,6 +71,13 @@
     <string name="add_expense_receipt_not_receipt">This doesn\'t look like a receipt. Try a different photo.</string>
     <string name="add_expense_receipt_unreadable">Couldn\'t read this receipt. Try a clearer photo or enter manually.</string>
     <string name="add_expense_receipt_no_network">Receipt scan requires an internet connection.</string>
+    <string name="monthly_expenses_receipt_fallback">Receipt</string>
+    <string name="monthly_expenses_empty">No expenses this month</string>
+    <string name="monthly_expenses_previous_month">Previous month</string>
+    <string name="monthly_expenses_next_month">Next month</string>
+    <string name="monthly_expenses_item_count">%1$d items</string>
+    <string name="monthly_expenses_expand_receipt">Expand receipt</string>
+    <string name="monthly_expenses_collapse_receipt">Collapse receipt</string>
     <string name="add_expense_receipt_service_unavailable">Service temporarily unavailable. Enter manually.</string>
     <string name="add_expense_scan_receipt_hint">Snap a photo to auto-fill</string>
     <string name="add_expense_select_category">Select category</string>

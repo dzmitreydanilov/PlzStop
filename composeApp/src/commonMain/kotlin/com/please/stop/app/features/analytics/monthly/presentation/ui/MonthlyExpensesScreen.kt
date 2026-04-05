@@ -1,4 +1,4 @@
-package com.please.stop.app.features.expenses.monthly.presentation.ui
+package com.please.stop.app.features.analytics.monthly.presentation.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -16,32 +18,51 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.please.stop.app.features.expenses.monthly.presentation.DayGroupUiModel
-import com.please.stop.app.features.expenses.monthly.presentation.ExpenseEntryUiModel
-import com.please.stop.app.features.expenses.monthly.presentation.MonthlyExpensesEvent
-import com.please.stop.app.features.expenses.monthly.presentation.MonthlyExpensesNavigation
-import com.please.stop.app.features.expenses.monthly.presentation.MonthlyExpensesState
-import com.please.stop.app.features.expenses.monthly.presentation.MonthlyExpensesStateHolder
+import com.please.stop.app.features.analytics.monthly.presentation.DayGroupUiModel
+import com.please.stop.app.features.analytics.monthly.presentation.ExpenseEntryUiModel
+import com.please.stop.app.features.analytics.monthly.presentation.MonthPageState
+import com.please.stop.app.features.analytics.monthly.presentation.MonthlyExpensesEvent
+import com.please.stop.app.features.analytics.monthly.presentation.MonthlyExpensesNavigation
+import com.please.stop.app.features.analytics.monthly.presentation.MonthlyExpensesStateHolder
+import com.please.stop.app.features.analytics.monthly.presentation.MonthlyWindowState
 import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
+import com.please.stop.app.utils.date.currentMonthPageIndex
+import com.please.stop.app.utils.date.monthName
+import com.please.stop.app.utils.date.pageIndexToYearMonth
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_arrow_forward
+import plzstop.composeapp.generated.resources.ic_keyboard_arrow_down
+import plzstop.composeapp.generated.resources.ic_keyboard_arrow_up
+import plzstop.composeapp.generated.resources.monthly_expenses_collapse_receipt
+import plzstop.composeapp.generated.resources.monthly_expenses_empty
+import plzstop.composeapp.generated.resources.monthly_expenses_expand_receipt
+import plzstop.composeapp.generated.resources.monthly_expenses_item_count
+import plzstop.composeapp.generated.resources.monthly_expenses_next_month
+import plzstop.composeapp.generated.resources.monthly_expenses_previous_month
+import plzstop.composeapp.generated.resources.monthly_expenses_receipt_fallback
 
 @Composable
 fun MonthlyExpensesScreen(
@@ -49,6 +70,18 @@ fun MonthlyExpensesScreen(
 ) {
     val stateHolder = koinViewModel<MonthlyExpensesStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+
+    val maxPage = remember { currentMonthPageIndex() }
+    val pagerState = rememberPagerState(
+        initialPage = maxPage,
+        pageCount = { maxPage + 1 },
+    )
+
+    LaunchedEffect(pagerState.currentPage) {
+        val (year, month) = pageIndexToYearMonth(pagerState.currentPage)
+        stateHolder.processEvent(MonthlyExpensesEvent.MonthSelected(year, month))
+    }
 
     CollectNavigationFlow(
         flow = stateHolder.getNavigation(),
@@ -59,59 +92,84 @@ fun MonthlyExpensesScreen(
         }
     }
 
-    val errorOverlay: ScreenOverlay? = when (val s = state) {
-        is MonthlyExpensesState.Error -> ScreenOverlay.Error(type = s.errorType)
-        else -> null
+    val (currentYear, currentMonth) = remember(pagerState.currentPage) {
+        pageIndexToYearMonth(pagerState.currentPage)
     }
 
     ScreenOverlayContainer(
-        overlay = errorOverlay,
+        overlay = state.asOverlay(currentYear, currentMonth),
         onDismiss = {},
     ) {
-        DisplayFullScreenProgress(showProgress = state is MonthlyExpensesState.Loading)
+        Scaffold(
+            topBar = {
+                MonthHeader(
+                    monthLabel = "${monthName(currentMonth)} $currentYear",
+                    canGoToPreviousMonth = pagerState.currentPage > 0,
+                    canGoToNextMonth = pagerState.currentPage < maxPage,
+                    onPreviousClicked = {
+                        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                    },
+                    onNextClicked = {
+                        scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                    },
+                )
+            },
+        ) { innerPadding ->
+            HorizontalPager(
+                state = pagerState,
+                beyondViewportPageCount = 1,
+                modifier = Modifier.padding(innerPadding),
+            ) { page ->
+                val (year, month) = pageIndexToYearMonth(page)
+                val pageState = state.pageStateFor(year, month)
 
-        when (val s = state) {
-            is MonthlyExpensesState.Content -> MonthlyExpensesContent(
-                state = s,
-                onEvent = stateHolder::processEvent,
-            )
-            else -> {}
+                MonthBody(
+                    state = pageState,
+                    onExpenseClicked = { id ->
+                        stateHolder.processEvent(MonthlyExpensesEvent.ExpenseClicked(id))
+                    },
+                    onReceiptGroupClicked = { id ->
+                        stateHolder.processEvent(
+                            MonthlyExpensesEvent.ReceiptGroupClicked(id, year, month)
+                        )
+                    },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun MonthlyExpensesContent(
-    state: MonthlyExpensesState.Content,
-    onEvent: (MonthlyExpensesEvent) -> Unit,
+private fun MonthBody(
+    state: MonthPageState,
+    modifier: Modifier = Modifier,
+    onExpenseClicked: (Long) -> Unit,
+    onReceiptGroupClicked: (Long) -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        MonthHeader(
-            monthLabel = state.monthLabel,
-            canGoToPreviousMonth = state.canGoToPreviousMonth,
-            canGoToNextMonth = state.canGoToNextMonth,
-            onPreviousClicked = { onEvent(MonthlyExpensesEvent.PreviousMonthClicked) },
-            onNextClicked = { onEvent(MonthlyExpensesEvent.NextMonthClicked) },
+    when {
+        state is MonthPageState.Loading -> DisplayFullScreenProgress(
+            showProgress = true,
+            modifier = modifier.fillMaxSize(),
         )
-        if (state.isEmpty) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No expenses this month",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            MonthlyExpenseList(
-                dayGroups = state.dayGroups,
-                expandedReceiptIds = state.expandedReceiptIds,
-                onExpenseClicked = { id -> onEvent(MonthlyExpensesEvent.ExpenseClicked(id)) },
-                onReceiptGroupClicked = { id -> onEvent(MonthlyExpensesEvent.ReceiptGroupClicked(id)) },
+
+        state.isEmpty -> Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(Res.string.monthly_expenses_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+        else -> MonthlyExpenseList(
+            dayGroups = state.dayGroups,
+            expandedReceiptIds = state.expandedReceiptIds,
+            modifier = modifier,
+            onExpenseClicked = onExpenseClicked,
+            onReceiptGroupClicked = onReceiptGroupClicked,
+        )
     }
 }
 
@@ -136,7 +194,7 @@ private fun MonthHeader(
         ) {
             Icon(
                 imageVector = vectorResource(Res.drawable.ic_arrow_back),
-                contentDescription = "Previous month",
+                contentDescription = stringResource(Res.string.monthly_expenses_previous_month),
             )
         }
         Text(
@@ -150,7 +208,7 @@ private fun MonthHeader(
         ) {
             Icon(
                 imageVector = vectorResource(Res.drawable.ic_arrow_forward),
-                contentDescription = "Next month",
+                contentDescription = stringResource(Res.string.monthly_expenses_next_month),
             )
         }
     }
@@ -160,11 +218,12 @@ private fun MonthHeader(
 private fun MonthlyExpenseList(
     dayGroups: ImmutableList<DayGroupUiModel>,
     expandedReceiptIds: ImmutableSet<Long>,
+    modifier: Modifier = Modifier,
     onExpenseClicked: (Long) -> Unit,
     onReceiptGroupClicked: (Long) -> Unit,
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         dayGroups.forEach { group ->
@@ -181,6 +240,7 @@ private fun MonthlyExpenseList(
                             )
                         }
                     }
+
                     is ExpenseEntryUiModel.ReceiptGroup -> {
                         item(key = "receipt_${entry.receiptId}") {
                             ReceiptGroupCard(
@@ -251,12 +311,13 @@ private fun ReceiptGroupCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = group.merchantName,
+                    text = group.merchantName
+                        ?: stringResource(Res.string.monthly_expenses_receipt_fallback),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    text = "${group.itemCount} items",
+                    text = stringResource(Res.string.monthly_expenses_item_count, group.itemCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -266,10 +327,14 @@ private fun ReceiptGroupCard(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
             )
-            Text(
-                text = if (isExpanded) "▲" else "▼",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Icon(
+                imageVector = if (isExpanded) vectorResource(Res.drawable.ic_keyboard_arrow_up)
+                    else vectorResource(Res.drawable.ic_keyboard_arrow_down),
+                contentDescription = stringResource(
+                    if (isExpanded) Res.string.monthly_expenses_collapse_receipt
+                    else Res.string.monthly_expenses_expand_receipt
+                ),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         if (isExpanded) {
@@ -339,3 +404,9 @@ private fun ExpenseRowContent(
         )
     }
 }
+
+internal fun MonthlyWindowState.asOverlay(year: Int, month: Int): ScreenOverlay? =
+    when (val pageState = pageStateFor(year, month)) {
+        is MonthPageState.Error -> ScreenOverlay.Error(type = pageState.errorType)
+        else -> null
+    }
