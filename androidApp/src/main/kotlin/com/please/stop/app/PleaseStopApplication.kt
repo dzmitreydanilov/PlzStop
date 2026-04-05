@@ -2,12 +2,15 @@ package com.please.stop.app
 
 import android.app.Application
 import android.content.pm.ApplicationInfo
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.please.stop.app.core.logger.initLogger
 import com.please.stop.app.di.initKoin
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.GlobalContext
 
 class PleaseStopApplication : Application() {
     override fun onCreate() {
@@ -26,5 +29,10 @@ class PleaseStopApplication : Application() {
                 androidContext(this@PleaseStopApplication)
             }
         )
+
+        val lifecycleObservers: List<DefaultLifecycleObserver> = GlobalContext.get().getAll()
+        lifecycleObservers.forEach {
+            ProcessLifecycleOwner.get().lifecycle.addObserver(it)
+        }
     }
 }

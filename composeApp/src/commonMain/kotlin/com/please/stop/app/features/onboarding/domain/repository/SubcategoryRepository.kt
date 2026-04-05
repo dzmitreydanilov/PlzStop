@@ -11,5 +11,5 @@ interface SubcategoryRepository {
 
     suspend fun getDefaultSubcategories(): Result<List<Subcategory>>
 
-    suspend fun ensureSeeded()
+    suspend fun ensureSeeded(): List<Subcategory>
 }

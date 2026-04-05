@@ -2,6 +2,8 @@ package com.please.stop.app.di
 
 import com.please.stop.app.core.ApplicationBuildSettings
 import com.please.stop.app.core.buildSettings.AppBuildSettingsProvider
+import com.please.stop.app.core.coroutines.ApplicationCoroutineScopeProvider
+import com.please.stop.app.core.coroutines.ICoroutineScopeProvider
 import com.please.stop.app.core.db.AppDatabaseFactory
 import com.please.stop.app.core.db.PassphraseProvider
 import org.koin.core.module.Module
@@ -11,4 +13,6 @@ actual val platformModule: Module = module {
     single<AppBuildSettingsProvider> { ApplicationBuildSettings() }
     single { PassphraseProvider() }
     single { AppDatabaseFactory(passphraseProvider = get(), buildSettingsProvider = get()) }
+    single<ICoroutineScopeProvider> { ApplicationCoroutineScopeProvider() }
+    single { IosAppLifecycleHandler(featureFlagsObserver = get(), dataWarmUpObserver = get(), scopeProvider = get()) }
 }

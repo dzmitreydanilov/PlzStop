@@ -33,23 +33,6 @@ sealed interface AddExpenseState {
     val currencyConversionEnabled: Boolean
 
     @Serializable
-    data object Loading : AddExpenseState {
-        override val editContext: EditContext = EditContext(isEditMode = false, existingExpenseId = null)
-        override val currency: CurrencyConfig = CurrencyConfig(symbol = "", decimalPlaces = 0)
-        override val form: ExpenseFormInput = ExpenseFormInput(dateEpochMillis = 0L)
-        override val categories: ImmutableList<CategoryUiModel> = persistentListOf()
-        override val subcategories: ImmutableList<SubcategoryUiModel> = persistentListOf()
-        override val selectedCategory: CategoryUiModel? = null
-        override val titleTags: ImmutableList<String> = persistentListOf()
-        override val dateTime: LocalDateTime = LocalDateTime(2000, 1, 1, 0, 0)
-        override val showCurrencyPicker: Boolean = false
-        override val status: FormStatus = FormStatus()
-        override val receipt: ReceiptState = ReceiptState()
-        override val conversion: ConversionState = ConversionState()
-        override val currencyConversionEnabled: Boolean = false
-    }
-
-    @Serializable
     data class Content(
         override val editContext: EditContext,
         override val currency: CurrencyConfig,

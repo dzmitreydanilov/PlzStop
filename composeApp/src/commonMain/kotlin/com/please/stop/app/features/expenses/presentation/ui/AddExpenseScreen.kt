@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.please.stop.app.navigation.nav3.HandleNavigationBack
 import com.please.stop.app.features.expenses.create.presentation.CreateExpenseStateHolder
 import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.features.expenses.edit.presentation.EditExpenseStateHolder
@@ -79,7 +80,6 @@ import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
-import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
 import com.please.stop.app.uicomponents.sheets.CurrencyPickerSheet
 import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.format
@@ -129,6 +129,7 @@ import plzstop.composeapp.generated.resources.conversion_rate_override_title
 import plzstop.composeapp.generated.resources.conversion_rate_unavailable
 import plzstop.composeapp.generated.resources.conversion_reset_rate
 import plzstop.composeapp.generated.resources.conversion_save_in
+import plzstop.composeapp.generated.resources.ic_calendar
 import plzstop.composeapp.generated.resources.ic_currency_exchange
 import kotlin.math.pow
 import kotlin.time.ExperimentalTime
@@ -168,6 +169,10 @@ private fun ExpenseScreenContent(
 ) {
     val state by stateHolder.state.collectAsStateWithLifecycle()
 
+    HandleNavigationBack(enabled = state.status.hasUnsavedChanges) {
+        stateHolder.processEvent(AddExpenseEvent.BackClicked)
+    }
+
     CollectNavigationFlow(
         flow = stateHolder.getNavigation(),
         key1 = stateHolder,
@@ -181,10 +186,6 @@ private fun ExpenseScreenContent(
         overlay = state.asOverlay,
         onDismiss = { stateHolder.processEvent(AddExpenseEvent.DismissError) },
     ) {
-
-        DisplayFullScreenProgress(
-            showProgress = state is AddExpenseState.Loading,
-        )
 
         AddExpenseContent(
             state = state,
@@ -275,6 +276,36 @@ private fun AddExpenseContent(
                     .padding(horizontal = 16.dp),
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
+                val dateTime = remember(form.dateEpochMillis) {
+                    localDateTimeFromMillis(form.dateEpochMillis)
+                }
+                val formattedDate = dateTime.format(DatePattern.EEEE_MMM_DD)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable {
+                            onEvent(
+                                AddExpenseEvent.KeyPressed(NumericKey.Calendar),
+                            )
+                        }
+                        .padding(vertical = 4.dp),
+                ) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.ic_calendar),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 if (!editContext.isEditMode) {
                     ScanReceiptCard(
                         isAnalyzing = receipt.isAnalyzing,
@@ -334,13 +365,14 @@ private fun AddExpenseContent(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                NotesSection(
-                    title = form.title,
-                    notes = form.notes,
-                    onClick = { showNotesSheet = true },
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
+                if (form.title.isNotBlank() || form.notes.isNotBlank()) {
+                    NotesSection(
+                        title = form.title,
+                        notes = form.notes,
+                        onClick = { showNotesSheet = true },
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
                 if (tags.isNotEmpty()) {
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -365,26 +397,6 @@ private fun AddExpenseContent(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                val dateTime = remember(form.dateEpochMillis) {
-                    localDateTimeFromMillis(form.dateEpochMillis)
-                }
-                val formattedDate = dateTime.format(DatePattern.EEEE_MMM_DD)
-                Text(
-                    text = formattedDate,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .clickable {
-                            onEvent(
-                                AddExpenseEvent.KeyPressed(
-                                    com.please.stop.app.features.expenses.presentation.NumericKey.Calendar,
-                                )
-                            )
-                        }
-                        .padding(vertical = 4.dp),
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
             }
 
             AmountSection(
@@ -404,7 +416,13 @@ private fun AddExpenseContent(
                 isInExpressionMode = form.isInExpressionMode,
                 isSaving = status.isSaving,
                 isSaveEnabled = status.isFormValid,
-                onKey = { onEvent(AddExpenseEvent.KeyPressed(it)) },
+                onKey = { key ->
+                    if (key is NumericKey.Notes) {
+                        showNotesSheet = true
+                    } else {
+                        onEvent(AddExpenseEvent.KeyPressed(key))
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -495,14 +513,13 @@ private fun DatePicker(
         },
     )
     DatePickerDialog(
-        onDismissRequest = { onEvent(AddExpenseEvent.DismissDatePicker) },
+        onDismissRequest = {  },
         confirmButton = {
             TextButton(
                 onClick = {
                     datePickerState.selectedDateMillis?.let {
                         onEvent(AddExpenseEvent.DateChanged(it))
                     }
-                    onEvent(AddExpenseEvent.DismissDatePicker)
                 },
             ) {
                 Text(stringResource(Res.string.add_expense_confirm))

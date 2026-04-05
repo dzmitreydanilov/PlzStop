@@ -15,6 +15,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct iOSApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @Environment(\.scenePhase) private var scenePhase
+
+    private let lifecycleHandler: IosAppLifecycleHandler
 
     init() {
         KermitInitializeUtilsKt.doInitLogger(minSeverity: .verbose)
@@ -22,12 +25,23 @@ struct iOSApp: App {
         let platformOverrides = IosKoinHelperKt.createIosPlatformOverrides(
             firebaseFunctionsCaller: AppFirebaseFunctionsCaller()
         )
-        KoinKt.doInitKoin(config: nil, platformOverrides: platformOverrides)
+        KoinApplication.start(platformOverrides: platformOverrides)
+        lifecycleHandler = KoinApplication.inject()
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .active:
+                lifecycleHandler.onAppBecameActive()
+            case .background:
+                lifecycleHandler.onAppEnteredBackground()
+            default:
+                break
+            }
         }
     }
 }
