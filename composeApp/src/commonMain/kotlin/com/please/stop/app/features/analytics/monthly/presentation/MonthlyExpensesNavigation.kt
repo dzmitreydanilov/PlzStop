@@ -1,4 +1,4 @@
-package com.please.stop.app.features.expenses.monthly.presentation
+package com.please.stop.app.features.analytics.monthly.presentation
 
 import com.please.stop.app.core.models.presentation.Navigation
 

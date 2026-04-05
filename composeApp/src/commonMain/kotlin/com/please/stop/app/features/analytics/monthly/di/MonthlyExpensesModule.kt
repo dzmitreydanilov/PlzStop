@@ -1,18 +1,18 @@
-package com.please.stop.app.features.expenses.monthly.di
+package com.please.stop.app.features.analytics.monthly.di
 
 import com.please.stop.app.core.db.AppDatabase
 import com.please.stop.app.di.dispatchers.DispatchersQualifiers
 import com.please.stop.app.features.expenses.data.repository.MonthlyExpensesRepositoryImpl
 import com.please.stop.app.features.expenses.domain.repository.MonthlyExpensesRepository
 import com.please.stop.app.features.expenses.domain.usecase.ObserveMonthlyExpensesUseCase
-import com.please.stop.app.features.expenses.monthly.presentation.MonthlyExpensesStateHolder
+import com.please.stop.app.features.analytics.monthly.presentation.MonthlyExpensesStateHolder
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 
 val monthlyExpensesModule = module {
 
-    single<MonthlyExpensesRepository> {
+    factory<MonthlyExpensesRepository> {
         MonthlyExpensesRepositoryImpl(
             expenseDao = get<AppDatabase>().expenseDao(),
             categoryDao = get<AppDatabase>().categoryDao(),

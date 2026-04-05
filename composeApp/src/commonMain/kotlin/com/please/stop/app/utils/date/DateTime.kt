@@ -52,12 +52,12 @@ fun localDateTimeFromMillis(
 fun currentDayStartMillis(
     timeZone: TimeZone = TimeZone.currentSystemDefault()
 ): Long {
-    return Clock.System.todayIn(timeZone).atStartOfDayIn(timeZone).toEpochMilliseconds()
+    return localDateToday(timeZone).atStartOfDayIn(timeZone).toEpochMilliseconds()
 }
 
 @OptIn(ExperimentalTime::class)
 fun currentDayEndMillis(timeZone: TimeZone = TimeZone.currentSystemDefault()): Long {
-    val startOfTomorrow = Clock.System.todayIn(timeZone)
+    val startOfTomorrow = localDateToday(timeZone)
         .plus(1, DateTimeUnit.DAY)
         .atStartOfDayIn(timeZone)
     return startOfTomorrow.minus(1, DateTimeUnit.MILLISECOND)
@@ -69,7 +69,40 @@ fun now(): Instant {
     return Clock.System.now()
 }
 
+@OptIn(ExperimentalTime::class)
+fun localDateToday(timeZone: TimeZone = TimeZone.currentSystemDefault()): LocalDate =
+    Clock.System.todayIn(timeZone)
+
 data class EpochMillisRange(val fromMillis: Long, val toMillis: Long)
+
+fun previousMonth(year: Int, month: Int): Pair<Int, Int> =
+    if (month == 1) year - 1 to 12 else year to month - 1
+
+fun nextMonth(year: Int, month: Int): Pair<Int, Int> =
+    if (month == 12) year + 1 to 1 else year to month + 1
+
+fun monthName(month: Int): String =
+    kotlinx.datetime.Month(month).name.lowercase().replaceFirstChar { it.uppercase() }
+
+@OptIn(ExperimentalTime::class)
+fun isBeforeCurrentMonth(
+    year: Int,
+    month: Int,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): Boolean {
+    val now = localDateToday(timeZone)
+    return year < now.year || (year == now.year && month < now.monthNumber)
+}
+
+@OptIn(ExperimentalTime::class)
+fun isCurrentOrFutureMonth(
+    year: Int,
+    month: Int,
+    timeZone: TimeZone = TimeZone.currentSystemDefault(),
+): Boolean {
+    val now = localDateToday(timeZone)
+    return year > now.year || (year == now.year && month >= now.monthNumber)
+}
 
 @OptIn(ExperimentalTime::class)
 fun formatDayLabel(
@@ -100,7 +133,7 @@ fun monthMillisRange(
 fun currentMonthMillisRange(
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): EpochMillisRange {
-    val today = Clock.System.todayIn(timeZone)
+    val today = localDateToday(timeZone)
     val monthStart = LocalDate(today.year, today.month, 1)
     val nextMonthStart = monthStart.plus(1, DateTimeUnit.MONTH)
     return EpochMillisRange(
@@ -108,3 +141,15 @@ fun currentMonthMillisRange(
         toMillis = nextMonthStart.atStartOfDayIn(timeZone).toEpochMilliseconds(),
     )
 }
+
+private const val PAGER_BASE_YEAR = 2000
+
+fun monthPageIndex(year: Int, month: Int): Int =
+    (year - PAGER_BASE_YEAR) * 12 + (month - 1)
+
+fun pageIndexToYearMonth(pageIndex: Int): Pair<Int, Int> =
+    (PAGER_BASE_YEAR + pageIndex / 12) to (pageIndex % 12 + 1)
+
+@OptIn(ExperimentalTime::class)
+fun currentMonthPageIndex(): Int =
+    localDateToday().let { monthPageIndex(it.year, it.monthNumber) }
