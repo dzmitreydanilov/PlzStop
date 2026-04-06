@@ -4,6 +4,7 @@ import com.please.stop.app.core.featureflags.featureFlagsModule
 import com.please.stop.app.di.dispatchers.dispatchersModule
 import com.please.stop.app.features.analytics.di.analyticsModule
 import com.please.stop.app.features.analytics.monthly.di.monthlyExpensesModule
+import com.please.stop.app.features.categories.di.categoriesModule
 import com.please.stop.app.features.expenses.di.addExpenseModule
 import com.please.stop.app.features.home.di.homeModule
 import com.please.stop.app.features.onboarding.di.onboardingModule
@@ -21,5 +22,6 @@ internal val appModule = module {
         analyticsModule,
         addExpenseModule,
         monthlyExpensesModule,
+        categoriesModule,
     )
 }

@@ -6,4 +6,5 @@ internal sealed interface HomeNavigation : Navigation {
     data class NavigateToAddExpense(val expenseCategoryId: Long) : HomeNavigation
     data object NavigateToCreateExpense : HomeNavigation
     data object NavigateToSettings : HomeNavigation
+    data object NavigateToMonthlyExpenses : HomeNavigation
 }

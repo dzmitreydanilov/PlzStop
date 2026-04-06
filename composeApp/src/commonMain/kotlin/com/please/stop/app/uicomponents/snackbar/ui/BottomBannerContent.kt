@@ -39,23 +39,23 @@ import plzstop.composeapp.generated.resources.ic_success_circle
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BottomBannerContent(
-    message: com.please.stop.app.uicomponents.snackbar.ui.models.BannerMessage,
+    message: BannerMessage,
     modifier: Modifier = Modifier
 ) {
     when (message) {
-        is com.please.stop.app.uicomponents.snackbar.ui.models.ErrorBannerMessage ->
-            com.please.stop.app.uicomponents.snackbar.ui.ErrorBannerMessageContent(
+        is ErrorBannerMessage ->
+            ErrorBannerMessageContent(
                 modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 title = message.title,
                 subtitle = message.subtitle,
                 onCloseClick = { message.onCloseClick() }
             )
 
-        is com.please.stop.app.uicomponents.snackbar.ui.models.InfoBannerMessage ->
-            com.please.stop.app.uicomponents.snackbar.ui.InfoBannerMessageContent(
+        is InfoBannerMessage ->
+            InfoBannerMessageContent(
                 modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 title = message.title,
-                type = com.please.stop.app.uicomponents.error.MessageType.Success,
+                type = MessageType.Success,
                 subtitle = message.subtitle,
                 onCloseClick = { message.onCloseClick() }
             )
@@ -66,7 +66,7 @@ fun BottomBannerContent(
 @Composable
 private fun InfoBannerMessageContent(
     title: String,
-    type: com.please.stop.app.uicomponents.error.MessageType,
+    type: MessageType,
     subtitle: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
@@ -93,18 +93,15 @@ private fun InfoBannerMessageContent(
                         Icon(
                             imageVector = vectorResource(Res.drawable.ic_success_circle),
                             contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                        com.please.stop.app.uicomponents.snackbar.ui.AutoSizedTitle(
-                            text = title
-                        )
+                        AutoSizedTitle(text = title)
                     }
 
-                    com.please.stop.app.uicomponents.snackbar.ui.AutoSizedSubtitle(
-                        text = subtitle
-                    )
+                    AutoSizedSubtitle(text = subtitle)
                 }
-                if (type != com.please.stop.app.uicomponents.error.MessageType.Success) {
-                    com.please.stop.app.uicomponents.icons.CloseIconButton(
+                if (type != MessageType.Success) {
+                    CloseIconButton(
                         onClick = onCloseClick
                     )
                 }
@@ -113,7 +110,8 @@ private fun InfoBannerMessageContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter),
-                thickness = 4.dp
+                thickness = 4.dp,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -147,23 +145,21 @@ private fun ErrorBannerMessageContent(
                     ) {
                         Icon(
                             imageVector = vectorResource(Res.drawable.ic_error),
+                            tint = MaterialTheme.colorScheme.error,
                             contentDescription = null,
                         )
-                        com.please.stop.app.uicomponents.snackbar.ui.AutoSizedTitle(
-                            text = title
-                        )
+                        AutoSizedTitle(text = title)
                     }
-                    com.please.stop.app.uicomponents.snackbar.ui.AutoSizedSubtitle(
-                        text = subtitle
-                    )
+                    AutoSizedSubtitle(text = subtitle)
                 }
-                com.please.stop.app.uicomponents.icons.CloseIconButton(onClick = onCloseClick)
+                CloseIconButton(onClick = onCloseClick)
             }
             HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter),
                 thickness = 4.dp,
+                color = MaterialTheme.colorScheme.error
             )
         }
     }
@@ -175,8 +171,8 @@ private fun AutoSizedSubtitle(text: String) {
     Text(
         text = text,
         modifier = Modifier.padding(top = 4.dp, start = 24.dp),
-        style = MaterialTheme.typography.bodyLargeEmphasized,
-        autoSize = TextAutoSize.StepBased(maxFontSize = MaterialTheme.typography.bodyLargeEmphasized.fontSize)
+        style = MaterialTheme.typography.titleSmallEmphasized,
+        autoSize = TextAutoSize.StepBased(maxFontSize = MaterialTheme.typography.titleSmallEmphasized.fontSize)
     )
 }
 
@@ -185,8 +181,8 @@ private fun AutoSizedSubtitle(text: String) {
 private fun AutoSizedTitle(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyLargeEmphasized.copy(fontWeight = FontWeight.SemiBold),
-        autoSize = TextAutoSize.StepBased(maxFontSize = MaterialTheme.typography.bodyLargeEmphasized.fontSize)
+        style = MaterialTheme.typography.titleMediumEmphasized.copy(fontWeight = FontWeight.SemiBold),
+        autoSize = TextAutoSize.StepBased(maxFontSize = MaterialTheme.typography.titleMediumEmphasized.fontSize)
     )
 }
 
@@ -194,8 +190,8 @@ private fun AutoSizedTitle(text: String) {
 @Preview
 @Composable
 private fun InfoBottomBannerContentPreview() {
-    com.please.stop.app.uicomponents.snackbar.ui.BottomBannerContent(
-        message = com.please.stop.app.uicomponents.snackbar.ui.models.InfoBannerMessage(
+    BottomBannerContent(
+        message = InfoBannerMessage(
             title = "Title",
             subtitle = "Subtitle"
         )
@@ -205,8 +201,8 @@ private fun InfoBottomBannerContentPreview() {
 @Preview
 @Composable
 private fun ErrorBottomBannerContentPreview() {
-    com.please.stop.app.uicomponents.snackbar.ui.BottomBannerContent(
-        message = com.please.stop.app.uicomponents.snackbar.ui.models.ErrorBannerMessage(
+    BottomBannerContent(
+        message = ErrorBannerMessage(
             title = "Title",
             subtitle = "Subtitle",
             onCloseClick = {}

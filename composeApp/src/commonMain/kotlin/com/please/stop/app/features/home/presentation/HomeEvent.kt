@@ -8,4 +8,5 @@ sealed interface HomeEvent {
     data object DismissAddCategorySheet : HomeEvent
     data object DismissError : HomeEvent
     data object ProfileClicked : HomeEvent
+    data object TotalSpentCardClick : HomeEvent
 }

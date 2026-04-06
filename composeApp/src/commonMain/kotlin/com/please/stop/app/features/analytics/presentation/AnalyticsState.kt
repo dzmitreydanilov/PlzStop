@@ -24,7 +24,16 @@ sealed interface AnalyticsState {
         override val categoriesCount: Int,
         override val activeCategoriesCount: Int,
         override val hasAnyExpenses: Boolean,
+        val budgetBurn: BudgetBurnUi?,
+        val projectedTotal: ProjectedTotalUi?,
+        val budgetPacingPoints: ImmutableList<Float>,
         val spendingSlices: ImmutableList<SpendingSlice>,
+        val dailySpending: ImmutableList<DailySpendingUiPoint>,
+        val monthlyBars: ImmutableList<MonthlyBarUiItem>,
+        val heatmapDays: ImmutableList<HeatmapDayUi>,
+        val categoryProgress: ImmutableList<CategoryProgressUi>,
+        val selectedDaySheet: DayExpensesSheetUi? = null,
+        val isDaySheetLoading: Boolean = false,
     ) : AnalyticsState
 
     data class Error(
@@ -36,9 +45,72 @@ sealed interface AnalyticsState {
 }
 
 @Stable
+data class BudgetBurnUi(
+    val spentFormatted: String,
+    val budgetFormatted: String,
+    val percentage: Float,
+    val dailyAllowanceFormatted: String,
+)
+
+@Stable
+data class ProjectedTotalUi(
+    val projectedFormatted: String,
+    val overUnderFormatted: String,
+    val isOverBudget: Boolean,
+)
+
+@Stable
 data class SpendingSlice(
     val name: String,
     val formattedAmount: String,
+    val formattedAvgDaily: String,
     val amount: Float,
     val color: Color,
+)
+
+@Stable
+data class DailySpendingUiPoint(
+    val dayOfMonth: Int,
+    val amount: Float,
+    val formattedAmount: String,
+)
+
+@Stable
+data class MonthlyBarUiItem(
+    val label: String,
+    val amount: Float,
+    val formattedAmount: String,
+    val isCurrent: Boolean,
+)
+
+@Stable
+data class HeatmapDayUi(
+    val dayOfMonth: Int,
+    val dayOfWeek: Int,
+    val weekOfMonth: Int,
+    val intensity: Float,
+    val formattedAmount: String,
+)
+
+@Stable
+data class CategoryProgressUi(
+    val name: String,
+    val iconKey: String,
+    val percentage: Float,
+    val formattedAmount: String,
+    val color: Color,
+)
+
+@Stable
+data class DayExpenseUiItem(
+    val title: String,
+    val categoryEmoji: String,
+    val formattedAmount: String,
+)
+
+@Stable
+data class DayExpensesSheetUi(
+    val dayLabel: String,
+    val totalFormatted: String,
+    val expenses: ImmutableList<DayExpenseUiItem>,
 )

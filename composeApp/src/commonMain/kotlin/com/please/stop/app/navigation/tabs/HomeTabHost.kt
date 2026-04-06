@@ -9,12 +9,14 @@ internal fun EntryProviderScope<NavKey>.homeTabEntries(
     onNavigateToAddExpense: (categoryId: Long) -> Unit,
     onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToMonthlyExpenses: () -> Unit,
 ) {
     entry<MainBottomTabs.Home> {
         HomeScreen(
             onNavigateToAddExpense = onNavigateToAddExpense,
             onNavigateToCreateExpense = onNavigateToCreateExpense,
             onNavigateToSettings = onNavigateToSettings,
+            onNavigateToMonthlyExpenses = onNavigateToMonthlyExpenses,
         )
     }
 }

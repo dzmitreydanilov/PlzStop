@@ -1,6 +1,8 @@
 package com.please.stop.app.features.analytics.monthly.presentation.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -21,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +57,10 @@ import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
 import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.add_expense_cancel
+import plzstop.composeapp.generated.resources.add_expense_delete
+import plzstop.composeapp.generated.resources.add_expense_delete_message
+import plzstop.composeapp.generated.resources.add_expense_delete_title
 import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_arrow_forward
 import plzstop.composeapp.generated.resources.ic_keyboard_arrow_down
@@ -128,6 +137,9 @@ fun MonthlyExpensesScreen(
                     onExpenseClicked = { id ->
                         stateHolder.processEvent(MonthlyExpensesEvent.ExpenseClicked(id))
                     },
+                    onExpenseLongClicked = { id ->
+                        stateHolder.processEvent(MonthlyExpensesEvent.ExpenseLongClicked(id))
+                    },
                     onReceiptGroupClicked = { id ->
                         stateHolder.processEvent(
                             MonthlyExpensesEvent.ReceiptGroupClicked(id, year, month)
@@ -137,6 +149,18 @@ fun MonthlyExpensesScreen(
             }
         }
     }
+
+    val deleteExpenseId = state.deleteConfirmExpenseId
+    if (deleteExpenseId != null) {
+        DeleteExpenseDialog(
+            onConfirm = {
+                stateHolder.processEvent(MonthlyExpensesEvent.ConfirmDeleteExpense(deleteExpenseId))
+            },
+            onDismiss = {
+                stateHolder.processEvent(MonthlyExpensesEvent.DismissDeleteDialog)
+            },
+        )
+    }
 }
 
 @Composable
@@ -144,6 +168,7 @@ private fun MonthBody(
     state: MonthPageState,
     modifier: Modifier = Modifier,
     onExpenseClicked: (Long) -> Unit,
+    onExpenseLongClicked: (Long) -> Unit,
     onReceiptGroupClicked: (Long) -> Unit,
 ) {
     when {
@@ -168,6 +193,7 @@ private fun MonthBody(
             expandedReceiptIds = state.expandedReceiptIds,
             modifier = modifier,
             onExpenseClicked = onExpenseClicked,
+            onExpenseLongClicked = onExpenseLongClicked,
             onReceiptGroupClicked = onReceiptGroupClicked,
         )
     }
@@ -220,6 +246,7 @@ private fun MonthlyExpenseList(
     expandedReceiptIds: ImmutableSet<Long>,
     modifier: Modifier = Modifier,
     onExpenseClicked: (Long) -> Unit,
+    onExpenseLongClicked: (Long) -> Unit,
     onReceiptGroupClicked: (Long) -> Unit,
 ) {
     LazyColumn(
@@ -237,6 +264,7 @@ private fun MonthlyExpenseList(
                             ExpenseCard(
                                 expense = entry,
                                 onClick = { onExpenseClicked(entry.id) },
+                                onLongClick = { onExpenseLongClicked(entry.id) },
                             )
                         }
                     }
@@ -248,6 +276,7 @@ private fun MonthlyExpenseList(
                                 isExpanded = entry.receiptId in expandedReceiptIds,
                                 onGroupClicked = { onReceiptGroupClicked(entry.receiptId) },
                                 onExpenseClicked = onExpenseClicked,
+                                onExpenseLongClicked = onExpenseLongClicked,
                             )
                         }
                     }
@@ -290,6 +319,7 @@ private fun ReceiptGroupCard(
     isExpanded: Boolean,
     onGroupClicked: () -> Unit,
     onExpenseClicked: (Long) -> Unit,
+    onExpenseLongClicked: (Long) -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -346,16 +376,19 @@ private fun ReceiptGroupCard(
                 ExpenseRowContent(
                     expense = expense,
                     onClick = { onExpenseClicked(expense.id) },
+                    onLongClick = { onExpenseLongClicked(expense.id) },
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ExpenseCard(
     expense: ExpenseEntryUiModel.Single,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -366,21 +399,22 @@ private fun ExpenseCard(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = onClick,
     ) {
-        ExpenseRowContent(expense = expense, onClick = onClick)
+        ExpenseRowContent(expense = expense, onClick = onClick, onLongClick = onLongClick)
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ExpenseRowContent(
     expense: ExpenseEntryUiModel.Single,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -403,6 +437,33 @@ private fun ExpenseRowContent(
             fontWeight = FontWeight.Medium,
         )
     }
+}
+
+@Composable
+private fun DeleteExpenseDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.add_expense_delete_title)) },
+        text = { Text(stringResource(Res.string.add_expense_delete_message)) },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+            ) {
+                Text(stringResource(Res.string.add_expense_delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.add_expense_cancel))
+            }
+        },
+    )
 }
 
 internal fun MonthlyWindowState.asOverlay(year: Int, month: Int): ScreenOverlay? =

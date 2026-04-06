@@ -26,7 +26,7 @@ import com.please.stop.app.core.db.entity.UserProfileEntity
         SubcategoryEntity::class,
         ReceiptEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -155,6 +155,13 @@ abstract class AppDatabase : RoomDatabase() {
                 connection.execSQL(
                     "ALTER TABLE `user_profile` ADD COLUMN `decimalPlaces` INTEGER NOT NULL DEFAULT 2"
                 )
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE `category` ADD COLUMN `comment` TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE `subcategory` ADD COLUMN `comment` TEXT DEFAULT NULL")
             }
         }
     }

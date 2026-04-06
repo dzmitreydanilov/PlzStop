@@ -7,4 +7,5 @@ data class Subcategory(
     val iconKey: String,
     val isDefault: Boolean,
     val sortOrder: Int,
+    val comment: String? = null,
 )

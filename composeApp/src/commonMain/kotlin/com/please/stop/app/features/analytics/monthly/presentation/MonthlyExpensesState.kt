@@ -15,6 +15,7 @@ import kotlinx.serialization.Serializable
 data class MonthlyWindowState(
     @Serializable(with = ImmutableListSerializer::class)
     val pages: ImmutableList<MonthPageEntry> = persistentListOf(),
+    val deleteConfirmExpenseId: Long? = null,
 ) {
     fun pageStateFor(year: Int, month: Int): MonthPageState =
         pages.find { it.year == year && it.month == month }?.pageState ?: MonthPageState.Loading

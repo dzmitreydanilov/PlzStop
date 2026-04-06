@@ -137,6 +137,7 @@ private fun SubcategoryEntity.toDomain() = Subcategory(
     iconKey = iconKey,
     isDefault = isDefault,
     sortOrder = sortOrder,
+    comment = comment,
 )
 
 private fun Subcategory.toEntity() = SubcategoryEntity(
@@ -145,4 +146,5 @@ private fun Subcategory.toEntity() = SubcategoryEntity(
     iconKey = iconKey,
     isDefault = isDefault,
     sortOrder = sortOrder,
+    comment = comment,
 )

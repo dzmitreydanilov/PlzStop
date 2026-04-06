@@ -17,6 +17,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
+import com.please.stop.app.features.analytics.monthly.presentation.ui.MonthlyExpensesScreen
 import com.please.stop.app.features.expenses.presentation.ui.CreateExpenseScreen
 import com.please.stop.app.features.expenses.presentation.ui.EditExpenseScreen
 import com.please.stop.app.features.expenses.receiptitems.presentation.ui.ReceiptItemsScreen
@@ -37,6 +38,7 @@ import com.please.stop.app.navigation.nav3.Router
 import com.please.stop.app.navigation.routes.CreateExpenseRoute
 import com.please.stop.app.navigation.routes.EditExpenseRoute
 import com.please.stop.app.navigation.routes.MainBottomTabs
+import com.please.stop.app.navigation.routes.MonthlyExpensesRoute
 import com.please.stop.app.navigation.routes.OnboardingRoute
 import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
@@ -169,6 +171,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
             onNavigateToSettings = {},
             onNavigateToCreateExpense = { router.push(CreateExpenseRoute()) },
             onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
+            onNavigateToMonthlyExpenses = { router.push(MonthlyExpensesRoute) },
         )
     }
 
@@ -191,6 +194,12 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
         ReceiptItemsScreen(
             onGoBack = { router.pop() },
             onSaved = { router.pop() },
+        )
+    }
+
+    entry<MonthlyExpensesRoute> {
+        MonthlyExpensesScreen(
+            onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
         )
     }
 }

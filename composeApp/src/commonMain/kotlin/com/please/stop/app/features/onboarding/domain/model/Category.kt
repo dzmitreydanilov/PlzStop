@@ -5,4 +5,5 @@ data class Category(
     val name: String,
     val iconKey: String,
     val isDefault: Boolean,
+    val comment: String? = null,
 )

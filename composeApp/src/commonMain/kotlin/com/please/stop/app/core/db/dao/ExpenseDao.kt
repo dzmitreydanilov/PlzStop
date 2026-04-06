@@ -22,6 +22,18 @@ interface ExpenseDao {
     @Query("UPDATE expense SET isDeleted = 1 WHERE id = :id")
     suspend fun softDelete(id: Long)
 
+    @Query("SELECT COUNT(*) FROM expense WHERE categoryId = :categoryId AND isDeleted = 0")
+    suspend fun countActiveByCategory(categoryId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM expense WHERE categoryId = :categoryId")
+    suspend fun countAllByCategory(categoryId: Long): Int
+
+    @Query("UPDATE expense SET categoryId = :targetCategoryId WHERE categoryId = :sourceCategoryId")
+    suspend fun reassignCategory(sourceCategoryId: Long, targetCategoryId: Long)
+
+    @Query("DELETE FROM expense WHERE categoryId = :categoryId")
+    suspend fun hardDeleteByCategory(categoryId: Long)
+
     @Query(
         """
         SELECT categoryId, SUM(amountMinorUnits) AS totalMinorUnits
@@ -64,6 +76,20 @@ interface ExpenseDao {
         fromEpochMillis: Long,
         toEpochMillis: Long,
     ): Flow<List<ExpenseEntity>>
+
+    @Query(
+        """
+        SELECT * FROM expense
+        WHERE isDeleted = 0
+          AND dateEpochMillis >= :fromEpochMillis
+          AND dateEpochMillis < :toEpochMillis
+        ORDER BY dateEpochMillis DESC
+        """
+    )
+    suspend fun getExpensesInRange(
+        fromEpochMillis: Long,
+        toEpochMillis: Long,
+    ): List<ExpenseEntity>
 }
 
 data class CategorySpending(

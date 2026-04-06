@@ -35,6 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
+import com.please.stop.app.features.categories.presentation.ui.CategoriesScreen
+import com.please.stop.app.navigation.nav3.Router
+import com.please.stop.app.navigation.routes.CategoriesRoute
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.theme.LocalAppColors
 import kotlinx.coroutines.delay
@@ -47,14 +50,17 @@ private const val HEADER_INITIAL_OFFSET_PX = -20f
 private const val SECTION_ANIMATION_DURATION_MS = 400
 private const val SECTION_INITIAL_OFFSET_PX = -20f
 
-internal fun EntryProviderScope<NavKey>.settingsTabEntries() {
+internal fun EntryProviderScope<NavKey>.settingsTabEntries(router: Router<NavKey>) {
     entry<MainBottomTabs.Settings> {
-        SettingsScreen()
+        SettingsScreen(onNavigateToCategories = { router.push(CategoriesRoute) })
+    }
+    entry<CategoriesRoute> {
+        CategoriesScreen(onGoBack = { router.pop() })
     }
 }
 
 @Composable
-private fun SettingsScreen() {
+private fun SettingsScreen(onNavigateToCategories: () -> Unit = {}) {
     val appColors = LocalAppColors.current
 
     val headerAlpha = remember { Animatable(0f) }
@@ -143,7 +149,12 @@ private fun SettingsScreen() {
         ) {
             AnimatedSettingsSection(title = "General", delayMillis = 150) {
                 SettingsItem(emoji = "\uD83D\uDCB1", title = "Currency", subtitle = "Change your default currency")
-                SettingsItem(emoji = "\uD83D\uDCC1", title = "Categories", subtitle = "Manage expense categories")
+                SettingsItem(
+                    emoji = "\uD83D\uDCC1",
+                    title = "Categories",
+                    subtitle = "Manage expense categories",
+                    onClick = onNavigateToCategories,
+                )
                 SettingsItem(emoji = "\uD83D\uDCCA", title = "Budget", subtitle = "Set monthly budget limits")
             }
 
