@@ -169,7 +169,6 @@ val addExpenseModule = module {
             argsHolder = get(),
             saveReceiptExpensesUseCase = get(),
             observeFormDataUseCase = get(),
-            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }
 }

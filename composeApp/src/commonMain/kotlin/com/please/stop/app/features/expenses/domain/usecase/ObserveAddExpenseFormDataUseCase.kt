@@ -14,20 +14,22 @@ import com.please.stop.app.core.models.domain.Result as DomainResult
 
 class ObserveAddExpenseFormDataUseCase(
     private val repository: AddExpenseRepository,
-    private val dispatcher: CoroutineDispatcher,
+    private val dispatcher: CoroutineDispatcher
 ) {
 
     operator fun invoke(): Flow<DomainResult> {
         return repository.observeFormData()
             .map<AddExpenseFormData, DomainResult> {
-                Result.Success(it)
+                ObserveAddExpenseFormDataResult.Success(it)
             }
-            .catch { emit(Result.Failure(it.toErrorType())) }
+            .catch { emit(ObserveAddExpenseFormDataResult.Failure(it.toErrorType())) }
             .flowOn(dispatcher)
     }
 
-    sealed interface Result : DomainResult {
-        data class Success(val data: AddExpenseFormData) : Result
-        data class Failure(override val errorType: ErrorType) : Result, ErrorResult
-    }
+}
+
+sealed interface ObserveAddExpenseFormDataResult : DomainResult {
+    data class Success(val data: AddExpenseFormData) : ObserveAddExpenseFormDataResult
+    data class Failure(override val errorType: ErrorType) : ObserveAddExpenseFormDataResult,
+        ErrorResult
 }
