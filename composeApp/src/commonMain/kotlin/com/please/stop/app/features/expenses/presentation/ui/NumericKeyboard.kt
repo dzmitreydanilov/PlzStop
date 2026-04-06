@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.expenses.presentation.KeyboardOperator
 import com.please.stop.app.features.expenses.presentation.NumericKey
+import androidx.compose.ui.tooling.preview.Preview
 import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.ic_backspace
@@ -231,6 +232,54 @@ private fun SaveEqualsButton(
             )
         }
     }
+}
+
+@Preview
+@Composable
+private fun NumericKeyboardDefaultPreview() {
+    NumericKeyboard(
+        currencySymbol = "$",
+        isInExpressionMode = false,
+        isSaving = false,
+        isSaveEnabled = true,
+        onKey = {},
+    )
+}
+
+@Preview
+@Composable
+private fun NumericKeyboardExpressionModePreview() {
+    NumericKeyboard(
+        currencySymbol = "$",
+        isInExpressionMode = true,
+        isSaving = false,
+        isSaveEnabled = true,
+        onKey = {},
+    )
+}
+
+@Preview
+@Composable
+private fun NumericKeyboardSavingPreview() {
+    NumericKeyboard(
+        currencySymbol = "$",
+        isInExpressionMode = false,
+        isSaving = true,
+        isSaveEnabled = true,
+        onKey = {},
+    )
+}
+
+@Preview
+@Composable
+private fun NumericKeyboardDisabledPreview() {
+    NumericKeyboard(
+        currencySymbol = "$",
+        isInExpressionMode = false,
+        isSaving = false,
+        isSaveEnabled = false,
+        onKey = {},
+    )
 }
 
 @Composable

@@ -18,4 +18,9 @@
 
     <!-- Progress -->
     <string name="content_desc_step_progress">Step %1$d of %2$d</string>
+
+    <!-- Receipt items -->
+    <string name="content_desc_date_warning">Date warning</string>
+    <string name="content_desc_change_date">Change date</string>
+    <string name="content_desc_edit">Edit</string>
 </resources>

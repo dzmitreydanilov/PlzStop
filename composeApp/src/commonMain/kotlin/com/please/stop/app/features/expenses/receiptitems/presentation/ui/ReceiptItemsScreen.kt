@@ -60,21 +60,43 @@ import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptIt
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemsStateHolder
 import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.navigation.routes.ReceiptItemsRoute
+import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.currentMonthMillisRange
 import com.please.stop.app.utils.date.format
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import kotlinx.collections.immutable.ImmutableList
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import kotlin.math.pow
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.add_expense_cancel
+import plzstop.composeapp.generated.resources.add_expense_category
+import plzstop.composeapp.generated.resources.add_expense_confirm
+import plzstop.composeapp.generated.resources.content_desc_change_date
+import plzstop.composeapp.generated.resources.content_desc_date_warning
+import plzstop.composeapp.generated.resources.content_desc_edit
+import plzstop.composeapp.generated.resources.content_desc_navigate_back
 import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_calendar
 import plzstop.composeapp.generated.resources.ic_edit
 import plzstop.composeapp.generated.resources.ic_error
 import plzstop.composeapp.generated.resources.ic_keyboard_arrow_right
+import plzstop.composeapp.generated.resources.receipt_items_add_item
+import plzstop.composeapp.generated.resources.receipt_items_amount
+import plzstop.composeapp.generated.resources.receipt_items_confirm
+import plzstop.composeapp.generated.resources.receipt_items_conversion_summary
+import plzstop.composeapp.generated.resources.receipt_items_date_auto_assigned
+import plzstop.composeapp.generated.resources.receipt_items_date_warning_message
+import plzstop.composeapp.generated.resources.receipt_items_date_warning_title
+import plzstop.composeapp.generated.resources.receipt_items_delete
+import plzstop.composeapp.generated.resources.receipt_items_got_it
+import plzstop.composeapp.generated.resources.receipt_items_item_name
+import plzstop.composeapp.generated.resources.receipt_items_subcategory
+import plzstop.composeapp.generated.resources.receipt_items_title
+import plzstop.composeapp.generated.resources.receipt_items_total
 
 @Composable
 fun ReceiptItemsScreen(
@@ -85,6 +107,7 @@ fun ReceiptItemsScreen(
     val stateHolder = koinViewModel<ReceiptItemsStateHolder>(
         key = "receipt_items_${route.merchantName}",
     ) { parametersOf(route) }
+    val state by stateHolder.state.collectAsStateWithLifecycle()
 
     CollectNavigationFlow(
         flow = stateHolder.getNavigation(),
@@ -97,17 +120,16 @@ fun ReceiptItemsScreen(
         }
     }
 
-    val state by stateHolder.state.collectAsStateWithLifecycle()
-
-    when (val s = state) {
-        is ReceiptItemsState.Content -> ReceiptItemsContent(
+    ScreenOverlayContainer(
+        overlay = state.asOverlay,
+        onDismiss = { /* No-op, errors are dismissed via events */ },
+        onRetry = { stateHolder.processEvent(ReceiptItemsEvent.Retry) }
+    )  {
+        ReceiptItemsContent(
             state = s,
             isManualEntry = route.isManualEntry,
             onEvent = stateHolder::processEvent,
         )
-        is ReceiptItemsState.Error -> {
-            // minimal error state
-        }
     }
 }
 
@@ -144,10 +166,10 @@ private fun ReceiptItemsContent(
                     val selected = datePickerState.selectedDateMillis
                     if (selected != null) onEvent(ReceiptItemsEvent.DateChanged(selected))
                     else onEvent(ReceiptItemsEvent.DismissDatePicker)
-                }) { Text("OK") }
+                }) { Text(stringResource(Res.string.add_expense_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { onEvent(ReceiptItemsEvent.DismissDatePicker) }) { Text("Cancel") }
+                TextButton(onClick = { onEvent(ReceiptItemsEvent.DismissDatePicker) }) { Text(stringResource(Res.string.add_expense_cancel)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -160,17 +182,13 @@ private fun ReceiptItemsContent(
         }
         AlertDialog(
             onDismissRequest = { onEvent(ReceiptItemsEvent.DismissDateWarningDialog) },
-            title = { Text("Receipt from a different month") },
+            title = { Text(stringResource(Res.string.receipt_items_date_warning_title)) },
             text = {
-                Text(
-                    "This receipt is dated $dateText, which is outside the current month. " +
-                        "Expenses will be saved to that month and won't appear in this month's dashboard. " +
-                        "You can change the date using the calendar icon."
-                )
+                Text(stringResource(Res.string.receipt_items_date_warning_message, dateText))
             },
             confirmButton = {
                 TextButton(onClick = { onEvent(ReceiptItemsEvent.DismissDateWarningDialog) }) {
-                    Text("Got it")
+                    Text(stringResource(Res.string.receipt_items_got_it))
                 }
             },
         )
@@ -179,12 +197,12 @@ private fun ReceiptItemsContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Receipt Items") },
+                title = { Text(stringResource(Res.string.receipt_items_title)) },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(ReceiptItemsEvent.BackClicked) }) {
                         Icon(
                             imageVector = vectorResource(Res.drawable.ic_arrow_back),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(Res.string.content_desc_navigate_back),
                         )
                     }
                 },
@@ -193,7 +211,7 @@ private fun ReceiptItemsContent(
                         IconButton(onClick = { onEvent(ReceiptItemsEvent.ShowDateWarningDialog) }) {
                             Icon(
                                 imageVector = vectorResource(Res.drawable.ic_error),
-                                contentDescription = "Date warning",
+                                contentDescription = stringResource(Res.string.content_desc_date_warning),
                                 tint = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -201,7 +219,7 @@ private fun ReceiptItemsContent(
                     IconButton(onClick = { onEvent(ReceiptItemsEvent.ShowDatePicker) }) {
                         Icon(
                             imageVector = vectorResource(Res.drawable.ic_calendar),
-                            contentDescription = "Change date",
+                            contentDescription = stringResource(Res.string.content_desc_change_date),
                         )
                     }
                 },
@@ -245,7 +263,7 @@ private fun ReceiptItemsContent(
                         onClick = { onEvent(ReceiptItemsEvent.AddItem) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     ) {
-                        Text("+ Add item")
+                        Text(stringResource(Res.string.receipt_items_add_item))
                     }
                 }
             }
@@ -283,7 +301,7 @@ private fun SwipeToDeleteItem(
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 Text(
-                    text = "Delete",
+                    text = stringResource(Res.string.receipt_items_delete),
                     modifier = Modifier.padding(end = 20.dp),
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.labelLarge,
@@ -323,7 +341,7 @@ private fun ReceiptHeader(
         }
         if (isDateAutoAssigned) {
             Text(
-                text = "Date not found on receipt — saved as today ($dateText)",
+                text = stringResource(Res.string.receipt_items_date_auto_assigned, dateText),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.tertiary,
             )
@@ -374,7 +392,7 @@ private fun ReceiptItemCard(
                     IconButton(onClick = onTap, modifier = Modifier.size(36.dp)) {
                         Icon(
                             imageVector = vectorResource(Res.drawable.ic_edit),
-                            contentDescription = "Edit",
+                            contentDescription = stringResource(Res.string.content_desc_edit),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -440,7 +458,7 @@ private fun EditItemSheet(
         OutlinedTextField(
             value = item.name,
             onValueChange = { onEvent(ReceiptItemsEvent.ItemNameChanged(item.id, it)) },
-            label = { Text("Item name") },
+            label = { Text(stringResource(Res.string.receipt_items_item_name)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -448,7 +466,7 @@ private fun EditItemSheet(
         OutlinedTextField(
             value = item.amountInput,
             onValueChange = { onEvent(ReceiptItemsEvent.ItemAmountChanged(item.id, it)) },
-            label = { Text("Amount") },
+            label = { Text(stringResource(Res.string.receipt_items_amount)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(
@@ -459,7 +477,7 @@ private fun EditItemSheet(
             suffix = { Text(currencySymbol) },
         )
         if (categories.isNotEmpty()) {
-            Text("Category", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(Res.string.add_expense_category), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 categories.forEach { category ->
                     FilterChip(
@@ -473,7 +491,7 @@ private fun EditItemSheet(
         }
         val filteredSubcategories = subcategories.filter { it.parentCategoryId == item.categoryId }
         if (filteredSubcategories.isNotEmpty()) {
-            Text("Subcategory", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(Res.string.receipt_items_subcategory), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 filteredSubcategories.forEach { sub ->
                     FilterChip(
@@ -507,7 +525,7 @@ private fun StickyFooter(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "Total",
+                text = stringResource(Res.string.receipt_items_total),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
@@ -522,8 +540,13 @@ private fun StickyFooter(
         }
         state.conversionSummary?.let { summary ->
             Text(
-                text = "1 ${summary.originalCurrencyCode} = ${summary.rate} → " +
-                    "${summary.defaultCurrencySymbol}${formatAmount(summary.convertedTotalMinorUnits, "", 2)}",
+                text = stringResource(
+                    Res.string.receipt_items_conversion_summary,
+                    summary.originalCurrencyCode,
+                    summary.rate,
+                    summary.defaultCurrencySymbol,
+                    formatAmount(summary.convertedTotalMinorUnits, "", 2),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -537,7 +560,7 @@ private fun StickyFooter(
             if (state.isSaving) {
                 CircularProgressIndicator()
             } else {
-                Text("Confirm")
+                Text(stringResource(Res.string.receipt_items_confirm))
             }
         }
     }

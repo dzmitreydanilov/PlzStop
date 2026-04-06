@@ -94,6 +94,20 @@
     <string name="conversion_rate_override_apply">Apply</string>
     <string name="conversion_reset_rate">Reset</string>
 
+    <string name="receipt_items_title">Receipt Items</string>
+    <string name="receipt_items_date_warning_title">Receipt from a different month</string>
+    <string name="receipt_items_date_warning_message">This receipt is dated %1$s, which is outside the current month. Expenses will be saved to that month and won\'t appear in this month\'s dashboard. You can change the date using the calendar icon.</string>
+    <string name="receipt_items_got_it">Got it</string>
+    <string name="receipt_items_delete">Delete</string>
+    <string name="receipt_items_date_auto_assigned">Date not found on receipt — saved as today (%1$s)</string>
+    <string name="receipt_items_item_name">Item name</string>
+    <string name="receipt_items_amount">Amount</string>
+    <string name="receipt_items_subcategory">Subcategory</string>
+    <string name="receipt_items_total">Total</string>
+    <string name="receipt_items_confirm">Confirm</string>
+    <string name="receipt_items_add_item">+ Add item</string>
+    <string name="receipt_items_conversion_summary">1 %1$s = %2$s → %3$s%4$s</string>
+
     <string name="onboarding_home_coming_soon">Home — coming soon</string>
     <string name="onboarding_analytics_coming_soon">Analytics — coming soon</string>
     <string name="onboarding_settings_coming_soon">Settings — coming soon</string>
