@@ -11,69 +11,32 @@ import kotlinx.serialization.Serializable
 
 @Stable
 @Serializable
-sealed interface AddExpenseState {
-    val editContext: EditContext
-    val currency: CurrencyConfig
-    val form: ExpenseFormInput
-
+data class AddExpenseState(
+    val editContext: EditContext,
+    val currency: CurrencyConfig,
+    val form: ExpenseFormInput,
     @Serializable(with = ImmutableListSerializer::class)
-    val categories: ImmutableList<CategoryUiModel>
-
+    val categories: ImmutableList<CategoryUiModel>,
     @Serializable(with = ImmutableListSerializer::class)
-    val subcategories: ImmutableList<SubcategoryUiModel>
-    val selectedCategory: CategoryUiModel?
-
+    val subcategories: ImmutableList<SubcategoryUiModel>,
+    val selectedCategory: CategoryUiModel? = null,
     @Serializable(with = ImmutableListSerializer::class)
-    val titleTags: ImmutableList<String>
-    val dateTime: LocalDateTime
-    val showCurrencyPicker: Boolean
-    val status: FormStatus
-    val receipt: ReceiptState
-    val conversion: ConversionState
-    val currencyConversionEnabled: Boolean
+    val titleTags: ImmutableList<String> = persistentListOf(),
+    val dateTime: LocalDateTime = LocalDateTime(2000, 1, 1, 0, 0),
+    val showCurrencyPicker: Boolean = false,
+    val status: FormStatus = FormStatus(),
+    val receipt: ReceiptState = ReceiptState(),
+    val conversion: ConversionState = ConversionState(),
+    val currencyConversionEnabled: Boolean = false,
+    val errorOverlay: ErrorOverlay? = null,
+)
 
-    @Serializable
-    data class Content(
-        override val editContext: EditContext,
-        override val currency: CurrencyConfig,
-        override val form: ExpenseFormInput,
-        @Serializable(with = ImmutableListSerializer::class)
-        override val categories: ImmutableList<CategoryUiModel>,
-        @Serializable(with = ImmutableListSerializer::class)
-        override val subcategories: ImmutableList<SubcategoryUiModel>,
-        override val selectedCategory: CategoryUiModel? = null,
-        @Serializable(with = ImmutableListSerializer::class)
-        override val titleTags: ImmutableList<String> = persistentListOf(),
-        override val dateTime: LocalDateTime = LocalDateTime(2000, 1, 1, 0, 0),
-        override val showCurrencyPicker: Boolean = false,
-        override val status: FormStatus,
-        override val receipt: ReceiptState,
-        override val conversion: ConversionState = ConversionState(),
-        override val currencyConversionEnabled: Boolean = false,
-    ) : AddExpenseState
-
-    @Serializable
-    data class Error(
-        val errorType: ErrorType,
-        val receiptError: ReceiptError? = null,
-        override val editContext: EditContext,
-        override val currency: CurrencyConfig,
-        override val form: ExpenseFormInput,
-        @Serializable(with = ImmutableListSerializer::class)
-        override val categories: ImmutableList<CategoryUiModel>,
-        @Serializable(with = ImmutableListSerializer::class)
-        override val subcategories: ImmutableList<SubcategoryUiModel>,
-        override val selectedCategory: CategoryUiModel? = null,
-        @Serializable(with = ImmutableListSerializer::class)
-        override val titleTags: ImmutableList<String> = persistentListOf(),
-        override val dateTime: LocalDateTime = LocalDateTime(2000, 1, 1, 0, 0),
-        override val showCurrencyPicker: Boolean = false,
-        override val status: FormStatus,
-        override val receipt: ReceiptState,
-        override val conversion: ConversionState = ConversionState(),
-        override val currencyConversionEnabled: Boolean = false,
-    ) : AddExpenseState
-}
+@Stable
+@Serializable
+data class ErrorOverlay(
+    val errorType: ErrorType,
+    val receiptError: ReceiptError? = null,
+)
 
 @Stable
 @Serializable

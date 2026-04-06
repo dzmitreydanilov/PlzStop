@@ -204,12 +204,11 @@ private fun ExpenseScreenContent(
 
 
 internal val AddExpenseState.asOverlay: ScreenOverlay?
-    @Composable get() = when (this) {
-        is AddExpenseState.Error -> ScreenOverlay.Error(
-            type = errorType,
-            title = receiptError?.toOverlayMessage(),
+    @Composable get() = errorOverlay?.let { overlay ->
+        ScreenOverlay.Error(
+            type = overlay.errorType,
+            title = overlay.receiptError?.toOverlayMessage(),
         )
-        else -> null
     }
 
 @Composable

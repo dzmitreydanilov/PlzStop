@@ -4,7 +4,7 @@ import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.features.expenses.domain.model.ExpenseDetail
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
-import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
+import com.please.stop.app.features.expenses.domain.usecase.FetchAndApplyExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SetPendingReceiptDataUseCase
@@ -28,14 +28,14 @@ class EditExpenseStateHolder(
     saveExpenseUseCase: SaveExpenseUseCase,
     private val deleteExpenseUseCase: DeleteExpenseUseCase,
     analyzeReceiptUseCase: AnalyzeReceiptUseCase,
-    fetchExchangeRateUseCase: FetchExchangeRateUseCase,
+    fetchAndApplyExchangeRateUseCase: FetchAndApplyExchangeRateUseCase,
     setPendingReceiptDataUseCase: SetPendingReceiptDataUseCase,
     clearPendingReceiptDataUseCase: ClearPendingReceiptDataUseCase,
 ) : BaseExpenseStateHolder(
     observeFormDataUseCase = observeFormDataUseCase,
     saveExpenseUseCase = saveExpenseUseCase,
     analyzeReceiptUseCase = analyzeReceiptUseCase,
-    fetchExchangeRateUseCase = fetchExchangeRateUseCase,
+    fetchAndApplyExchangeRateUseCase = fetchAndApplyExchangeRateUseCase,
     setPendingReceiptDataUseCase = setPendingReceiptDataUseCase,
     clearPendingReceiptDataUseCase = clearPendingReceiptDataUseCase,
 ) {
@@ -64,14 +64,13 @@ class EditExpenseStateHolder(
             applyExpenseDetail(previous, result.expense)
         }
         is GetExpenseByIdUseCase.Result.NotFound -> {
-            previous.toError(ErrorType.Unknown("Expense not found"))
+            previous.withError(ErrorType.Unknown("Expense not found"))
         }
         is GetExpenseByIdUseCase.Result.Failure -> {
-            previous.toError(result.errorType)
+            previous.withError(result.errorType)
         }
         is DeleteExpenseUseCase.Result.Failure -> {
-            val content = previous.asContent() ?: return previous
-            content.updateStatus { copy(isSaving = false) }.toError(result.errorType)
+            previous.updateStatus { copy(isSaving = false) }.withError(result.errorType)
         }
         else -> super.getStateByResult(previous, result)
     }
@@ -82,13 +81,12 @@ class EditExpenseStateHolder(
     }
 
     override fun handleDeleteClicked(): Flow<DomainResult> = flowOf(
-        updateContent { updateStatus { copy(showDeleteDialog = true) } }
+        updateState { updateStatus { copy(showDeleteDialog = true) } }
     )
 
     override fun handleConfirmDelete(): Flow<DomainResult> = flow {
-        emit(updateContent { updateStatus { copy(showDeleteDialog = false, isSaving = true) } })
-        val content = state.value.asContent() ?: return@flow
-        val id = content.editContext.existingExpenseId ?: return@flow
+        emit(updateState { updateStatus { copy(showDeleteDialog = false, isSaving = true) } })
+        val id = state.value.editContext.existingExpenseId ?: return@flow
 
         val result = deleteExpenseUseCase(id)
         emit(result)
@@ -98,15 +96,13 @@ class EditExpenseStateHolder(
     }
 
     override fun handleDismissDeleteDialog(): Flow<DomainResult> = flowOf(
-        updateContent { updateStatus { copy(showDeleteDialog = false) } }
+        updateState { updateStatus { copy(showDeleteDialog = false) } }
     )
 
     private fun applyExpenseDetail(
         previous: AddExpenseState,
         expense: ExpenseDetail,
     ): AddExpenseState {
-        val content = previous.asContent() ?: return previous
-
         val hasConversion = expense.originalCurrencyCode != null &&
             expense.conversionRate != null &&
             expense.originalAmountMinorUnits != null
@@ -117,7 +113,7 @@ class EditExpenseStateHolder(
             expense.amountMinorUnits
         }
 
-        val loadedForm = content.form.copy(
+        val loadedForm = previous.form.copy(
             amountInput = keyboardCalculator.formatFromMinorUnits(amountToDisplay),
             title = expense.title,
             selectedCategoryId = expense.categoryId,
@@ -127,18 +123,18 @@ class EditExpenseStateHolder(
         )
 
         val conversionState = if (hasConversion) {
-            content.conversion.copy(
+            previous.conversion.copy(
                 rate = expense.conversionRate,
                 fetchedRate = expense.conversionRate,
                 isManualOverride = true,
                 convertedAmountMinorUnits = expense.amountMinorUnits,
             )
         } else {
-            content.conversion
+            previous.conversion
         }
 
-        return content.copy(
-            editContext = content.editContext.copy(
+        return previous.copy(
+            editContext = previous.editContext.copy(
                 existingExpenseId = expense.id,
                 initialForm = loadedForm,
             ),
