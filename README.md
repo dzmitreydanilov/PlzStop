@@ -1,63 +1,109 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Web.
+# PlzStop - Expense Tracker
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+A personal expense tracking app built with Kotlin Multiplatform and Compose Multiplatform. Track expenses manually or by scanning receipts with AI. See spending trends at a glance.
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+## Platforms
 
-### Build and Run Android Application
+- Android
+- iOS
 
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
+## Tech Stack
 
-### Build and Run Web Application
+| Layer | Technology |
+|-------|-----------|
+| UI | Compose Multiplatform, Material 3 |
+| Architecture | MVI (StateHolder + sealed State/Event) |
+| Networking | Ktor |
+| Database | Room + SQLCipher |
+| DI | Koin |
+| Navigation | Navigation 3 |
+| Image loading | Coil |
+| Receipt AI | Firebase Cloud Functions + Gemini 2.5 Flash |
+| Analytics | Amplitude |
+| Async | Kotlin Coroutines + Flow |
+| Build | Gradle (version catalog), Detekt |
 
-To build and run the development version of the web app, use the run configuration from the run widget
-in your IDE's toolbar or run it directly from the terminal:
-- for the Wasm target (faster, modern browsers):
-  - on macOS/Linux
-    ```shell
-    ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
-    ```
-  - on Windows
-    ```shell
-    .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun
-    ```
-- for the JS target (slower, supports older browsers):
-  - on macOS/Linux
-    ```shell
-    ./gradlew :composeApp:jsBrowserDevelopmentRun
-    ```
-  - on Windows
-    ```shell
-    .\gradlew.bat :composeApp:jsBrowserDevelopmentRun
-    ```
+## Features
 
-### Build and Run iOS Application
+| Feature | Description |
+|---------|-------------|
+| [Onboarding](docs/features/onboarding.md) | Setup wizard: currency, name, budget |
+| [Home](docs/features/home.md) | Dashboard with categories and spending overview |
+| [Add/Edit Expense](docs/features/add-expense.md) | Calculator keyboard, receipt scanning, currency conversion |
+| [Receipt Items](docs/features/receipt-items.md) | Batch receipt line item editor |
+| [Analytics Overview](docs/features/analytics-overview.md) | Pie chart and category spending breakdown |
+| [Monthly Expenses](docs/features/monthly-expenses.md) | Month-by-month expense list with day grouping |
 
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+## Project Structure
 
----
+```
+PlzStop/
+  composeApp/
+    src/
+      commonMain/          Shared code (all features, core, navigation, DI)
+      androidMain/         Android platform code
+      iosMain/             iOS platform code
+      commonTest/          Shared tests
+  iosApp/                  iOS app entry point (SwiftUI bridge)
+  functions/               Firebase Cloud Functions (receipt analysis)
+  build-logic/             Gradle build configuration
+  config/                  Detekt and other config
+  docs/
+    features/              Functional specifications
+    cloudfunc/             Cloud function deployment guide
+```
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
+### App Architecture
 
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+```
+composeApp/src/commonMain/kotlin/com/please/stop/app/
+  core/
+    db/                    Room database, entities, migrations
+    models/                Shared domain and UI models
+    stateholder/           MVI base classes, StateSaver
+  navigation/              Navigation 3 routes, router, bottom tabs
+  network/                 HTTP client, flowFromSuspend, mapToResult
+  di/                      Koin root modules
+  features/
+    home/                  Home dashboard
+      data/                Repository implementations
+      domain/              Use cases, repository interfaces, models
+      presentation/        StateHolder, State, Event, UI
+    expenses/              Add/edit expense + receipt items
+      data/
+      domain/
+      presentation/
+      create/              Create expense flow
+      edit/                Edit expense flow
+      receiptitems/        Receipt items editor
+    analytics/             Overview + monthly breakdown
+      data/
+      domain/
+      presentation/
+      monthly/             Monthly expenses sub-feature
+    onboarding/            First-launch setup
+      data/
+      domain/
+      presentation/
+```
+
+## Build & Run
+
+```bash
+# Android
+./gradlew :composeApp:assembleDebug
+
+# iOS
+# Open iosApp/ in Xcode and run
+
+# Lint
+./gradlew detekt
+```
+
+## Cloud Functions
+
+See [docs/cloudfunc/deploy-cloud-functions.md](docs/cloudfunc/deploy-cloud-functions.md) for deployment instructions.
+
+```bash
+cd functions && npm install && npm run build && cd .. && firebase deploy --only functions
+```
