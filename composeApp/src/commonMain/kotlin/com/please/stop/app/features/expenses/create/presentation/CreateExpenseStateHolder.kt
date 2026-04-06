@@ -2,7 +2,7 @@ package com.please.stop.app.features.expenses.create.presentation
 
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
-import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
+import com.please.stop.app.features.expenses.domain.usecase.FetchAndApplyExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SetPendingReceiptDataUseCase
@@ -16,14 +16,14 @@ class CreateExpenseStateHolder(
     observeFormDataUseCase: ObserveAddExpenseFormDataUseCase,
     saveExpenseUseCase: SaveExpenseUseCase,
     analyzeReceiptUseCase: AnalyzeReceiptUseCase,
-    fetchExchangeRateUseCase: FetchExchangeRateUseCase,
+    fetchAndApplyExchangeRateUseCase: FetchAndApplyExchangeRateUseCase,
     setPendingReceiptDataUseCase: SetPendingReceiptDataUseCase,
     clearPendingReceiptDataUseCase: ClearPendingReceiptDataUseCase,
 ) : BaseExpenseStateHolder(
     observeFormDataUseCase = observeFormDataUseCase,
     saveExpenseUseCase = saveExpenseUseCase,
     analyzeReceiptUseCase = analyzeReceiptUseCase,
-    fetchExchangeRateUseCase = fetchExchangeRateUseCase,
+    fetchAndApplyExchangeRateUseCase = fetchAndApplyExchangeRateUseCase,
     setPendingReceiptDataUseCase = setPendingReceiptDataUseCase,
     clearPendingReceiptDataUseCase = clearPendingReceiptDataUseCase,
 ) {

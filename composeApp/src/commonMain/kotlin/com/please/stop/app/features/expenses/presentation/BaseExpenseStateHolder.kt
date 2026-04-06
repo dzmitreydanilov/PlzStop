@@ -5,14 +5,14 @@ import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.presentation.Navigation
 import com.please.stop.app.features.expenses.domain.model.AddExpenseFormData
-import com.please.stop.app.features.expenses.domain.model.PendingReceiptData
 import com.please.stop.app.features.expenses.domain.model.ReceiptError
-import com.please.stop.app.features.expenses.domain.model.ReceiptExpenseItem
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
+import com.please.stop.app.features.expenses.domain.usecase.BuildPendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
-import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
+import com.please.stop.app.features.expenses.domain.usecase.FetchAndApplyExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataResult
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
+import com.please.stop.app.features.expenses.domain.usecase.ResolveExpenseSaveAmountsUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SetPendingReceiptDataUseCase
 import com.please.stop.app.features.onboarding.domain.model.Currency
@@ -30,14 +30,14 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toInstant
 import kotlin.math.roundToLong
 import kotlin.reflect.KClass
-import kotlin.time.ExperimentalTime
 import com.please.stop.app.core.models.domain.Result as DomainResult
 
+@Suppress("TooManyFunctions")
 abstract class BaseExpenseStateHolder(
     private val observeFormDataUseCase: ObserveAddExpenseFormDataUseCase,
     private val saveExpenseUseCase: SaveExpenseUseCase,
     private val analyzeReceiptUseCase: AnalyzeReceiptUseCase,
-    private val fetchExchangeRateUseCase: FetchExchangeRateUseCase,
+    private val fetchAndApplyExchangeRateUseCase: FetchAndApplyExchangeRateUseCase,
     private val setPendingReceiptDataUseCase: SetPendingReceiptDataUseCase,
     private val clearPendingReceiptDataUseCase: ClearPendingReceiptDataUseCase,
 ) : StateHolder<AddExpenseState, AddExpenseEvent>() {
@@ -57,14 +57,12 @@ abstract class BaseExpenseStateHolder(
         clearPendingReceiptDataUseCase()
     }
 
-    override fun getInitial(): AddExpenseState = AddExpenseState.Content(
+    override fun getInitial(): AddExpenseState = AddExpenseState(
         editContext = editContext,
         currency = CurrencyConfig(symbol = "", decimalPlaces = 0),
         form = buildInitialForm(),
         categories = persistentListOf(),
         subcategories = persistentListOf(),
-        status = FormStatus(),
-        receipt = ReceiptState(),
     )
 
     override fun collectFlowsOnInit(): Flow<DomainResult> = observeFormDataUseCase()
@@ -79,67 +77,23 @@ abstract class BaseExpenseStateHolder(
         else -> null
     }
 
-    @OptIn(ExperimentalTime::class)
     override fun getStateByResult(
         previous: AddExpenseState,
         result: DomainResult,
     ): AddExpenseState {
         val newState = when (result) {
-            is ObserveAddExpenseFormDataResult.Success -> {
-                applyFormData(previous, result.data)
-            }
-
-            is ObserveAddExpenseFormDataResult.Failure -> {
-                previous.toError(result.errorType)
-            }
-
-            is ExpenseResult.UpdateContent -> result.updater(
-                previous.asContent() ?: return previous
-            )
-
-            is SaveExpenseUseCase.Result.Success -> {
-                previous.asContent()?.updateStatus { copy(isSaving = false) } ?: previous
-            }
-
+            is ObserveAddExpenseFormDataResult.Success -> applyFormData(previous, result.data)
+            is ObserveAddExpenseFormDataResult.Failure -> previous.withError(result.errorType)
+            is ExpenseResult.UpdateContent -> result.updater(previous)
+            is SaveExpenseUseCase.Result.Success -> previous.updateStatus { copy(isSaving = false) }
             is SaveExpenseUseCase.Result.Failure -> {
-                val content = previous.asContent() ?: return previous
-                content.updateStatus { copy(isSaving = false) }.toError(result.errorType)
+                previous.updateStatus { copy(isSaving = false) }.withError(result.errorType)
             }
-
-            is AnalyzeReceiptUseCase.Result.Success -> {
-                val data = result.data
-                val content = previous.asContent() ?: return previous
-                val newAmountInput = data.totalAmountMinorUnits?.let {
-                    keyboardCalculator.formatFromMinorUnits(it)
-                } ?: content.form.amountInput
-                if (data.totalAmountMinorUnits != null) {
-                    keyboardCalculator.setFromAmount(newAmountInput)
-                }
-                val kbState = keyboardCalculator.getState()
-                val newCategoryId = data.categoryId ?: content.form.selectedCategoryId
-                val categoryChanged = newCategoryId != content.form.selectedCategoryId
-                content.copy(
-                    receipt = ReceiptState(),
-                    form = content.form.copy(
-                        title = data.merchantName ?: content.form.title,
-                        amountInput = newAmountInput,
-                        amountDisplayExpression = kbState.displayExpression,
-                        isInExpressionMode = kbState.isInExpressionMode,
-                        selectedCategoryId = newCategoryId,
-                        selectedSubcategoryId = when {
-                            categoryChanged -> data.subcategoryId
-                            else -> data.subcategoryId ?: content.form.selectedSubcategoryId
-                        },
-                        dateEpochMillis = data.date?.toEpochMillis()
-                            ?: content.form.dateEpochMillis,
-                    ),
-                )
-            }
-
-            is ExpenseResult.ClearError -> previous.toContent()
+            is AnalyzeReceiptUseCase.Result.Success -> applyReceiptResult(previous, result)
+            is ExpenseResult.ClearError -> previous.copy(errorOverlay = null)
             else -> super.getStateByResult(previous, result)
         }
-        return (newState as? AddExpenseState.Content)?.withDerivedFields() ?: newState
+        return newState.withDerivedFields()
     }
 
     override fun getErrorStateByResult(
@@ -147,18 +101,17 @@ abstract class BaseExpenseStateHolder(
         errorType: ErrorType
     ): AddExpenseState {
         val receiptError = (result as? AnalyzeReceiptUseCase.Result.Failure)?.receiptError
-        return state.value.toError(errorType, receiptError).copy(receipt = ReceiptState())
+        return state.value.withError(errorType, receiptError).copy(receipt = ReceiptState())
     }
 
     override fun resolveEventResult(event: AddExpenseEvent): Flow<DomainResult> {
         return when (event) {
             is AddExpenseEvent.KeyPressed -> handleKeyPress(event.key)
             is AddExpenseEvent.TitleChanged -> flowOf(
-                updateContent { copy(form = form.copy(title = event.text.take(MAX_TITLE_LENGTH))) }
+                updateState { copy(form = form.copy(title = event.text.take(MAX_TITLE_LENGTH))) }
             )
-
             is AddExpenseEvent.CategorySelected -> flowOf(
-                updateContent {
+                updateState {
                     copy(
                         form = form.copy(
                             selectedCategoryId = event.categoryId,
@@ -167,43 +120,36 @@ abstract class BaseExpenseStateHolder(
                     )
                 }
             )
-
             is AddExpenseEvent.SubcategorySelected -> flowOf(
-                updateContent { copy(form = form.copy(selectedSubcategoryId = event.subcategoryId)) }
+                updateState { copy(form = form.copy(selectedSubcategoryId = event.subcategoryId)) }
             )
-
             is AddExpenseEvent.DateChanged -> handleDateChange(event.epochMillis)
             is AddExpenseEvent.NotesChanged -> flowOf(
-                updateContent { copy(form = form.copy(notes = event.text.take(MAX_NOTES_LENGTH))) }
+                updateState { copy(form = form.copy(notes = event.text.take(MAX_NOTES_LENGTH))) }
             )
-
             is AddExpenseEvent.SaveClicked -> handleSave()
             is AddExpenseEvent.DeleteClicked -> handleDeleteClicked()
             is AddExpenseEvent.ConfirmDelete -> handleConfirmDelete()
             is AddExpenseEvent.DismissDeleteDialog -> handleDismissDeleteDialog()
             is AddExpenseEvent.BackClicked -> handleBack()
             is AddExpenseEvent.ConfirmDiscard -> flow {
-                emit(updateContent { updateStatus { copy(showDiscardDialog = false) } })
+                emit(updateState { updateStatus { copy(showDiscardDialog = false) } })
                 emit(ExpenseResult.NavigateBack)
             }
-
             is AddExpenseEvent.DismissDiscardDialog -> flowOf(
-                updateContent { updateStatus { copy(showDiscardDialog = false) } }
+                updateState { updateStatus { copy(showDiscardDialog = false) } }
             )
-
             is AddExpenseEvent.DismissError -> flowOf(ExpenseResult.ClearError)
             is AddExpenseEvent.ReceiptScanned -> handleReceiptScanned(event.imageBytes)
             is AddExpenseEvent.DismissDatePicker -> flowOf(
-                updateContent { updateStatus { copy(showDatePicker = false) } }
+                updateState { updateStatus { copy(showDatePicker = false) } }
             )
-
             is AddExpenseEvent.DismissCurrencyPicker -> flowOf(
-                updateContent { copy(showCurrencyPicker = false) }
+                updateState { copy(showCurrencyPicker = false) }
             )
-
             is AddExpenseEvent.ExpenseCurrencySelected -> handleCurrencySelection(event.currency)
             is AddExpenseEvent.ShowRateOverrideSheet -> flowOf(
-                updateContent {
+                updateState {
                     copy(
                         conversion = conversion.copy(
                             showRateEditSheet = true,
@@ -212,97 +158,56 @@ abstract class BaseExpenseStateHolder(
                     )
                 }
             )
-
             is AddExpenseEvent.DismissRateOverrideSheet -> flowOf(
-                updateContent { copy(conversion = conversion.copy(showRateEditSheet = false)) }
+                updateState { copy(conversion = conversion.copy(showRateEditSheet = false)) }
             )
-
             is AddExpenseEvent.RateOverrideInputChanged -> flowOf(
-                updateContent { copy(conversion = conversion.copy(rateEditInput = event.input)) }
+                updateState { copy(conversion = conversion.copy(rateEditInput = event.input)) }
             )
-
             is AddExpenseEvent.ConfirmRateOverride -> flowOf(
-                updateContent { applyManualRateOverride() }
+                updateState { applyManualRateOverride() }
             )
-
             is AddExpenseEvent.ResetToFetchedRate -> flowOf(
-                updateContent { resetToFetchedRate() }
+                updateState { resetToFetchedRate() }
             )
-
             is AddExpenseEvent.ToggleSaveInOriginalCurrency -> flowOf(
-                updateContent {
+                updateState {
                     copy(conversion = conversion.copy(saveInOriginalCurrency = !conversion.saveInOriginalCurrency))
                 }
             )
-
             is AddExpenseEvent.CreateReceiptClicked -> handleCreateReceiptManually()
         }
     }
 
     protected open fun handleDeleteClicked(): Flow<DomainResult> =
-        flowOf(updateContent { this })
+        flowOf(updateState { this })
 
     protected open fun handleConfirmDelete(): Flow<DomainResult> =
-        flowOf(updateContent { this })
+        flowOf(updateState { this })
 
     protected open fun handleDismissDeleteDialog(): Flow<DomainResult> =
-        flowOf(updateContent { this })
+        flowOf(updateState { this })
 
-    @OptIn(ExperimentalTime::class)
     protected fun applyFormData(
         previous: AddExpenseState,
         data: AddExpenseFormData,
     ): AddExpenseState {
-        val currency = CurrencyConfig(
-            code = data.currencyCode,
-            symbol = data.currencySymbol,
-            decimalPlaces = data.decimalPlaces,
-        )
-        val existingCurrency = previous.asContent()?.currency
-        val hasUserSelectedCurrency = existingCurrency != null &&
-            existingCurrency.code != previous.conversion.defaultCurrencyCode &&
-            existingCurrency.code.isNotEmpty()
+        val currency = AddExpenseStateMapper.toCurrencyConfig(data)
+        val hasUserSelectedCurrency = previous.currency.code != previous.conversion.defaultCurrencyCode &&
+            previous.currency.code.isNotEmpty()
         if (!hasUserSelectedCurrency) {
             keyboardCalculator = KeyboardCalculator(
                 decimalPlaces = currency.decimalPlaces,
                 currencySymbol = data.currencySymbol,
             )
         }
-        val categories = data.categories.map { category ->
-            CategoryUiModel(
-                id = category.id,
-                name = category.name,
-                iconKey = category.iconKey,
-            )
-        }.toImmutableList()
-
-        val subcategories = data.subcategories.map { sub ->
-            SubcategoryUiModel(
-                id = sub.id,
-                parentCategoryId = sub.parentCategoryId,
-                name = sub.name,
-                iconKey = sub.iconKey,
-            )
-        }.toImmutableList()
-
-        val existingContent = previous.asContent()
-        val content = existingContent ?: AddExpenseState.Content(
-            editContext = editContext,
-            currency = currency,
-            form = buildInitialForm(),
-            categories = persistentListOf(),
-            subcategories = persistentListOf(),
-            status = FormStatus(),
-            receipt = ReceiptState(),
-        )
-        val preserveUserCurrency = existingContent != null &&
-            existingContent.currency.code != existingContent.conversion.defaultCurrencyCode &&
-            existingContent.currency.code.isNotEmpty()
-        return content.copy(
-            currency = if (preserveUserCurrency) existingContent.currency else currency,
+        val categories = AddExpenseStateMapper.toCategoryUiModels(data)
+        val subcategories = AddExpenseStateMapper.toSubcategoryUiModels(data)
+        return previous.copy(
+            currency = if (hasUserSelectedCurrency) previous.currency else currency,
             categories = categories,
             subcategories = subcategories,
-            conversion = content.conversion.copy(
+            conversion = previous.conversion.copy(
                 defaultCurrencyCode = currency.code,
                 defaultCurrencySymbol = currency.symbol,
             ),
@@ -310,35 +215,62 @@ abstract class BaseExpenseStateHolder(
         )
     }
 
+    private fun applyReceiptResult(
+        previous: AddExpenseState,
+        result: AnalyzeReceiptUseCase.Result.Success,
+    ): AddExpenseState {
+        val data = result.data
+        val newAmountInput = data.totalAmountMinorUnits?.let {
+            keyboardCalculator.formatFromMinorUnits(it)
+        } ?: previous.form.amountInput
+        if (data.totalAmountMinorUnits != null) {
+            keyboardCalculator.setFromAmount(newAmountInput)
+        }
+        val kbState = keyboardCalculator.getState()
+        val newCategoryId = data.categoryId ?: previous.form.selectedCategoryId
+        val categoryChanged = newCategoryId != previous.form.selectedCategoryId
+        return previous.copy(
+            receipt = ReceiptState(),
+            form = previous.form.copy(
+                title = data.merchantName ?: previous.form.title,
+                amountInput = newAmountInput,
+                amountDisplayExpression = kbState.displayExpression,
+                isInExpressionMode = kbState.isInExpressionMode,
+                selectedCategoryId = newCategoryId,
+                selectedSubcategoryId = when {
+                    categoryChanged -> data.subcategoryId
+                    else -> data.subcategoryId ?: previous.form.selectedSubcategoryId
+                },
+                dateEpochMillis = data.date?.toEpochMillis() ?: previous.form.dateEpochMillis,
+            ),
+        )
+    }
+
     private fun handleKeyPress(key: NumericKey): Flow<DomainResult> = when (key) {
         is NumericKey.Calendar -> flowOf(
-            updateContent { updateStatus { copy(showDatePicker = true) } }
+            updateState { updateStatus { copy(showDatePicker = true) } }
         )
-
         is NumericKey.Notes -> emptyFlow<DomainResult>()
-
         is NumericKey.Equals -> {
             if (state.value.form.isInExpressionMode) {
                 val newState = keyboardCalculator.processKey(key)
-                flowOf(updateContent { applyKeyboardState(newState) })
+                flowOf(updateState { applyKeyboardState(newState) })
             } else {
                 handleSave()
             }
         }
-
         is NumericKey.CurrencySymbol -> flowOf(
-            updateContent { copy(showCurrencyPicker = true) }
+            updateState { copy(showCurrencyPicker = true) }
         )
-
         else -> {
             val newState = keyboardCalculator.processKey(key)
-            flowOf(updateContent { applyKeyboardState(newState) })
+            flowOf(updateState { applyKeyboardState(newState) })
         }
     }
 
-    private fun AddExpenseState.Content.applyKeyboardState(
+    private fun AddExpenseState.applyKeyboardState(
         kbState: KeyboardState,
-    ): AddExpenseState.Content = copy(
+    ): AddExpenseState = copy(
         form = form.copy(
             amountInput = kbState.currentValue,
             amountDisplayExpression = kbState.displayExpression,
@@ -354,7 +286,7 @@ abstract class BaseExpenseStateHolder(
             symbol = selected.symbol,
             decimalPlaces = selected.decimalPlaces,
         )
-        val content = state.value.asContent() ?: return@flow
+        val content = state.value
         val currentAmountInput = content.form.amountInput
         keyboardCalculator = KeyboardCalculator(
             decimalPlaces = selected.decimalPlaces,
@@ -368,7 +300,7 @@ abstract class BaseExpenseStateHolder(
         val isSameCurrency = selected.code == defaultCode
 
         emit(
-            updateContent {
+            updateState {
                 copy(
                     currency = newCurrency,
                     showCurrencyPicker = false,
@@ -399,75 +331,12 @@ abstract class BaseExpenseStateHolder(
         if (isSameCurrency) return@flow
 
         val dateString = localDateTimeFromMillis(content.form.dateEpochMillis).date.toString()
-        val result =
-            fetchExchangeRateUseCase(from = selected.code, to = defaultCode, date = dateString)
-        when (result) {
-            is FetchExchangeRateUseCase.Result.Success -> emit(
-                updateContent {
-                    copy(
-                        conversion = conversion.copy(
-                            isLoading = false,
-                            rate = result.rate,
-                            fetchedRate = result.rate,
-                        ),
-                    ).withUpdatedConversion()
-                }
-            )
-
-            is FetchExchangeRateUseCase.Result.Failure -> emit(
-                updateContent {
-                    copy(conversion = conversion.copy(isLoading = false, hasFetchError = true))
-                }
-            )
-
-            is FetchExchangeRateUseCase.Result.Disabled -> emit(
-                updateContent {
-                    copy(
-                        conversion = ConversionState(
-                            defaultCurrencyCode = conversion.defaultCurrencyCode,
-                            defaultCurrencySymbol = conversion.defaultCurrencySymbol,
-                        ),
-                    )
-                }
-            )
-        }
-    }
-
-    private fun AddExpenseState.Content.withUpdatedConversion(): AddExpenseState.Content {
-        val rate = conversion.rate ?: return this
-        val amountMinorUnits = keyboardCalculator.parseToMinorUnits()
-        if (amountMinorUnits <= 0) {
-            return copy(conversion = conversion.copy(convertedAmountMinorUnits = null))
-        }
-        val converted = (amountMinorUnits * rate).roundToLong()
-        return copy(conversion = conversion.copy(convertedAmountMinorUnits = converted))
-    }
-
-    private fun AddExpenseState.Content.applyManualRateOverride(): AddExpenseState.Content {
-        val rate = conversion.rateEditInput.toDoubleOrNull()
-        if (rate == null || rate <= 0) return this
-        return copy(
-            conversion = conversion.copy(
-                rate = rate,
-                isManualOverride = true,
-                showRateEditSheet = false,
-            ),
-        ).withUpdatedConversion()
-    }
-
-    private fun AddExpenseState.Content.resetToFetchedRate(): AddExpenseState.Content {
-        val fetched = conversion.fetchedRate ?: return this
-        return copy(
-            conversion = conversion.copy(
-                rate = fetched,
-                isManualOverride = false,
-            ),
-        ).withUpdatedConversion()
+        emitExchangeRateResult(selected.code, defaultCode, dateString)
     }
 
     private fun handleDateChange(newDateEpochMillis: Long): Flow<DomainResult> = flow {
         val tz = TimeZone.currentSystemDefault()
-        val content = state.value.asContent() ?: return@flow
+        val content = state.value
         val oldDateTime = localDateTimeFromMillis(content.form.dateEpochMillis, tz)
         val newDate = localDateTimeFromMillis(newDateEpochMillis, tz)
         val merged = LocalDateTime(
@@ -482,7 +351,7 @@ abstract class BaseExpenseStateHolder(
         val mergedMillis = merged.toInstant(tz).toEpochMilliseconds()
 
         emit(
-            updateContent {
+            updateState {
                 copy(form = form.copy(dateEpochMillis = mergedMillis))
                     .updateStatus { copy(showDatePicker = false) }
             }
@@ -495,118 +364,114 @@ abstract class BaseExpenseStateHolder(
         val dateChanged = oldDateTime.date != newDate.date
 
         if (isForeignCurrency && dateChanged) {
-            emit(
-                updateContent {
+            emit(updateState { copy(conversion = conversion.resetForFetch()) })
+            emitExchangeRateResult(content.currency.code, conv.defaultCurrencyCode, newDate.date.toString())
+        }
+    }
+
+    private suspend fun kotlinx.coroutines.flow.FlowCollector<DomainResult>.emitExchangeRateResult(
+        from: String,
+        to: String,
+        date: String,
+    ) {
+        when (val result = fetchAndApplyExchangeRateUseCase(from = from, to = to, date = date)) {
+            is FetchAndApplyExchangeRateUseCase.Result.RateFetched -> emit(
+                updateState {
                     copy(
                         conversion = conversion.copy(
-                            isLoading = true,
-                            rate = null,
-                            fetchedRate = null,
-                            isManualOverride = false,
-                            convertedAmountMinorUnits = null,
-                            hasFetchError = false,
+                            isLoading = false,
+                            rate = result.rate,
+                            fetchedRate = result.rate,
+                        ),
+                    ).withUpdatedConversion()
+                }
+            )
+            is FetchAndApplyExchangeRateUseCase.Result.FetchFailed -> emit(
+                updateState {
+                    copy(conversion = conversion.copy(isLoading = false, hasFetchError = true))
+                }
+            )
+            is FetchAndApplyExchangeRateUseCase.Result.Disabled -> emit(
+                updateState {
+                    copy(
+                        conversion = ConversionState(
+                            defaultCurrencyCode = conversion.defaultCurrencyCode,
+                            defaultCurrencySymbol = conversion.defaultCurrencySymbol,
                         ),
                     )
                 }
             )
-            val dateString = newDate.date.toString()
-            val result = fetchExchangeRateUseCase(
-                from = content.currency.code,
-                to = conv.defaultCurrencyCode,
-                date = dateString,
-            )
-            when (result) {
-                is FetchExchangeRateUseCase.Result.Success -> emit(
-                    updateContent {
-                        copy(
-                            conversion = conversion.copy(
-                                isLoading = false,
-                                rate = result.rate,
-                                fetchedRate = result.rate,
-                            ),
-                        ).withUpdatedConversion()
-                    }
-                )
-
-                is FetchExchangeRateUseCase.Result.Failure -> emit(
-                    updateContent {
-                        copy(conversion = conversion.copy(isLoading = false))
-                    }
-                )
-
-                is FetchExchangeRateUseCase.Result.Disabled -> emit(
-                    updateContent {
-                        copy(
-                            conversion = ConversionState(
-                                defaultCurrencyCode = conversion.defaultCurrencyCode,
-                                defaultCurrencySymbol = conversion.defaultCurrencySymbol,
-                            ),
-                        )
-                    }
-                )
-            }
         }
     }
 
-    private fun handleTimeChange(hour: Int, minute: Int): DomainResult {
-        return updateContent {
-            val tz = TimeZone.currentSystemDefault()
-            val oldDateTime = localDateTimeFromMillis(form.dateEpochMillis, tz)
-            val merged = LocalDateTime(
-                year = oldDateTime.year,
-                month = oldDateTime.month,
-                day = oldDateTime.day,
-                hour = hour,
-                minute = minute,
-                second = 0,
-                nanosecond = 0,
-            )
-            copy(form = form.copy(dateEpochMillis = merged.toInstant(tz).toEpochMilliseconds()))
+    private fun ConversionState.resetForFetch(): ConversionState = copy(
+        isLoading = true,
+        rate = null,
+        fetchedRate = null,
+        isManualOverride = false,
+        convertedAmountMinorUnits = null,
+        hasFetchError = false,
+    )
+
+    private fun AddExpenseState.withUpdatedConversion(): AddExpenseState {
+        val rate = conversion.rate ?: return this
+        val amountMinorUnits = keyboardCalculator.parseToMinorUnits()
+        if (amountMinorUnits <= 0) {
+            return copy(conversion = conversion.copy(convertedAmountMinorUnits = null))
         }
+        val converted = (amountMinorUnits * rate).roundToLong()
+        return copy(conversion = conversion.copy(convertedAmountMinorUnits = converted))
+    }
+
+    private fun AddExpenseState.applyManualRateOverride(): AddExpenseState {
+        val rate = conversion.rateEditInput.toDoubleOrNull()
+        if (rate == null || rate <= 0) return this
+        return copy(
+            conversion = conversion.copy(
+                rate = rate,
+                isManualOverride = true,
+                showRateEditSheet = false,
+            ),
+        ).withUpdatedConversion()
+    }
+
+    private fun AddExpenseState.resetToFetchedRate(): AddExpenseState {
+        val fetched = conversion.fetchedRate ?: return this
+        return copy(
+            conversion = conversion.copy(
+                rate = fetched,
+                isManualOverride = false,
+            ),
+        ).withUpdatedConversion()
     }
 
     private fun handleSave(): Flow<DomainResult> = flow {
-        emit(updateContent { updateStatus { copy(isSaving = true) } })
-        val content = state.value.asContent() ?: return@flow
-
-        val enteredAmountMinorUnits = keyboardCalculator.parseToMinorUnits()
+        emit(updateState { updateStatus { copy(isSaving = true) } })
+        val content = state.value
         val categoryId = content.form.selectedCategoryId ?: return@flow
 
-        val conv = content.conversion
-        val isForeignCurrency = content.currency.code != conv.defaultCurrencyCode &&
-            conv.rate != null
-
-        val amountToSave: Long
-        val originalAmount: Long?
-        val originalCurrencyCode: String?
-
-        if (isForeignCurrency) {
-            if (conv.saveInOriginalCurrency) {
-                amountToSave = enteredAmountMinorUnits
-                originalAmount = conv.convertedAmountMinorUnits
-                originalCurrencyCode = conv.defaultCurrencyCode
-            } else {
-                amountToSave = conv.convertedAmountMinorUnits ?: enteredAmountMinorUnits
-                originalAmount = enteredAmountMinorUnits
-                originalCurrencyCode = content.currency.code
-            }
-        } else {
-            amountToSave = enteredAmountMinorUnits
-            originalAmount = null
-            originalCurrencyCode = null
-        }
+        val amounts = ResolveExpenseSaveAmountsUseCase(
+            ResolveExpenseSaveAmountsUseCase.Input(
+                enteredAmountMinorUnits = keyboardCalculator.parseToMinorUnits(),
+                convertedAmountMinorUnits = content.conversion.convertedAmountMinorUnits,
+                currencyCode = content.currency.code,
+                defaultCurrencyCode = content.conversion.defaultCurrencyCode,
+                conversionRate = content.conversion.rate,
+                saveInOriginalCurrency = content.conversion.saveInOriginalCurrency,
+            )
+        )
 
         val result = saveExpenseUseCase(
             existingId = content.editContext.existingExpenseId,
-            amountMinorUnits = amountToSave,
+            amountMinorUnits = amounts.amountToSave,
             title = content.form.title.trim(),
             categoryId = categoryId,
             dateEpochMillis = content.form.dateEpochMillis,
             notes = content.form.notes.trim().takeIf { it.isNotBlank() },
             subcategoryId = content.form.selectedSubcategoryId,
-            originalAmountMinorUnits = originalAmount,
-            originalCurrencyCode = originalCurrencyCode,
-            conversionRate = if (isForeignCurrency) conv.rate else null,
+            originalAmountMinorUnits = amounts.originalAmountMinorUnits,
+            originalCurrencyCode = amounts.originalCurrencyCode,
+            conversionRate = amounts.conversionRate,
         )
         emit(result)
         if (result is SaveExpenseUseCase.Result.Success) {
@@ -615,29 +480,14 @@ abstract class BaseExpenseStateHolder(
     }
 
     private fun handleReceiptScanned(imageBytes: ByteArray): Flow<DomainResult> = flow {
-        emit(updateContent { copy(receipt = ReceiptState(isAnalyzing = true)) })
+        emit(updateState { copy(receipt = ReceiptState(isAnalyzing = true)) })
         val result = analyzeReceiptUseCase(imageBytes)
         if (result is AnalyzeReceiptUseCase.Result.Success && result.data.items.size > 1) {
-            setPendingReceiptDataUseCase(
-                PendingReceiptData(
-                    items = result.data.items.map { item ->
-                        ReceiptExpenseItem(
-                            id = item.name + "_" + item.amountMinorUnits,
-                            name = item.name,
-                            amountMinorUnits = item.amountMinorUnits,
-                            categoryId = item.categoryId ?: result.data.categoryId,
-                            subcategoryId = item.subcategoryId ?: result.data.subcategoryId,
-                        )
-                    },
-                    merchantName = result.data.merchantName,
-                    currency = result.data.currency,
-                    dateString = result.data.date,
-                    categoryId = result.data.categoryId,
-                    subcategoryId = result.data.subcategoryId,
-                    isManualEntry = false,
-                )
+            val pendingData = BuildPendingReceiptDataUseCase(
+                BuildPendingReceiptDataUseCase.Input.FromReceipt(result.data)
             )
-            emit(updateContent { copy(receipt = ReceiptState()) })
+            setPendingReceiptDataUseCase(pendingData)
+            emit(updateState { copy(receipt = ReceiptState()) })
             emit(ExpenseResult.NavigateToReceiptItems)
         } else {
             emit(result)
@@ -645,38 +495,26 @@ abstract class BaseExpenseStateHolder(
     }
 
     private fun handleCreateReceiptManually(): Flow<DomainResult> = flow {
-        val content = state.value.asContent() ?: return@flow
-        setPendingReceiptDataUseCase(
-            PendingReceiptData(
-                items = listOf(
-                    ReceiptExpenseItem(
-                        id = "manual_0",
-                        name = "",
-                        amountMinorUnits = 0L,
-                        categoryId = content.form.selectedCategoryId,
-                        subcategoryId = content.form.selectedSubcategoryId,
-                    )
-                ),
-                merchantName = null,
-                currency = null,
-                dateString = null,
+        val content = state.value
+        val pendingData = BuildPendingReceiptDataUseCase(
+            BuildPendingReceiptDataUseCase.Input.Manual(
                 categoryId = content.form.selectedCategoryId,
                 subcategoryId = content.form.selectedSubcategoryId,
-                isManualEntry = true,
             )
         )
+        setPendingReceiptDataUseCase(pendingData)
         emit(ExpenseResult.NavigateToReceiptItems)
     }
 
     private fun handleBack(): Flow<DomainResult> {
         return if (state.value.status.hasUnsavedChanges) {
-            flowOf(updateContent { updateStatus { copy(showDiscardDialog = true) } })
+            flowOf(updateState { updateStatus { copy(showDiscardDialog = true) } })
         } else {
             flowOf(ExpenseResult.NavigateBack)
         }
     }
 
-    private fun AddExpenseState.Content.withDerivedFields(): AddExpenseState.Content {
+    private fun AddExpenseState.withDerivedFields(): AddExpenseState {
         val resolvedCategory = categories.firstOrNull { it.id == form.selectedCategoryId }
         val resolvedTags = resolvedCategory?.let {
             tagsForCategoryKey(it.iconKey).toImmutableList()
@@ -700,64 +538,17 @@ abstract class BaseExpenseStateHolder(
             form.selectedCategoryId != null
     }
 
-    protected fun AddExpenseState.Content.updateStatus(
+    protected fun AddExpenseState.updateStatus(
         updater: FormStatus.() -> FormStatus,
-    ): AddExpenseState.Content = copy(status = status.updater())
+    ): AddExpenseState = copy(status = status.updater())
 
-    protected fun AddExpenseState.toError(
+    protected fun AddExpenseState.withError(
         errorType: ErrorType,
         receiptError: ReceiptError? = null,
-    ): AddExpenseState.Error =
-        AddExpenseState.Error(
-            errorType = errorType,
-            receiptError = receiptError,
-            editContext = editContext,
-            currency = currency,
-            form = form,
-            categories = categories,
-            subcategories = subcategories,
-            showCurrencyPicker = showCurrencyPicker,
-            status = status,
-            receipt = receipt,
-            conversion = conversion,
-            currencyConversionEnabled = currencyConversionEnabled,
-        )
+    ): AddExpenseState = copy(errorOverlay = ErrorOverlay(errorType, receiptError))
 
-    private fun AddExpenseState.toContent(): AddExpenseState = when (this) {
-        is AddExpenseState.Error -> AddExpenseState.Content(
-            editContext = editContext,
-            currency = currency,
-            form = form,
-            categories = categories,
-            subcategories = subcategories,
-            showCurrencyPicker = showCurrencyPicker,
-            status = status,
-            receipt = receipt,
-            conversion = conversion,
-            currencyConversionEnabled = currencyConversionEnabled,
-        )
-
-        else -> this
-    }
-
-    protected fun AddExpenseState.asContent(): AddExpenseState.Content? = when (this) {
-        is AddExpenseState.Content -> this
-        is AddExpenseState.Error -> AddExpenseState.Content(
-            editContext = editContext,
-            currency = currency,
-            form = form,
-            categories = categories,
-            subcategories = subcategories,
-            showCurrencyPicker = showCurrencyPicker,
-            status = status,
-            receipt = receipt,
-            conversion = conversion,
-            currencyConversionEnabled = currencyConversionEnabled,
-        )
-    }
-
-    protected fun updateContent(
-        updater: AddExpenseState.Content.() -> AddExpenseState.Content,
+    protected fun updateState(
+        updater: AddExpenseState.() -> AddExpenseState,
     ): DomainResult = ExpenseResult.UpdateContent(updater)
 
     companion object {
@@ -775,7 +566,7 @@ private fun String.toEpochMillis(): Long? = runCatching {
 
 internal sealed interface ExpenseResult : DomainResult {
     data class UpdateContent(
-        val updater: AddExpenseState.Content.() -> AddExpenseState.Content,
+        val updater: AddExpenseState.() -> AddExpenseState,
     ) : ExpenseResult
 
     data object NavigateBack : ExpenseResult

@@ -17,6 +17,7 @@ import com.please.stop.app.features.expenses.domain.repository.ReceiptSaveReposi
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ConsumePendingReceiptDataUseCase
+import com.please.stop.app.features.expenses.domain.usecase.FetchAndApplyExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
@@ -135,6 +136,12 @@ val addExpenseModule = module {
     }
 
     factory {
+        FetchAndApplyExchangeRateUseCase(
+            fetchExchangeRateUseCase = get(),
+        )
+    }
+
+    factory {
         SaveReceiptExpensesUseCase(
             repository = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
@@ -168,7 +175,7 @@ val addExpenseModule = module {
             observeFormDataUseCase = get(),
             saveExpenseUseCase = get(),
             analyzeReceiptUseCase = get(),
-            fetchExchangeRateUseCase = get(),
+            fetchAndApplyExchangeRateUseCase = get(),
             setPendingReceiptDataUseCase = get(),
             clearPendingReceiptDataUseCase = get(),
         )
@@ -182,7 +189,7 @@ val addExpenseModule = module {
             saveExpenseUseCase = get(),
             deleteExpenseUseCase = get(),
             analyzeReceiptUseCase = get(),
-            fetchExchangeRateUseCase = get(),
+            fetchAndApplyExchangeRateUseCase = get(),
             setPendingReceiptDataUseCase = get(),
             clearPendingReceiptDataUseCase = get(),
         )
