@@ -39,12 +39,16 @@ MANDATORY: Before responding to ANY prompt, you MUST:
 - Avoid unnecessarily re-reading files already in context.
 - Prefer targeted file reads (specific line ranges) over reading entire large files.
 - Batch related edits into fewer tool calls where possible.
+- Build artifacts, iOS SPM checkouts, node_modules, IDE files, and binaries are excluded via `.claudeignore` — do not read or reference those paths.
+- **Always limit command output** — pipe through `tail -20`, `grep`, or use `--quiet`/`-q` flags. Never let raw Gradle or build output flood the context.
 
 ## Quick Reference
 
 ```bash
-./gradlew detekt          # Lint — run before every task completion (max issues = 0)
+./gradlew detekt -q 2>&1 | tail -20   # Lint — run before every task completion (max issues = 0)
 ```
+
+> Always use `-q` and pipe to `tail -N` or `grep` to limit output and save context tokens.
 
 - **Branch:** `master` = production
 - **Max line length:** 120 chars
