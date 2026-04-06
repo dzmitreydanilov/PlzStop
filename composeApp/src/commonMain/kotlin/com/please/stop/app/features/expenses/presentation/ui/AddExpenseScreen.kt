@@ -77,7 +77,6 @@ import com.please.stop.app.features.expenses.presentation.NumericKey
 import com.please.stop.app.features.expenses.scanner.rememberDocumentScanner
 import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.navigation.nav3.HandleNavigationBack
-import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
@@ -144,7 +143,7 @@ private const val CATEGORY_GRID_COLUMNS = 3
 fun CreateExpenseScreen(
     categoryId: Long?,
     onGoBack: () -> Unit,
-    onOpenReceiptItems: (ReceiptItemsRoute) -> Unit = {},
+    onOpenReceiptItems: () -> Unit = {},
 ) {
     val stateHolder = koinViewModel<CreateExpenseStateHolder>(
         key = "create_expense_$categoryId",
@@ -173,7 +172,7 @@ fun EditExpenseScreen(
 private fun ExpenseScreenContent(
     stateHolder: BaseExpenseStateHolder,
     onGoBack: () -> Unit,
-    onOpenReceiptItems: (ReceiptItemsRoute) -> Unit = {},
+    onOpenReceiptItems: () -> Unit = {},
 ) {
     val state by stateHolder.state.collectAsStateWithLifecycle()
 
@@ -187,7 +186,7 @@ private fun ExpenseScreenContent(
     ) { navigation ->
         when (navigation) {
             AddExpenseNavigation.GoBack -> onGoBack()
-            is AddExpenseNavigation.OpenReceiptItems -> onOpenReceiptItems(navigation.route)
+            AddExpenseNavigation.OpenReceiptItems -> onOpenReceiptItems()
         }
     }
 

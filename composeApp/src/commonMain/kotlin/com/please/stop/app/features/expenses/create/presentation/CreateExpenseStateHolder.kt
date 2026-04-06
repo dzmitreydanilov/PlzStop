@@ -1,13 +1,14 @@
 package com.please.stop.app.features.expenses.create.presentation
 
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
+import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
+import com.please.stop.app.features.expenses.domain.usecase.SetPendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
 import com.please.stop.app.features.expenses.presentation.EditContext
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
-import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
 import com.please.stop.app.utils.date.nowMillis
 
 class CreateExpenseStateHolder(
@@ -16,13 +17,15 @@ class CreateExpenseStateHolder(
     saveExpenseUseCase: SaveExpenseUseCase,
     analyzeReceiptUseCase: AnalyzeReceiptUseCase,
     fetchExchangeRateUseCase: FetchExchangeRateUseCase,
-    receiptItemsArgsHolder: ReceiptItemsArgsHolder,
+    setPendingReceiptDataUseCase: SetPendingReceiptDataUseCase,
+    clearPendingReceiptDataUseCase: ClearPendingReceiptDataUseCase,
 ) : BaseExpenseStateHolder(
     observeFormDataUseCase = observeFormDataUseCase,
     saveExpenseUseCase = saveExpenseUseCase,
     analyzeReceiptUseCase = analyzeReceiptUseCase,
     fetchExchangeRateUseCase = fetchExchangeRateUseCase,
-    receiptItemsArgsHolder = receiptItemsArgsHolder,
+    setPendingReceiptDataUseCase = setPendingReceiptDataUseCase,
+    clearPendingReceiptDataUseCase = clearPendingReceiptDataUseCase,
 ) {
     override val tag = "CreateExpenseStateHolder"
 

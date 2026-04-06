@@ -176,7 +176,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
         CreateExpenseScreen(
             categoryId = route.categoryId,
             onGoBack = { router.pop() },
-            onOpenReceiptItems = { receiptRoute -> router.replaceCurrent(receiptRoute) },
+            onOpenReceiptItems = { router.replaceCurrent(ReceiptItemsRoute) },
         )
     }
 
@@ -187,9 +187,8 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
         )
     }
 
-    entry<ReceiptItemsRoute> { route ->
+    entry<ReceiptItemsRoute> {
         ReceiptItemsScreen(
-            route = route,
             onGoBack = { router.pop() },
             onSaved = { router.pop() },
         )

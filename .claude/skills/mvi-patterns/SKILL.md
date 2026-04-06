@@ -42,6 +42,8 @@ Provide a `FooState.toError(errorType)` extension that copies all current props 
 
 ## ScreenOverlayContainer — required on every screen
 
+Because all UI properties live on the sealed interface, **every state variant (including `Error`) carries the last-known data**. The screen content renders unconditionally — no `when` branching needed inside `ScreenOverlayContainer`. The overlay handles the error display on top.
+
 ```kotlin
 // 1. Define asOverlay in the screen file
 internal val FooState.asOverlay: ScreenOverlay?
@@ -50,15 +52,20 @@ internal val FooState.asOverlay: ScreenOverlay?
         else -> null
     }
 
-// 2. Wrap content
+// 2. Wrap content — always render, never branch by state variant
 ScreenOverlayContainer(
     overlay = state.asOverlay,
     onDismiss = { stateHolder.processEvent(FooEvent.DismissError) },
     onRetry = { stateHolder.processEvent(FooEvent.Retry) },
 ) {
-    // Screen content
+    FooContent(
+        state = state,         // accepts FooState, NOT FooState.Content
+        onEvent = stateHolder::processEvent,
+    )
 }
 ```
+
+**Key rule:** `FooContent` must accept `FooState` (the sealed interface), not `FooState.Content`. This way both `Content` and `Error` states render the same UI, with `Error` showing the overlay on top of preserved content. Do NOT add `when`/`is` checks inside `ScreenOverlayContainer` to filter by state variant.
 
 Behaviour: `ErrorType.Network` → full-screen dialog (close + retry). Other errors → error snackbar. `ScreenOverlay.Message` → info snackbar.
 

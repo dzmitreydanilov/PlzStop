@@ -100,7 +100,8 @@
       "Bash(for f:*)",
       "Bash(do echo:*)",
       "Read(//Users/dmitry.danilov/StudioProjects/PlzStop/**)",
-      "Bash(done)"
+      "Bash(done)",
+      "WebFetch(domain:insert-koin.io)"
     ]
   },
   "enabledMcpjsonServers": [

@@ -43,7 +43,25 @@ Make Composables **stateless** whenever possible by moving state to the caller.
 *   Use `MaterialTheme.colorScheme` and `MaterialTheme.typography` instead of hardcoded colors or text styles.
 *   Organize simple UI components into specific files (e.g., `DesignSystem.kt` or `Components.kt`) if they are shared across features.
 
-### 5. Previews
+### 5. Bottom Sheets
+*   **ALWAYS** use `AppModalBottomSheet` from `com.please.stop.app.uicomponents.sheets.BottomSheets.kt` for any bottom sheet in the app.
+*   **NEVER** use Material 3 `ModalBottomSheet` or any other bottom sheet implementation directly.
+*   `AppModalBottomSheet` wraps `com.composables.core.ModalBottomSheet` (Compose Unstyled) with the app's standard styling: rounded corners, scrim, drag indicator, drop shadow, status-bar insets, IME padding, and max width.
+*   **State**: Create sheet state with `rememberModalBottomSheetState()` from `com.composables.core`.
+*   **Usage**:
+    ```kotlin
+    val sheetState = rememberModalBottomSheetState(initialDetent = Hidden)
+
+    AppModalBottomSheet(
+        state = sheetState,
+        onDismiss = { /* handle dismiss */ },
+    ) {
+        // Sheet content
+    }
+    ```
+*   Optional parameters: `showDragIndicator` (default `true`), `draggableIndicatorColors`, `properties`.
+
+### 6. Previews
 *   Create a private preview function for every public Composable.
 *   Use `@Preview(showBackground = true)` and include Light/Dark mode previews if applicable.
 *   Pass dummy data (static) to the stateless Composable for the preview.

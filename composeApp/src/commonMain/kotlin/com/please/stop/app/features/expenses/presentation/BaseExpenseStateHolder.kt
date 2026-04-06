@@ -5,17 +5,17 @@ import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.presentation.Navigation
 import com.please.stop.app.features.expenses.domain.model.AddExpenseFormData
-import com.please.stop.app.features.expenses.domain.model.ReceiptData
+import com.please.stop.app.features.expenses.domain.model.PendingReceiptData
 import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.features.expenses.domain.model.ReceiptExpenseItem
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
+import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataResult
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
-import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
+import com.please.stop.app.features.expenses.domain.usecase.SetPendingReceiptDataUseCase
 import com.please.stop.app.features.onboarding.domain.model.Currency
-import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.uicomponents.tagsForCategoryKey
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import kotlinx.collections.immutable.persistentListOf
@@ -38,7 +38,8 @@ abstract class BaseExpenseStateHolder(
     private val saveExpenseUseCase: SaveExpenseUseCase,
     private val analyzeReceiptUseCase: AnalyzeReceiptUseCase,
     private val fetchExchangeRateUseCase: FetchExchangeRateUseCase,
-    private val receiptItemsArgsHolder: ReceiptItemsArgsHolder,
+    private val setPendingReceiptDataUseCase: SetPendingReceiptDataUseCase,
+    private val clearPendingReceiptDataUseCase: ClearPendingReceiptDataUseCase,
 ) : StateHolder<AddExpenseState, AddExpenseEvent>() {
 
     override val bootstrapTiming = BootstrapTiming.DEFERRED
@@ -51,6 +52,10 @@ abstract class BaseExpenseStateHolder(
         form: ExpenseFormInput,
         editContext: EditContext
     ): Boolean
+
+    override suspend fun bootstrap(emit: suspend (DomainResult) -> Unit) {
+        clearPendingReceiptDataUseCase()
+    }
 
     override fun getInitial(): AddExpenseState = AddExpenseState.Content(
         editContext = editContext,
@@ -70,7 +75,7 @@ abstract class BaseExpenseStateHolder(
 
     override fun getNavigationByResult(result: DomainResult): Navigation? = when (result) {
         is ExpenseResult.NavigateBack -> AddExpenseNavigation.GoBack
-        is ExpenseResult.NavigateToReceiptItems -> AddExpenseNavigation.OpenReceiptItems(result.route)
+        is ExpenseResult.NavigateToReceiptItems -> AddExpenseNavigation.OpenReceiptItems
         else -> null
     }
 
@@ -613,17 +618,27 @@ abstract class BaseExpenseStateHolder(
         emit(updateContent { copy(receipt = ReceiptState(isAnalyzing = true)) })
         val result = analyzeReceiptUseCase(imageBytes)
         if (result is AnalyzeReceiptUseCase.Result.Success && result.data.items.size > 1) {
-            receiptItemsArgsHolder.pendingItems = result.data.items.map { item ->
-                ReceiptExpenseItem(
-                    id = item.name + "_" + item.amountMinorUnits,
-                    name = item.name,
-                    amountMinorUnits = item.amountMinorUnits,
-                    categoryId = item.categoryId ?: result.data.categoryId,
-                    subcategoryId = item.subcategoryId ?: result.data.subcategoryId,
+            setPendingReceiptDataUseCase(
+                PendingReceiptData(
+                    items = result.data.items.map { item ->
+                        ReceiptExpenseItem(
+                            id = item.name + "_" + item.amountMinorUnits,
+                            name = item.name,
+                            amountMinorUnits = item.amountMinorUnits,
+                            categoryId = item.categoryId ?: result.data.categoryId,
+                            subcategoryId = item.subcategoryId ?: result.data.subcategoryId,
+                        )
+                    },
+                    merchantName = result.data.merchantName,
+                    currency = result.data.currency,
+                    dateString = result.data.date,
+                    categoryId = result.data.categoryId,
+                    subcategoryId = result.data.subcategoryId,
+                    isManualEntry = false,
                 )
-            }
+            )
             emit(updateContent { copy(receipt = ReceiptState()) })
-            emit(ExpenseResult.NavigateToReceiptItems(result.data.toReceiptItemsRoute()))
+            emit(ExpenseResult.NavigateToReceiptItems)
         } else {
             emit(result)
         }
@@ -631,33 +646,27 @@ abstract class BaseExpenseStateHolder(
 
     private fun handleCreateReceiptManually(): Flow<DomainResult> = flow {
         val content = state.value.asContent() ?: return@flow
-        receiptItemsArgsHolder.pendingItems = listOf(
-            ReceiptExpenseItem(
-                id = "manual_0",
-                name = "",
-                amountMinorUnits = 0L,
+        setPendingReceiptDataUseCase(
+            PendingReceiptData(
+                items = listOf(
+                    ReceiptExpenseItem(
+                        id = "manual_0",
+                        name = "",
+                        amountMinorUnits = 0L,
+                        categoryId = content.form.selectedCategoryId,
+                        subcategoryId = content.form.selectedSubcategoryId,
+                    )
+                ),
+                merchantName = null,
+                currency = null,
+                dateString = null,
                 categoryId = content.form.selectedCategoryId,
                 subcategoryId = content.form.selectedSubcategoryId,
+                isManualEntry = true,
             )
         )
-        val route = ReceiptItemsRoute(
-            merchantName = null,
-            currency = null,
-            dateString = null,
-            categoryId = content.form.selectedCategoryId,
-            subcategoryId = content.form.selectedSubcategoryId,
-            isManualEntry = true,
-        )
-        emit(ExpenseResult.NavigateToReceiptItems(route))
+        emit(ExpenseResult.NavigateToReceiptItems)
     }
-
-    private fun ReceiptData.toReceiptItemsRoute(): ReceiptItemsRoute = ReceiptItemsRoute(
-        merchantName = merchantName,
-        currency = currency,
-        dateString = date,
-        categoryId = categoryId,
-        subcategoryId = subcategoryId,
-    )
 
     private fun handleBack(): Flow<DomainResult> {
         return if (state.value.status.hasUnsavedChanges) {
@@ -771,5 +780,5 @@ internal sealed interface ExpenseResult : DomainResult {
 
     data object NavigateBack : ExpenseResult
     data object ClearError : ExpenseResult
-    data class NavigateToReceiptItems(val route: ReceiptItemsRoute) : ExpenseResult
+    data object NavigateToReceiptItems : ExpenseResult
 }

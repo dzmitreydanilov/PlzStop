@@ -29,7 +29,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
@@ -50,6 +49,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.composables.core.SheetDetent
+import com.composables.core.rememberModalBottomSheetState
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
 import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemUiModel
@@ -58,17 +59,15 @@ import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptIt
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemsState
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemsStateHolder
 import com.please.stop.app.navigation.CollectNavigationFlow
-import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
-import com.please.stop.app.utils.date.currentMonthMillisRange
+import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import com.please.stop.app.utils.minorUnitsMultiplier
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.parameter.parametersOf
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.add_expense_cancel
 import plzstop.composeapp.generated.resources.add_expense_category
@@ -98,13 +97,10 @@ import plzstop.composeapp.generated.resources.receipt_items_total
 
 @Composable
 fun ReceiptItemsScreen(
-    route: ReceiptItemsRoute,
     onGoBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
-    val stateHolder = koinViewModel<ReceiptItemsStateHolder>(
-        key = "receipt_items_${route.merchantName}",
-    ) { parametersOf(route) }
+    val stateHolder = koinViewModel<ReceiptItemsStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()
 
     CollectNavigationFlow(
@@ -121,40 +117,30 @@ fun ReceiptItemsScreen(
         overlay = state.asOverlay,
         onDismiss = { stateHolder.processEvent(ReceiptItemsEvent.DismissError) },
     ) {
-        when (val currentState = state) {
-            is ReceiptItemsState.Content -> ReceiptItemsContent(
-                state = currentState,
-                isManualEntry = route.isManualEntry,
-                onEvent = stateHolder::processEvent,
-            )
-            is ReceiptItemsState.Error -> Unit
-        }
+        ReceiptItemsContent(
+            state = state,
+            isManualEntry = state.isManualEntry,
+            onEvent = stateHolder::processEvent,
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReceiptItemsContent(
-    state: ReceiptItemsState.Content,
+    state: ReceiptItemsState,
     isManualEntry: Boolean,
     onEvent: (ReceiptItemsEvent) -> Unit,
 ) {
-    val monthRange = remember { currentMonthMillisRange() }
-    val isDateFromDifferentMonth = state.dateMillis < monthRange.fromMillis || state.dateMillis >= monthRange.toMillis
+    val isDateFromDifferentMonth = state.isDateFromDifferentMonth
 
-    val editingItem = state.editingItemId?.let { id -> state.items.firstOrNull { it.id == id } }
-
-    if (editingItem != null) {
-        ModalBottomSheet(onDismissRequest = { onEvent(ReceiptItemsEvent.DoneEditingItem(editingItem.id)) }) {
-            EditItemSheet(
-                item = editingItem,
-                categories = state.categories,
-                subcategories = state.subcategories,
-                currencySymbol = state.currency.symbol,
-                onEvent = onEvent,
-            )
-        }
-    }
+    EditItemBottomSheet(
+        editingItem = state.editingItem,
+        categories = state.categories,
+        subcategories = state.subcategories,
+        currencySymbol = state.currency.symbol,
+        onEvent = onEvent,
+    )
 
     if (state.showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = state.dateMillis)
@@ -439,9 +425,46 @@ private fun ReceiptItemCard(
     }
 }
 
+@Composable
+private fun EditItemBottomSheet(
+    editingItem: ReceiptItemUiModel?,
+    categories: ImmutableList<CategoryUiModel>,
+    subcategories: ImmutableList<SubcategoryUiModel>,
+    currencySymbol: String,
+    onEvent: (ReceiptItemsEvent) -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(
+        initialDetent = SheetDetent.Hidden,
+        detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
+    )
+
+    LaunchedEffect(editingItem) {
+        sheetState.targetDetent = if (editingItem != null) {
+            SheetDetent.FullyExpanded
+        } else {
+            SheetDetent.Hidden
+        }
+    }
+
+    if (editingItem != null) {
+        AppModalBottomSheet(
+            state = sheetState,
+            onDismiss = { onEvent(ReceiptItemsEvent.DoneEditingItem(editingItem.id)) },
+        ) {
+            EditItemSheetContent(
+                item = editingItem,
+                categories = categories,
+                subcategories = subcategories,
+                currencySymbol = currencySymbol,
+                onEvent = onEvent,
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-private fun EditItemSheet(
+private fun EditItemSheetContent(
     item: ReceiptItemUiModel,
     categories: ImmutableList<CategoryUiModel>,
     subcategories: ImmutableList<SubcategoryUiModel>,
@@ -473,17 +496,39 @@ private fun EditItemSheet(
                 keyboardType = KeyboardType.Decimal,
                 imeAction = ImeAction.Done,
             ),
-            keyboardActions = KeyboardActions(onDone = { onEvent(ReceiptItemsEvent.DoneEditingItem(item.id)) }),
+            keyboardActions = KeyboardActions(onDone = {
+                onEvent(
+                    ReceiptItemsEvent.DoneEditingItem(
+                        item.id
+                    )
+                )
+            }),
             suffix = { Text(currencySymbol) },
         )
         if (categories.isNotEmpty()) {
-            Text(stringResource(Res.string.add_expense_category), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(Res.string.add_expense_category),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 categories.forEach { category ->
                     FilterChip(
                         selected = item.categoryId == category.id,
-                        onClick = { onEvent(ReceiptItemsEvent.ItemCategoryChanged(item.id, category.id)) },
-                        label = { Text(category.name, style = MaterialTheme.typography.labelMedium) },
+                        onClick = {
+                            onEvent(
+                                ReceiptItemsEvent.ItemCategoryChanged(
+                                    item.id,
+                                    category.id
+                                )
+                            )
+                        },
+                        label = {
+                            Text(
+                                category.name,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
                         shape = RoundedCornerShape(20.dp),
                     )
                 }
@@ -491,7 +536,11 @@ private fun EditItemSheet(
         }
         val filteredSubcategories = subcategories.filter { it.parentCategoryId == item.categoryId }
         if (filteredSubcategories.isNotEmpty()) {
-            Text(stringResource(Res.string.receipt_items_subcategory), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(Res.string.receipt_items_subcategory),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 filteredSubcategories.forEach { sub ->
                     FilterChip(
@@ -511,7 +560,7 @@ private fun EditItemSheet(
 
 @Composable
 private fun StickyFooter(
-    state: ReceiptItemsState.Content,
+    state: ReceiptItemsState,
     onConfirm: () -> Unit,
 ) {
     Column(
@@ -577,5 +626,5 @@ private fun formatAmount(minorUnits: Long, symbol: String, decimalPlaces: Int): 
 internal val ReceiptItemsState.asOverlay: ScreenOverlay?
     @Composable get() = when (this) {
         is ReceiptItemsState.Error -> ScreenOverlay.Error(type = errorType)
-        is ReceiptItemsState.Content -> null
+        else -> null
     }

@@ -3,9 +3,11 @@ package com.please.stop.app.features.expenses.edit.presentation
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.features.expenses.domain.model.ExpenseDetail
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
+import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
+import com.please.stop.app.features.expenses.domain.usecase.SetPendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
 import com.please.stop.app.features.expenses.edit.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
@@ -13,7 +15,6 @@ import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
 import com.please.stop.app.features.expenses.presentation.EditContext
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
 import com.please.stop.app.features.expenses.presentation.ExpenseResult
-import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -28,13 +29,15 @@ class EditExpenseStateHolder(
     private val deleteExpenseUseCase: DeleteExpenseUseCase,
     analyzeReceiptUseCase: AnalyzeReceiptUseCase,
     fetchExchangeRateUseCase: FetchExchangeRateUseCase,
-    receiptItemsArgsHolder: ReceiptItemsArgsHolder,
+    setPendingReceiptDataUseCase: SetPendingReceiptDataUseCase,
+    clearPendingReceiptDataUseCase: ClearPendingReceiptDataUseCase,
 ) : BaseExpenseStateHolder(
     observeFormDataUseCase = observeFormDataUseCase,
     saveExpenseUseCase = saveExpenseUseCase,
     analyzeReceiptUseCase = analyzeReceiptUseCase,
     fetchExchangeRateUseCase = fetchExchangeRateUseCase,
-    receiptItemsArgsHolder = receiptItemsArgsHolder,
+    setPendingReceiptDataUseCase = setPendingReceiptDataUseCase,
+    clearPendingReceiptDataUseCase = clearPendingReceiptDataUseCase,
 ) {
     override val tag = "EditExpenseStateHolder"
 
@@ -48,6 +51,7 @@ class EditExpenseStateHolder(
     )
 
     override suspend fun bootstrap(emit: suspend (DomainResult) -> Unit) {
+        super.bootstrap(emit)
         val result = getExpenseByIdUseCase(expenseId)
         emit(result)
     }

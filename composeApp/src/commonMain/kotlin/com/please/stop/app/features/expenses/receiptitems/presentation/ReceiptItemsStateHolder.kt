@@ -1,11 +1,11 @@
 package com.please.stop.app.features.expenses.receiptitems.presentation
 
+import com.please.stop.app.core.BootstrapTiming
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.presentation.Navigation
-import com.please.stop.app.features.expenses.domain.model.ExpenseCategory
-import com.please.stop.app.features.expenses.domain.model.ExpenseSubcategory
 import com.please.stop.app.features.expenses.domain.model.ReceiptExpenseItem
+import com.please.stop.app.features.expenses.domain.usecase.ConsumePendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataResult
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveReceiptExpensesUseCase
@@ -13,9 +13,8 @@ import com.please.stop.app.features.expenses.presentation.CategoryUiModel
 import com.please.stop.app.features.expenses.presentation.CurrencyConfig
 import com.please.stop.app.features.expenses.presentation.KeyboardCalculator
 import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
-import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
-import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
+import com.please.stop.app.utils.date.currentMonthMillisRange
 import com.please.stop.app.utils.date.nowMillis
 import com.please.stop.app.utils.minorUnitsMultiplier
 import kotlinx.collections.immutable.toImmutableList
@@ -28,36 +27,54 @@ import kotlin.reflect.KClass
 import com.please.stop.app.core.models.domain.Result as DomainResult
 
 class ReceiptItemsStateHolder(
-    private val route: ReceiptItemsRoute,
-    private val argsHolder: ReceiptItemsArgsHolder,
+    private val consumePendingReceiptDataUseCase: ConsumePendingReceiptDataUseCase,
     private val saveReceiptExpensesUseCase: SaveReceiptExpensesUseCase,
     private val observeFormDataUseCase: ObserveAddExpenseFormDataUseCase,
 ) : StateHolder<ReceiptItemsState, ReceiptItemsEvent>() {
 
     override val tag = "ReceiptItemsStateHolder"
+    override val bootstrapTiming = BootstrapTiming.DEFERRED
 
+    private val monthRange = currentMonthMillisRange()
     private var keyboardCalculator =
         KeyboardCalculator(decimalPlaces = DEFAULT_CURRENCY_DECIMAL_PLACES, currencySymbol = "")
-    private var decimalPlaces: Int = DEFAULT_CURRENCY_DECIMAL_PLACES
-    private var defaultCategoryId: Long? = null
-    private var formCurrencyCode: String = ""
-    private var formCurrencySymbol: String = ""
-    private var categories: List<ExpenseCategory> = emptyList()
-    private var subcategories: List<ExpenseSubcategory> = emptyList()
 
-    override fun getInitial(): ReceiptItemsState {
-        val items = argsHolder.pendingItems.mapIndexed { index, item ->
-            item.toUiModel(index, keyboardCalculator)
-        }.toImmutableList()
-        val parsedDateMillis = route.dateString?.let { parseDateToMillis(it) }
-        return ReceiptItemsState.Content(
-            merchantName = route.merchantName,
-            dateMillis = parsedDateMillis ?: nowMillis(),
-            isDateAutoAssigned = parsedDateMillis == null,
-            items = items,
-            currency = CurrencyConfig(symbol = "", decimalPlaces = DEFAULT_CURRENCY_DECIMAL_PLACES),
-            totalAmountMinorUnits = items.sumOf { it.amountMinorUnits },
-        )
+    override fun getInitial(): ReceiptItemsState = ReceiptItemsState.Loading
+
+    override suspend fun bootstrap(emit: suspend (DomainResult) -> Unit) {
+        when (val result = consumePendingReceiptDataUseCase()) {
+            is ConsumePendingReceiptDataUseCase.Result.Success -> {
+                val data = result.data
+                val items = data.items.mapIndexed { index, item ->
+                    item.toUiModel(index, keyboardCalculator)
+                }.toImmutableList()
+                val parsedDateMillis = data.dateString?.let { parseDateToMillis(it) }
+                val dateMillis = parsedDateMillis ?: nowMillis()
+                emit(
+                    ReceiptItemsResult.UpdateContent {
+                        ReceiptItemsState.Content(
+                            merchantName = data.merchantName,
+                            dateMillis = dateMillis,
+                            isDateAutoAssigned = parsedDateMillis == null,
+                            items = items,
+                            currency = CurrencyConfig(
+                                symbol = "",
+                                decimalPlaces = DEFAULT_CURRENCY_DECIMAL_PLACES,
+                            ),
+                            totalAmountMinorUnits = items.sumOf { it.amountMinorUnits },
+                            isDateFromDifferentMonth = isDateOutsideCurrentMonth(dateMillis),
+                            isManualEntry = data.isManualEntry,
+                            defaultCategoryId = data.categoryId,
+                            defaultSubcategoryId = data.subcategoryId,
+                            pendingCurrencyCode = data.currency,
+                        )
+                    }
+                )
+            }
+            is ConsumePendingReceiptDataUseCase.Result.NoPendingData -> {
+                emit(ReceiptItemsResult.GoBack)
+            }
+        }
     }
 
     override fun collectFlowsOnInit(): Flow<DomainResult> = observeFormDataUseCase()
@@ -80,36 +97,26 @@ class ReceiptItemsStateHolder(
     ): ReceiptItemsState = when (result) {
         is ObserveAddExpenseFormDataResult.Success -> {
             val data = result.data
-            if (defaultCategoryId == null) {
-                defaultCategoryId = data.categories.firstOrNull()?.id
-            }
-            decimalPlaces = data.decimalPlaces
             keyboardCalculator = KeyboardCalculator(
                 decimalPlaces = data.decimalPlaces,
                 currencySymbol = data.currencySymbol,
             )
-            formCurrencyCode = data.currencyCode
-            formCurrencySymbol = data.currencySymbol
-            categories = data.categories
-            subcategories = data.subcategories
             val content = previous as? ReceiptItemsState.Content ?: return previous
+            val resolvedDefaultCategoryId = content.defaultCategoryId
+                ?: data.categories.firstOrNull()?.id
             val updatedItems = content.items.map { item ->
                 item.copy(
                     amountInput = keyboardCalculator.formatFromMinorUnits(item.amountMinorUnits),
                     categoryName = data.categories.firstOrNull { it.id == item.categoryId }?.name,
-                    subcategoryName = data.subcategories.firstOrNull { it.id == item.subcategoryId }?.name,
+                    subcategoryName = data.subcategories
+                        .firstOrNull { it.id == item.subcategoryId }?.name,
                 )
             }.toImmutableList()
             val categoryUiModels =
                 data.categories.map { CategoryUiModel(it.id, it.name, it.iconKey) }
                     .toImmutableList()
             val subcategoryUiModels = data.subcategories.map {
-                SubcategoryUiModel(
-                    it.id,
-                    it.parentCategoryId,
-                    it.name,
-                    it.iconKey
-                )
+                SubcategoryUiModel(it.id, it.parentCategoryId, it.name, it.iconKey)
             }.toImmutableList()
             content.copy(
                 currency = CurrencyConfig(
@@ -120,12 +127,14 @@ class ReceiptItemsStateHolder(
                 items = updatedItems,
                 categories = categoryUiModels,
                 subcategories = subcategoryUiModels,
-            )
+                defaultCategoryId = resolvedDefaultCategoryId,
+            ).withDerivedFields()
         }
 
         is ReceiptItemsResult.UpdateContent -> {
             val content = previous as? ReceiptItemsState.Content ?: return previous
-            result.updater(content)
+            val updated = result.updater(content)
+            if (updated is ReceiptItemsState.Content) updated.withDerivedFields() else updated
         }
 
         else -> super.getStateByResult(previous, result)
@@ -133,8 +142,8 @@ class ReceiptItemsStateHolder(
 
     override fun getErrorStateByResult(
         result: DomainResult,
-        errorType: ErrorType
-    ): ReceiptItemsState = ReceiptItemsState.Error(errorType)
+        errorType: ErrorType,
+    ): ReceiptItemsState = state.value.toError(errorType)
 
     override fun resolveEventResult(event: ReceiptItemsEvent): Flow<DomainResult> = when (event) {
         is ReceiptItemsEvent.EditItem -> {
@@ -178,7 +187,8 @@ class ReceiptItemsStateHolder(
                 updateItem(event.itemId) {
                     copy(
                         subcategoryId = event.subcategoryId,
-                        subcategoryName = subcategories.firstOrNull { it.id == event.subcategoryId }?.name,
+                        subcategoryName = subcategories
+                            .firstOrNull { it.id == event.subcategoryId }?.name,
                     )
                 }
             }
@@ -193,24 +203,26 @@ class ReceiptItemsStateHolder(
 
         is ReceiptItemsEvent.DateChanged -> flowOf(
             updateContent {
-                copy(dateMillis = event.epochMillis, isDateAutoAssigned = false, showDatePicker = false)
+                copy(
+                    dateMillis = event.epochMillis,
+                    isDateAutoAssigned = false,
+                    showDatePicker = false,
+                )
             }
         )
 
         is ReceiptItemsEvent.ShowDateWarningDialog -> flowOf(
-            updateContent {
-                copy(showDateWarningDialog = true)
-            }
+            updateContent { copy(showDateWarningDialog = true) }
         )
 
         is ReceiptItemsEvent.DismissDateWarningDialog -> flowOf(
-            updateContent {
-                copy(showDateWarningDialog = false)
-            }
+            updateContent { copy(showDateWarningDialog = false) }
         )
 
         is ReceiptItemsEvent.ShowDatePicker -> flowOf(updateContent { copy(showDatePicker = true) })
-        is ReceiptItemsEvent.DismissDatePicker -> flowOf(updateContent { copy(showDatePicker = false) })
+        is ReceiptItemsEvent.DismissDatePicker -> {
+            flowOf(updateContent { copy(showDatePicker = false) })
+        }
         is ReceiptItemsEvent.AddItem -> flowOf(
             updateContent {
                 val newItem = ReceiptItemUiModel(
@@ -218,8 +230,8 @@ class ReceiptItemsStateHolder(
                     name = "",
                     amountInput = keyboardCalculator.formatFromMinorUnits(0L),
                     amountMinorUnits = 0L,
-                    categoryId = route.categoryId ?: defaultCategoryId,
-                    subcategoryId = route.subcategoryId,
+                    categoryId = defaultCategoryId,
+                    subcategoryId = defaultSubcategoryId,
                 )
                 val updated = (items + newItem).toImmutableList()
                 copy(items = updated, editingItemId = newItem.id)
@@ -237,7 +249,7 @@ class ReceiptItemsStateHolder(
             emit(updateContent { copy(isSaving = false) })
             return@flow
         }
-        val catId = defaultCategoryId ?: route.categoryId ?: run {
+        val catId = content.defaultCategoryId ?: run {
             emit(updateContent { copy(isSaving = false) })
             return@flow
         }
@@ -253,8 +265,8 @@ class ReceiptItemsStateHolder(
         }
 
         val result = saveReceiptExpensesUseCase(
-            merchantName = route.merchantName,
-            currency = route.currency,
+            merchantName = content.merchantName,
+            currency = content.pendingCurrencyCode,
             dateEpochMillis = content.dateMillis,
             items = domainItems,
             defaultCategoryId = catId,
@@ -268,14 +280,18 @@ class ReceiptItemsStateHolder(
                 emit(ReceiptItemsResult.Saved)
             }
 
-            is SaveReceiptExpensesUseCase.Result.Failure -> emit(updateContent { copy(isSaving = false) })
+            is SaveReceiptExpensesUseCase.Result.Failure -> {
+                emit(updateContent { copy(isSaving = false) })
+            }
+
             else -> emit(updateContent { copy(isSaving = false) })
         }
     }
 
     private fun parseAmountInput(input: String): Long {
         val value = input.toDoubleOrNull() ?: return 0L
-        val multiplier = minorUnitsMultiplier(decimalPlaces)
+        val content = state.value as? ReceiptItemsState.Content ?: return 0L
+        val multiplier = minorUnitsMultiplier(content.currency.decimalPlaces)
         return (value * multiplier).toLong()
     }
 
@@ -297,6 +313,39 @@ class ReceiptItemsStateHolder(
     private fun updateContent(
         updater: ReceiptItemsState.Content.() -> ReceiptItemsState,
     ): DomainResult = ReceiptItemsResult.UpdateContent(updater)
+
+    private fun isDateOutsideCurrentMonth(dateMillis: Long): Boolean =
+        dateMillis < monthRange.fromMillis || dateMillis >= monthRange.toMillis
+
+    private fun ReceiptItemsState.Content.withDerivedFields(): ReceiptItemsState.Content =
+        copy(
+            isDateFromDifferentMonth = isDateOutsideCurrentMonth(dateMillis),
+            editingItem = editingItemId?.let { id -> items.firstOrNull { it.id == id } },
+        )
+
+    private fun ReceiptItemsState.toError(errorType: ErrorType): ReceiptItemsState.Error =
+        ReceiptItemsState.Error(
+            errorType = errorType,
+            merchantName = merchantName,
+            dateMillis = dateMillis,
+            items = items,
+            currency = currency,
+            totalAmountMinorUnits = totalAmountMinorUnits,
+            isSaving = false,
+            conversionSummary = conversionSummary,
+            editingItemId = editingItemId,
+            isDateAutoAssigned = isDateAutoAssigned,
+            showDateWarningDialog = showDateWarningDialog,
+            showDatePicker = showDatePicker,
+            isDateFromDifferentMonth = isDateFromDifferentMonth,
+            editingItem = editingItem,
+            categories = categories,
+            subcategories = subcategories,
+            isManualEntry = isManualEntry,
+            defaultCategoryId = defaultCategoryId,
+            defaultSubcategoryId = defaultSubcategoryId,
+            pendingCurrencyCode = pendingCurrencyCode,
+        )
 }
 
 private fun ReceiptExpenseItem.toUiModel(

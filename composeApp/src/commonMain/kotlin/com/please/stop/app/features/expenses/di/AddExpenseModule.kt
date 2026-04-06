@@ -6,21 +6,25 @@ import com.please.stop.app.features.expenses.create.presentation.CreateExpenseSt
 import com.please.stop.app.features.expenses.data.remote.ExchangeRateApiService
 import com.please.stop.app.features.expenses.data.repository.AddExpenseRepositoryImpl
 import com.please.stop.app.features.expenses.data.repository.ExchangeRateRepositoryImpl
+import com.please.stop.app.features.expenses.data.repository.PendingReceiptItemsRepositoryImpl
 import com.please.stop.app.features.expenses.data.repository.ReceiptRepositoryImpl
 import com.please.stop.app.features.expenses.data.repository.ReceiptSaveRepositoryImpl
 import com.please.stop.app.features.expenses.domain.repository.AddExpenseRepository
 import com.please.stop.app.features.expenses.domain.repository.ExchangeRateRepository
+import com.please.stop.app.features.expenses.domain.repository.PendingReceiptItemsRepository
 import com.please.stop.app.features.expenses.domain.repository.ReceiptRepository
 import com.please.stop.app.features.expenses.domain.repository.ReceiptSaveRepository
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
+import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
+import com.please.stop.app.features.expenses.domain.usecase.ConsumePendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveReceiptExpensesUseCase
+import com.please.stop.app.features.expenses.domain.usecase.SetPendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
 import com.please.stop.app.features.expenses.edit.domain.usecase.GetExpenseByIdUseCase
 import com.please.stop.app.features.expenses.edit.presentation.EditExpenseStateHolder
-import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemsStateHolder
 import com.please.stop.app.network.configureContent
 import com.please.stop.app.network.contentEncoding
@@ -35,7 +39,7 @@ import org.koin.dsl.module
 
 val addExpenseModule = module {
 
-    single { ReceiptItemsArgsHolder() }
+    single<PendingReceiptItemsRepository> { PendingReceiptItemsRepositoryImpl() }
 
     single<ReceiptRepository> {
         ReceiptRepositoryImpl(
@@ -137,6 +141,27 @@ val addExpenseModule = module {
         )
     }
 
+    factory {
+        SetPendingReceiptDataUseCase(
+            repository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+
+    factory {
+        ConsumePendingReceiptDataUseCase(
+            repository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+
+    factory {
+        ClearPendingReceiptDataUseCase(
+            repository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+
     viewModel { params ->
         CreateExpenseStateHolder(
             preselectedCategoryId = params.getOrNull(),
@@ -144,7 +169,8 @@ val addExpenseModule = module {
             saveExpenseUseCase = get(),
             analyzeReceiptUseCase = get(),
             fetchExchangeRateUseCase = get(),
-            receiptItemsArgsHolder = get(),
+            setPendingReceiptDataUseCase = get(),
+            clearPendingReceiptDataUseCase = get(),
         )
     }
 
@@ -157,14 +183,14 @@ val addExpenseModule = module {
             deleteExpenseUseCase = get(),
             analyzeReceiptUseCase = get(),
             fetchExchangeRateUseCase = get(),
-            receiptItemsArgsHolder = get(),
+            setPendingReceiptDataUseCase = get(),
+            clearPendingReceiptDataUseCase = get(),
         )
     }
 
-    viewModel { params ->
+    viewModel {
         ReceiptItemsStateHolder(
-            route = params.get(),
-            argsHolder = get(),
+            consumePendingReceiptDataUseCase = get(),
             saveReceiptExpensesUseCase = get(),
             observeFormDataUseCase = get(),
         )
