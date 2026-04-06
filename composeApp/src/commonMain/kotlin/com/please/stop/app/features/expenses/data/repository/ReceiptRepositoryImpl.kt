@@ -51,7 +51,7 @@ class ReceiptRepositoryImpl(
 
         log.d { "Calling analyzeReceipt..." }
         val callResult = withTimeout(TIMEOUT_MS) {
-            callableFunctions.call("analyzeReceipt", requestData)
+            callableFunctions.call("analyzeReceiptGemini", requestData)
         }
         log.d { "Call result: isSuccess=${callResult.isSuccess}, isFailure=${callResult.isFailure}" }
         callResult.onFailure { log.e(it) { "Function call failed" } }
