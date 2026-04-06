@@ -12,6 +12,7 @@ import {
   ReceiptResponse,
   prepareRequest,
   parseResponse,
+  validateResponseData,
   handleError,
 } from "./receipt";
 
@@ -46,7 +47,8 @@ export const analyzeReceipt = onCall(
   },
   async (request): Promise<ReceiptResponse> => {
     try {
-      const { imageBase64, userPrompt } = await prepareRequest(request);
+      const { imageBase64, userPrompt, validCategoryIds, validSubcategoryIds } =
+        await prepareRequest(request);
       const model = getVertexModel();
 
       const result = await model.generateContent({
@@ -63,7 +65,8 @@ export const analyzeReceipt = onCall(
 
       const responseText =
         result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
-      return parseResponse(responseText);
+      const parsed = parseResponse(responseText);
+      return validateResponseData(parsed, validCategoryIds, validSubcategoryIds);
     } catch (error) {
       handleError(error);
     }
@@ -109,7 +112,8 @@ export const analyzeReceiptGemini = onCall(
 
     try {
       await checkGlobalDailyLimit();
-      const { imageBase64, userPrompt } = await prepareRequest(request);
+      const { imageBase64, userPrompt, validCategoryIds, validSubcategoryIds } =
+        await prepareRequest(request);
       const model = getGeminiModel(apiKey);
 
       const result = await model.generateContent([
@@ -120,7 +124,8 @@ export const analyzeReceiptGemini = onCall(
       ]);
 
       const responseText = result.response.text();
-      return parseResponse(responseText);
+      const parsed = parseResponse(responseText);
+      return validateResponseData(parsed, validCategoryIds, validSubcategoryIds);
     } catch (error) {
       handleError(error);
     }
