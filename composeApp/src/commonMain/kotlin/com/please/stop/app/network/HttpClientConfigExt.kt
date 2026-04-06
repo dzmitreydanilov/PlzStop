@@ -1,7 +1,6 @@
 package com.please.stop.app.network
 
 import com.please.stop.app.core.ITokensStorage
-import com.please.stop.app.core.buildSettings.DeviceIdReader
 import com.please.stop.app.core.logger.logDebug
 import com.please.stop.app.core.logger.logError
 import com.please.stop.app.core.models.data.AuthToken
@@ -14,7 +13,6 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRedirect
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.providers.BearerTokens
 import io.ktor.client.plugins.auth.providers.bearer

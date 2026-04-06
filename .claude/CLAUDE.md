@@ -25,6 +25,7 @@ MANDATORY: Before responding to ANY prompt, you MUST:
 | `coil-compose-multiplatform` | Image loading, avatars, thumbnails, or remote images |
 | `compose-multiplatform-performance-audit` | Performance reviews, recomposition issues, lazy lists |
 | `gradle-build-performance` | Build config changes, new modules, dependency updates |
+|`commit-messageGenerating` | commit messages, finishing a task, describing changes|
 
 ### File-First Workflow
 

@@ -1,9 +1,11 @@
 package com.please.stop.app.presentation
 
 import androidx.navigation3.runtime.NavKey
+import com.please.stop.app.core.BootstrapTiming
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.domain.Result
+import com.please.stop.app.features.onboarding.domain.usecase.BackfillCurrencyProfileUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.ObserveOnboardingCompletedUseCase
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.navigation.routes.OnboardingRoute
@@ -14,12 +16,18 @@ import kotlinx.coroutines.flow.map
 
 class RootStateHolder(
     private val observeOnboardingCompletedUseCase: ObserveOnboardingCompletedUseCase,
+    private val backfillCurrencyProfileUseCase: BackfillCurrencyProfileUseCase,
     private val ioDispatcher: CoroutineDispatcher,
 ) : StateHolder<RootState, Nothing>() {
 
     override val tag = "RootStateHolder"
+    override val bootstrapTiming = BootstrapTiming.IMMEDIATE
 
     override fun getInitial() = RootState.Loading
+
+    override suspend fun bootstrap(emit: suspend (Result) -> Unit) {
+        backfillCurrencyProfileUseCase()
+    }
 
     override fun collectFlowsOnInit(): Flow<Result> =
         observeOnboardingCompletedUseCase()

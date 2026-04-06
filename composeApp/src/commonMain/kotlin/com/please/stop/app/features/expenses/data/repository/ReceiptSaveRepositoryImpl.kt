@@ -8,7 +8,6 @@ import com.please.stop.app.features.expenses.domain.repository.ReceiptSaveReposi
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
 
 class ReceiptSaveRepositoryImpl(
     private val receiptDao: ReceiptDao,

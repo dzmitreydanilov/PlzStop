@@ -27,7 +27,6 @@ import com.please.stop.app.network.contentEncoding
 import com.please.stop.app.network.httpEngine
 import com.please.stop.app.network.logging
 import io.ktor.client.HttpClient
-import kotlinx.serialization.json.Json
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.defaultRequest
 import org.koin.core.module.dsl.viewModel
@@ -56,7 +55,6 @@ val addExpenseModule = module {
             userProfileDao = get<AppDatabase>().userProfileDao(),
             categoryDao = get<AppDatabase>().categoryDao(),
             expenseDao = get<AppDatabase>().expenseDao(),
-            currencyRepository = get(),
             subcategoryRepository = get(),
             featureFlags = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),

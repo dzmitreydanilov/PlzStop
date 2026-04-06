@@ -2,6 +2,7 @@ package com.please.stop.app.features.onboarding.presentation
 
 import androidx.compose.runtime.Stable
 import com.please.stop.app.features.onboarding.domain.model.Currency
+import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import kotlinx.serialization.Serializable
 
 @Stable
@@ -19,7 +20,7 @@ sealed interface OnboardingState {
         val currencySymbol: String = "",
         val deviceCurrencyCode: String? = null,
         val monthlyBudgetInput: String = "",
-        val decimalPlaces: Int = 2,
+        val decimalPlaces: Int = DEFAULT_CURRENCY_DECIMAL_PLACES,
         val showCurrencySheet: Boolean = false,
         val isDetectingCurrency: Boolean = false,
         val hasAttemptedCurrencyDetection: Boolean = false,

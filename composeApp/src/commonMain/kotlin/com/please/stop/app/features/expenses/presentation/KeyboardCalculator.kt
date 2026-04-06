@@ -1,7 +1,7 @@
 package com.please.stop.app.features.expenses.presentation
 
+import com.please.stop.app.utils.minorUnitsMultiplier
 import kotlin.math.abs
-import kotlin.math.pow
 import kotlin.math.roundToLong
 
 class KeyboardCalculator(
@@ -9,7 +9,7 @@ class KeyboardCalculator(
     private val currencySymbol: String,
 ) {
 
-    private val multiplier: Long = 10.0.pow(decimalPlaces).toLong()
+    private val multiplier: Long = minorUnitsMultiplier(decimalPlaces)
 
     private var accumulator: Double = 0.0
     private var pendingOperator: KeyboardOperator? = null

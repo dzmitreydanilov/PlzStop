@@ -8,19 +8,17 @@ import com.please.stop.app.core.models.domain.Currency
 import com.please.stop.app.features.home.domain.model.HomeCategoryItem
 import com.please.stop.app.features.home.domain.model.HomeData
 import com.please.stop.app.features.home.domain.repository.HomeRepository
-import com.please.stop.app.features.onboarding.domain.repository.CurrencyRepository
+import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.date.currentMonthMillisRange
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
-import com.please.stop.app.features.onboarding.domain.model.Currency as OnboardingCurrency
 
 class HomeRepositoryImpl(
     private val userProfileDao: UserProfileDao,
     private val categoryDao: CategoryDao,
     private val expenseDao: ExpenseDao,
-    private val currencyRepository: CurrencyRepository,
     private val ioDispatcher: CoroutineDispatcher,
 ) : HomeRepository {
 
@@ -34,16 +32,16 @@ class HomeRepositoryImpl(
         ) { categories, spendingList, totalSpent ->
             val spendingMap = spendingList.associate { it.categoryId to it.totalMinorUnits }
             val profile = userProfileDao.get()
-            val currency = resolveCurrency(profile?.currencyCode)
 
             HomeData(
                 displayName = profile?.displayName,
-                currency = currency?.toCoreCurrency() ?: Currency(
+                currency = Currency(
                     code = profile?.currencyCode.orEmpty(),
-                    symbol = currency?.symbol.orEmpty(),
-                    name = currency?.name.orEmpty(),
+                    symbol = profile?.currencySymbol.orEmpty(),
+                    name = "",
+                    decimalPlaces = profile?.decimalPlaces ?: DEFAULT_CURRENCY_DECIMAL_PLACES,
                 ),
-                decimalPlaces = currency?.decimalPlaces ?: 2,
+                decimalPlaces = profile?.decimalPlaces ?: DEFAULT_CURRENCY_DECIMAL_PLACES,
                 totalSpentMinorUnits = totalSpent ?: 0L,
                 categories = categories.map { entity ->
                     HomeCategoryItem(
@@ -68,16 +66,5 @@ class HomeRepositoryImpl(
                 sortOrder = sortOrder,
             )
         )
-    }
-
-    private var currencyCache: List<OnboardingCurrency>? = null
-
-    private suspend fun resolveCurrency(code: String?): OnboardingCurrency? {
-        if (code == null) return null
-        val currencies = currencyCache ?: currencyRepository.getAllCurrencies()
-            .getOrNull()
-            ?.also { currencyCache = it }
-            ?: return null
-        return currencies.find { it.code == code }
     }
 }

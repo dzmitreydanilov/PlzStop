@@ -14,5 +14,6 @@ data class Currency(
         code = code,
         symbol = symbol,
         name = name,
+        decimalPlaces = decimalPlaces,
     )
 }

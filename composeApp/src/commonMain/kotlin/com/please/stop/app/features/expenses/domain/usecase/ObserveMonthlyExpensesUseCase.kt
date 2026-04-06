@@ -40,7 +40,9 @@ sealed interface ObserveMonthlyExpensesResult : Result {
     val month: Int
 
     data class Success(
-        override val year: Int, override val month: Int, val data: MonthlyExpensesData
+        override val year: Int,
+        override val month: Int,
+        val data: MonthlyExpensesData
     ) : ObserveMonthlyExpensesResult
 
     data class Failure(

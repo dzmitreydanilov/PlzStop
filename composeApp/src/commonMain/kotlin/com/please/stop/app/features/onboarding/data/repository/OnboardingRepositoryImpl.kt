@@ -44,6 +44,8 @@ private fun OnboardingData.toUserProfileEntity() = UserProfileEntity(
     id = 1,
     displayName = displayName?.takeIf { it.isNotBlank() },
     currencyCode = currency.code,
+    currencySymbol = currency.symbol,
+    decimalPlaces = currency.decimalPlaces,
     monthlyBudget = monthlyBudgetMinorUnits,
     onboardingCompleted = true,
 )

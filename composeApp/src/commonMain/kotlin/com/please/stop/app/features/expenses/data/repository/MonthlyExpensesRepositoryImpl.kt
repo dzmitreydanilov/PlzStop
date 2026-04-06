@@ -13,8 +13,7 @@ import com.please.stop.app.features.expenses.domain.model.ExpenseListItem
 import com.please.stop.app.features.expenses.domain.model.MonthlyExpenseEntry
 import com.please.stop.app.features.expenses.domain.model.MonthlyExpensesData
 import com.please.stop.app.features.expenses.domain.repository.MonthlyExpensesRepository
-import com.please.stop.app.features.onboarding.domain.model.Currency
-import com.please.stop.app.features.onboarding.domain.repository.CurrencyRepository
+import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.date.monthMillisRange
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -33,11 +32,8 @@ class MonthlyExpensesRepositoryImpl(
     private val categoryDao: CategoryDao,
     private val receiptDao: ReceiptDao,
     private val userProfileDao: UserProfileDao,
-    private val currencyRepository: CurrencyRepository,
     private val ioDispatcher: CoroutineDispatcher,
 ) : MonthlyExpensesRepository {
-
-    private var currencyCache: List<Currency>? = null
 
     @OptIn(ExperimentalTime::class)
     override fun observeExpensesForMonth(year: Int, month: Int): Flow<Result<MonthlyExpensesData>> {
@@ -64,16 +60,9 @@ class MonthlyExpensesRepositoryImpl(
 
     private suspend fun resolveCurrencyConfig(): CurrencyDisplayConfig {
         val profile = userProfileDao.get()
-        val currency = profile?.currencyCode?.let { code ->
-            val currencies = currencyCache ?: currencyRepository.getAllCurrencies()
-                .getOrNull()
-                ?.also { currencyCache = it }
-                ?: return@let null
-            currencies.find { it.code == code }
-        }
         return CurrencyDisplayConfig(
-            symbol = currency?.symbol ?: "$",
-            decimalPlaces = currency?.decimalPlaces ?: 2,
+            symbol = profile?.currencySymbol.orEmpty(),
+            decimalPlaces = profile?.decimalPlaces ?: DEFAULT_CURRENCY_DECIMAL_PLACES,
         )
     }
 

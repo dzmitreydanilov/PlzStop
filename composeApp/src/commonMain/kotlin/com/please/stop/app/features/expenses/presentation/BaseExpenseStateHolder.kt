@@ -10,12 +10,12 @@ import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.features.expenses.domain.model.ReceiptExpenseItem
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
 import com.please.stop.app.features.expenses.domain.usecase.FetchExchangeRateUseCase
+import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataResult
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveExpenseUseCase
 import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
 import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.navigation.routes.ReceiptItemsRoute
-import kotlin.math.roundToLong
 import com.please.stop.app.uicomponents.tagsForCategoryKey
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import kotlinx.collections.immutable.persistentListOf
@@ -28,6 +28,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toInstant
+import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 import kotlin.time.ExperimentalTime
 import com.please.stop.app.core.models.domain.Result as DomainResult
@@ -79,11 +80,11 @@ abstract class BaseExpenseStateHolder(
         result: DomainResult,
     ): AddExpenseState {
         val newState = when (result) {
-            is ObserveAddExpenseFormDataUseCase.Result.Success -> {
+            is ObserveAddExpenseFormDataResult.Success -> {
                 applyFormData(previous, result.data)
             }
 
-            is ObserveAddExpenseFormDataUseCase.Result.Failure -> {
+            is ObserveAddExpenseFormDataResult.Failure -> {
                 previous.toError(result.errorType)
             }
 
@@ -254,8 +255,8 @@ abstract class BaseExpenseStateHolder(
         )
         val existingCurrency = previous.asContent()?.currency
         val hasUserSelectedCurrency = existingCurrency != null &&
-                existingCurrency.code != previous.conversion.defaultCurrencyCode &&
-                existingCurrency.code.isNotEmpty()
+            existingCurrency.code != previous.conversion.defaultCurrencyCode &&
+            existingCurrency.code.isNotEmpty()
         if (!hasUserSelectedCurrency) {
             keyboardCalculator = KeyboardCalculator(
                 decimalPlaces = currency.decimalPlaces,
@@ -290,8 +291,8 @@ abstract class BaseExpenseStateHolder(
             receipt = ReceiptState(),
         )
         val preserveUserCurrency = existingContent != null &&
-                existingContent.currency.code != existingContent.conversion.defaultCurrencyCode &&
-                existingContent.currency.code.isNotEmpty()
+            existingContent.currency.code != existingContent.conversion.defaultCurrencyCode &&
+            existingContent.currency.code.isNotEmpty()
         return content.copy(
             currency = if (preserveUserCurrency) existingContent.currency else currency,
             categories = categories,
@@ -361,32 +362,34 @@ abstract class BaseExpenseStateHolder(
         val defaultCode = content.conversion.defaultCurrencyCode
         val isSameCurrency = selected.code == defaultCode
 
-        emit(updateContent {
-            copy(
-                currency = newCurrency,
-                showCurrencyPicker = false,
-                form = form.copy(
-                    amountInput = currentAmountInput,
-                    amountDisplayExpression = kbState.displayExpression,
-                    isInExpressionMode = kbState.isInExpressionMode,
-                ),
-                conversion = if (isSameCurrency) {
-                    ConversionState(
-                        defaultCurrencyCode = defaultCode,
-                        defaultCurrencySymbol = conversion.defaultCurrencySymbol,
-                    )
-                } else {
-                    conversion.copy(
-                        isLoading = true,
-                        rate = null,
-                        fetchedRate = null,
-                        isManualOverride = false,
-                        convertedAmountMinorUnits = null,
-                        hasFetchError = false,
-                    )
-                },
-            )
-        })
+        emit(
+            updateContent {
+                copy(
+                    currency = newCurrency,
+                    showCurrencyPicker = false,
+                    form = form.copy(
+                        amountInput = currentAmountInput,
+                        amountDisplayExpression = kbState.displayExpression,
+                        isInExpressionMode = kbState.isInExpressionMode,
+                    ),
+                    conversion = if (isSameCurrency) {
+                        ConversionState(
+                            defaultCurrencyCode = defaultCode,
+                            defaultCurrencySymbol = conversion.defaultCurrencySymbol,
+                        )
+                    } else {
+                        conversion.copy(
+                            isLoading = true,
+                            rate = null,
+                            fetchedRate = null,
+                            isManualOverride = false,
+                            convertedAmountMinorUnits = null,
+                            hasFetchError = false,
+                        )
+                    },
+                )
+            }
+        )
 
         if (isSameCurrency) return@flow
 
@@ -394,28 +397,34 @@ abstract class BaseExpenseStateHolder(
         val result =
             fetchExchangeRateUseCase(from = selected.code, to = defaultCode, date = dateString)
         when (result) {
-            is FetchExchangeRateUseCase.Result.Success -> emit(updateContent {
-                copy(
-                    conversion = conversion.copy(
-                        isLoading = false,
-                        rate = result.rate,
-                        fetchedRate = result.rate,
-                    ),
-                ).withUpdatedConversion()
-            })
+            is FetchExchangeRateUseCase.Result.Success -> emit(
+                updateContent {
+                    copy(
+                        conversion = conversion.copy(
+                            isLoading = false,
+                            rate = result.rate,
+                            fetchedRate = result.rate,
+                        ),
+                    ).withUpdatedConversion()
+                }
+            )
 
-            is FetchExchangeRateUseCase.Result.Failure -> emit(updateContent {
-                copy(conversion = conversion.copy(isLoading = false, hasFetchError = true))
-            })
+            is FetchExchangeRateUseCase.Result.Failure -> emit(
+                updateContent {
+                    copy(conversion = conversion.copy(isLoading = false, hasFetchError = true))
+                }
+            )
 
-            is FetchExchangeRateUseCase.Result.Disabled -> emit(updateContent {
-                copy(
-                    conversion = ConversionState(
-                        defaultCurrencyCode = conversion.defaultCurrencyCode,
-                        defaultCurrencySymbol = conversion.defaultCurrencySymbol,
-                    ),
-                )
-            })
+            is FetchExchangeRateUseCase.Result.Disabled -> emit(
+                updateContent {
+                    copy(
+                        conversion = ConversionState(
+                            defaultCurrencyCode = conversion.defaultCurrencyCode,
+                            defaultCurrencySymbol = conversion.defaultCurrencySymbol,
+                        ),
+                    )
+                }
+            )
         }
     }
 
@@ -467,30 +476,34 @@ abstract class BaseExpenseStateHolder(
         )
         val mergedMillis = merged.toInstant(tz).toEpochMilliseconds()
 
-        emit(updateContent {
-            copy(form = form.copy(dateEpochMillis = mergedMillis))
-                .updateStatus { copy(showDatePicker = false) }
-        })
+        emit(
+            updateContent {
+                copy(form = form.copy(dateEpochMillis = mergedMillis))
+                    .updateStatus { copy(showDatePicker = false) }
+            }
+        )
 
         val conv = content.conversion
         val isForeignCurrency = content.currency.code != conv.defaultCurrencyCode &&
-                conv.defaultCurrencyCode.isNotEmpty() &&
-                content.currency.code.isNotEmpty()
+            conv.defaultCurrencyCode.isNotEmpty() &&
+            content.currency.code.isNotEmpty()
         val dateChanged = oldDateTime.date != newDate.date
 
         if (isForeignCurrency && dateChanged) {
-            emit(updateContent {
-                copy(
-                    conversion = conversion.copy(
-                        isLoading = true,
-                        rate = null,
-                        fetchedRate = null,
-                        isManualOverride = false,
-                        convertedAmountMinorUnits = null,
-                        hasFetchError = false,
-                    ),
-                )
-            })
+            emit(
+                updateContent {
+                    copy(
+                        conversion = conversion.copy(
+                            isLoading = true,
+                            rate = null,
+                            fetchedRate = null,
+                            isManualOverride = false,
+                            convertedAmountMinorUnits = null,
+                            hasFetchError = false,
+                        ),
+                    )
+                }
+            )
             val dateString = newDate.date.toString()
             val result = fetchExchangeRateUseCase(
                 from = content.currency.code,
@@ -498,28 +511,34 @@ abstract class BaseExpenseStateHolder(
                 date = dateString,
             )
             when (result) {
-                is FetchExchangeRateUseCase.Result.Success -> emit(updateContent {
-                    copy(
-                        conversion = conversion.copy(
-                            isLoading = false,
-                            rate = result.rate,
-                            fetchedRate = result.rate,
-                        ),
-                    ).withUpdatedConversion()
-                })
+                is FetchExchangeRateUseCase.Result.Success -> emit(
+                    updateContent {
+                        copy(
+                            conversion = conversion.copy(
+                                isLoading = false,
+                                rate = result.rate,
+                                fetchedRate = result.rate,
+                            ),
+                        ).withUpdatedConversion()
+                    }
+                )
 
-                is FetchExchangeRateUseCase.Result.Failure -> emit(updateContent {
-                    copy(conversion = conversion.copy(isLoading = false))
-                })
+                is FetchExchangeRateUseCase.Result.Failure -> emit(
+                    updateContent {
+                        copy(conversion = conversion.copy(isLoading = false))
+                    }
+                )
 
-                is FetchExchangeRateUseCase.Result.Disabled -> emit(updateContent {
-                    copy(
-                        conversion = ConversionState(
-                            defaultCurrencyCode = conversion.defaultCurrencyCode,
-                            defaultCurrencySymbol = conversion.defaultCurrencySymbol,
-                        ),
-                    )
-                })
+                is FetchExchangeRateUseCase.Result.Disabled -> emit(
+                    updateContent {
+                        copy(
+                            conversion = ConversionState(
+                                defaultCurrencyCode = conversion.defaultCurrencyCode,
+                                defaultCurrencySymbol = conversion.defaultCurrencySymbol,
+                            ),
+                        )
+                    }
+                )
             }
         }
     }
@@ -550,7 +569,7 @@ abstract class BaseExpenseStateHolder(
 
         val conv = content.conversion
         val isForeignCurrency = content.currency.code != conv.defaultCurrencyCode &&
-                conv.rate != null
+            conv.rate != null
 
         val amountToSave: Long
         val originalAmount: Long?
@@ -667,9 +686,9 @@ abstract class BaseExpenseStateHolder(
 
     private fun isFormValid(form: ExpenseFormInput): Boolean {
         return form.amountInput.isNotEmpty() &&
-                form.amountInput.toDoubleOrNull().let { it != null && it > 0 } &&
-                form.title.isNotBlank() &&
-                form.selectedCategoryId != null
+            form.amountInput.toDoubleOrNull().let { it != null && it > 0 } &&
+            form.title.isNotBlank() &&
+            form.selectedCategoryId != null
     }
 
     protected fun AddExpenseState.Content.updateStatus(

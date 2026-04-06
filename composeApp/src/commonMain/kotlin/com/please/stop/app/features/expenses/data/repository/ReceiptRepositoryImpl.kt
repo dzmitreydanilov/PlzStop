@@ -8,11 +8,10 @@ import com.please.stop.app.features.expenses.domain.model.ExpenseSubcategory
 import com.please.stop.app.features.expenses.domain.model.ReceiptData
 import com.please.stop.app.features.expenses.domain.model.ReceiptItem
 import com.please.stop.app.features.expenses.domain.repository.ReceiptRepository
+import com.please.stop.app.utils.toMinorUnits
 import kotlinx.coroutines.withTimeout
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
-import kotlin.math.pow
-import kotlin.math.roundToLong
 
 class ReceiptRepositoryImpl(
     private val callableFunctions: FirebaseCallableFunctions,
@@ -77,7 +76,7 @@ class ReceiptRepositoryImpl(
             ResponseStatus.SUCCESS, ResponseStatus.PARTIAL -> {
                 val totalAmount = (data?.get("totalAmount") as? Number)?.toDouble()
                 val totalAmountMinorUnits = totalAmount?.let {
-                    (it * 10.0.pow(decimalPlaces)).roundToLong()
+                    it.toMinorUnits(decimalPlaces)
                 }
 
                 val itemsRaw = data?.get("items") as? List<*>
@@ -87,7 +86,7 @@ class ReceiptRepositoryImpl(
                     val amount = (map["amount"] as? Number)?.toDouble() ?: return@mapNotNull null
                     ReceiptItem(
                         name = name,
-                        amountMinorUnits = (amount * 10.0.pow(decimalPlaces)).roundToLong(),
+                        amountMinorUnits = amount.toMinorUnits(decimalPlaces),
                         categoryId = (map["categoryId"] as? Number)?.toLong(),
                         subcategoryId = (map["subcategoryId"] as? Number)?.toLong(),
                     )

@@ -11,6 +11,7 @@ import com.please.stop.app.features.onboarding.domain.repository.CategoryReposit
 import com.please.stop.app.features.onboarding.domain.repository.CurrencyRepository
 import com.please.stop.app.features.onboarding.domain.repository.OnboardingRepository
 import com.please.stop.app.features.onboarding.domain.repository.SubcategoryRepository
+import com.please.stop.app.features.onboarding.domain.usecase.BackfillCurrencyProfileUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.CompleteOnboardingUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.DetectDeviceCurrencyUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.LoadOnboardingDataUseCase
@@ -76,6 +77,13 @@ val onboardingModule = module {
         )
     }
     factory { ObserveOnboardingCompletedUseCase(repository = get()) }
+    factory {
+        BackfillCurrencyProfileUseCase(
+            userProfileDao = get<AppDatabase>().userProfileDao(),
+            currencyRepository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
 
     viewModel {
         CurrencyPickerViewModel(
@@ -97,6 +105,7 @@ val onboardingModule = module {
     viewModel {
         RootStateHolder(
             observeOnboardingCompletedUseCase = get(),
+            backfillCurrencyProfileUseCase = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }

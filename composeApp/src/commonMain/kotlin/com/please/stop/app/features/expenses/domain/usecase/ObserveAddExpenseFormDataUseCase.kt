@@ -25,11 +25,11 @@ class ObserveAddExpenseFormDataUseCase(
             .catch { emit(ObserveAddExpenseFormDataResult.Failure(it.toErrorType())) }
             .flowOn(dispatcher)
     }
-
 }
 
 sealed interface ObserveAddExpenseFormDataResult : DomainResult {
     data class Success(val data: AddExpenseFormData) : ObserveAddExpenseFormDataResult
-    data class Failure(override val errorType: ErrorType) : ObserveAddExpenseFormDataResult,
+    data class Failure(override val errorType: ErrorType) :
+        ObserveAddExpenseFormDataResult,
         ErrorResult
 }
