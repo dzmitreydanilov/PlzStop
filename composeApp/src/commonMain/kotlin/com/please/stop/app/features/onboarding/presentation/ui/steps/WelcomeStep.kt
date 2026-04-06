@@ -66,5 +66,4 @@ fun WelcomeStep() {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
     )
-
 }

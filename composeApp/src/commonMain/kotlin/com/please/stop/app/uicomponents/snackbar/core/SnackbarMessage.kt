@@ -1,7 +1,6 @@
 package com.please.stop.app.uicomponents.snackbar.core
 
 import androidx.compose.ui.Alignment
-import com.please.stop.app.uicomponents.snackbar.ui.models.BannerMessage
 
 /**
  * A concrete implementation of [com.please.stop.app.uicomponents.snackbar.core.SnackbarContent]
@@ -17,4 +16,5 @@ class SnackbarMessage(
     override val content: com.please.stop.app.uicomponents.snackbar.ui.models.BannerMessage,
     override val alignment: Alignment = Alignment.BottomCenter,
 ) : com.please.stop.app.uicomponents.snackbar.core.SnackbarContent<
-    com.please.stop.app.uicomponents.snackbar.ui.models.BannerMessage>
+    com.please.stop.app.uicomponents.snackbar.ui.models.BannerMessage
+    >

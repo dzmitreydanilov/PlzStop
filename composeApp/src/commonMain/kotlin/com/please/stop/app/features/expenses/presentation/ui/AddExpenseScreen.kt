@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -52,40 +53,41 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.please.stop.app.navigation.nav3.HandleNavigationBack
 import com.please.stop.app.features.expenses.create.presentation.CreateExpenseStateHolder
 import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.features.expenses.edit.presentation.EditExpenseStateHolder
 import com.please.stop.app.features.expenses.presentation.AddExpenseEvent
 import com.please.stop.app.features.expenses.presentation.AddExpenseNavigation
-import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
-import com.please.stop.app.features.expenses.presentation.ConversionState
-import com.please.stop.app.features.expenses.presentation.NumericKey
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.MAX_NOTES_LENGTH
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.MAX_TITLE_LENGTH
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.NOTES_COUNTER_THRESHOLD
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.TITLE_COUNTER_THRESHOLD
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
+import com.please.stop.app.features.expenses.presentation.ConversionState
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
+import com.please.stop.app.features.expenses.presentation.NumericKey
 import com.please.stop.app.features.expenses.scanner.rememberDocumentScanner
 import com.please.stop.app.navigation.CollectNavigationFlow
+import com.please.stop.app.navigation.nav3.HandleNavigationBack
+import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.uicomponents.sheets.CurrencyPickerSheet
+import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.format
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import com.please.stop.app.utils.date.nowMillis
+import com.please.stop.app.utils.minorUnitsMultiplier
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -116,10 +118,6 @@ import plzstop.composeapp.generated.resources.add_expense_title
 import plzstop.composeapp.generated.resources.add_expense_title_edit
 import plzstop.composeapp.generated.resources.add_expense_title_label
 import plzstop.composeapp.generated.resources.add_expense_what_was_it_for
-import plzstop.composeapp.generated.resources.ic_arrow_back
-import plzstop.composeapp.generated.resources.ic_keyboard_arrow_right
-import plzstop.composeapp.generated.resources.ic_scan
-import plzstop.composeapp.generated.resources.ic_trash_bin
 import plzstop.composeapp.generated.resources.conversion_converted_amount
 import plzstop.composeapp.generated.resources.conversion_custom_rate
 import plzstop.composeapp.generated.resources.conversion_fetching_rate
@@ -130,9 +128,12 @@ import plzstop.composeapp.generated.resources.conversion_rate_override_title
 import plzstop.composeapp.generated.resources.conversion_rate_unavailable
 import plzstop.composeapp.generated.resources.conversion_reset_rate
 import plzstop.composeapp.generated.resources.conversion_save_in
+import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_calendar
 import plzstop.composeapp.generated.resources.ic_currency_exchange
-import kotlin.math.pow
+import plzstop.composeapp.generated.resources.ic_keyboard_arrow_right
+import plzstop.composeapp.generated.resources.ic_scan
+import plzstop.composeapp.generated.resources.ic_trash_bin
 import kotlin.time.ExperimentalTime
 
 private val AMOUNT_DISPLAY_HEIGHT = 64.dp
@@ -411,7 +412,6 @@ private fun AddExpenseContent(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-
             }
 
             AmountSection(
@@ -528,7 +528,7 @@ private fun DatePicker(
         },
     )
     DatePickerDialog(
-        onDismissRequest = {  },
+        onDismissRequest = { },
         confirmButton = {
             TextButton(
                 onClick = {
@@ -1104,8 +1104,11 @@ private fun NotesInputSheet(
     }
 }
 
-private fun formatMinorUnitsForDisplay(minorUnits: Long, decimalPlaces: Int = 2): String {
-    val multiplier = 10.0.pow(decimalPlaces).toLong()
+private fun formatMinorUnitsForDisplay(
+    minorUnits: Long,
+    decimalPlaces: Int = DEFAULT_CURRENCY_DECIMAL_PLACES,
+): String {
+    val multiplier = minorUnitsMultiplier(decimalPlaces)
     val intPart = minorUnits / multiplier
     val fracPart = (minorUnits % multiplier).toString().padStart(decimalPlaces, '0')
     return "$intPart.$fracPart"

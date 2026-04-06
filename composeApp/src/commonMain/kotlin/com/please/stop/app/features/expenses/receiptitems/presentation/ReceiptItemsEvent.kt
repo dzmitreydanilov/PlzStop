@@ -16,4 +16,5 @@ sealed interface ReceiptItemsEvent {
     data object ConfirmAll : ReceiptItemsEvent
     data object AddItem : ReceiptItemsEvent
     data object BackClicked : ReceiptItemsEvent
+    data object DismissError : ReceiptItemsEvent
 }

@@ -61,7 +61,6 @@ fun BudgetStep(
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-
 }
 
 private fun filterBudgetInput(input: String, decimalPlaces: Int): String? {

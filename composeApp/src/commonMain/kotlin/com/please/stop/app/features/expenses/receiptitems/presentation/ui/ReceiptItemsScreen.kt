@@ -2,7 +2,6 @@ package com.please.stop.app.features.expenses.receiptitems.presentation.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -12,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,7 +26,6 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +40,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -52,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
 import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
-import com.please.stop.app.features.expenses.receiptitems.presentation.ConversionSummary
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemUiModel
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemsEvent
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemsNavigation
@@ -60,15 +59,14 @@ import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptIt
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemsStateHolder
 import com.please.stop.app.navigation.CollectNavigationFlow
 import com.please.stop.app.navigation.routes.ReceiptItemsRoute
+import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
-import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.currentMonthMillisRange
-import com.please.stop.app.utils.date.format
 import com.please.stop.app.utils.date.localDateTimeFromMillis
+import com.please.stop.app.utils.minorUnitsMultiplier
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
-import kotlin.math.pow
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import plzstop.composeapp.generated.resources.Res
@@ -115,21 +113,22 @@ fun ReceiptItemsScreen(
     ) { navigation ->
         when (navigation) {
             ReceiptItemsNavigation.GoBack -> onGoBack()
-            ReceiptItemsNavigation.PopTwice -> onSaved()
-            ReceiptItemsNavigation.PopOnce -> onGoBack()
+            ReceiptItemsNavigation.Saved -> onSaved()
         }
     }
 
     ScreenOverlayContainer(
         overlay = state.asOverlay,
-        onDismiss = { /* No-op, errors are dismissed via events */ },
-        onRetry = { stateHolder.processEvent(ReceiptItemsEvent.Retry) }
-    )  {
-        ReceiptItemsContent(
-            state = s,
-            isManualEntry = route.isManualEntry,
-            onEvent = stateHolder::processEvent,
-        )
+        onDismiss = { stateHolder.processEvent(ReceiptItemsEvent.DismissError) },
+    ) {
+        when (val currentState = state) {
+            is ReceiptItemsState.Content -> ReceiptItemsContent(
+                state = currentState,
+                isManualEntry = route.isManualEntry,
+                onEvent = stateHolder::processEvent,
+            )
+            is ReceiptItemsState.Error -> Unit
+        }
     }
 }
 
@@ -169,7 +168,9 @@ private fun ReceiptItemsContent(
                 }) { Text(stringResource(Res.string.add_expense_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { onEvent(ReceiptItemsEvent.DismissDatePicker) }) { Text(stringResource(Res.string.add_expense_cancel)) }
+                TextButton(onClick = {
+                    onEvent(ReceiptItemsEvent.DismissDatePicker)
+                }) { Text(stringResource(Res.string.add_expense_cancel)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -277,16 +278,15 @@ private fun SwipeToDeleteItem(
     onDelete: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart || value == SwipeToDismissBoxValue.StartToEnd) {
-                onDelete()
-                true
-            } else {
-                false
-            }
-        },
-    )
+    val dismissState = rememberSwipeToDismissBoxState()
+
+    LaunchedEffect(dismissState.currentValue) {
+        val value = dismissState.currentValue
+        if (value == SwipeToDismissBoxValue.EndToStart || value == SwipeToDismissBoxValue.StartToEnd) {
+            onDelete()
+        }
+    }
+
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
@@ -568,8 +568,14 @@ private fun StickyFooter(
 
 private fun formatAmount(minorUnits: Long, symbol: String, decimalPlaces: Int): String {
     if (decimalPlaces == 0) return "$symbol$minorUnits"
-    val multiplier = 10.0.pow(decimalPlaces).toLong()
+    val multiplier = minorUnitsMultiplier(decimalPlaces)
     val intPart = minorUnits / multiplier
     val fracPart = (minorUnits % multiplier).toString().padStart(decimalPlaces, '0')
     return "$symbol$intPart.$fracPart"
 }
+
+internal val ReceiptItemsState.asOverlay: ScreenOverlay?
+    @Composable get() = when (this) {
+        is ReceiptItemsState.Error -> ScreenOverlay.Error(type = errorType)
+        is ReceiptItemsState.Content -> null
+    }

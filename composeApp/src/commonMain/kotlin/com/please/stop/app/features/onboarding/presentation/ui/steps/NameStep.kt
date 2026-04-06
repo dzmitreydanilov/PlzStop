@@ -52,5 +52,4 @@ fun NameStep(
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-
 }

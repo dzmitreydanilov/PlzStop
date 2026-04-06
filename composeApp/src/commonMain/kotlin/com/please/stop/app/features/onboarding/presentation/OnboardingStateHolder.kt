@@ -10,12 +10,11 @@ import com.please.stop.app.features.onboarding.domain.model.OnboardingData
 import com.please.stop.app.features.onboarding.domain.usecase.CompleteOnboardingUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.DetectDeviceCurrencyUseCase
 import com.please.stop.app.features.onboarding.domain.usecase.LoadOnboardingDataUseCase
+import com.please.stop.app.utils.toMinorUnits
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlin.math.pow
-import kotlin.math.roundToLong
 import kotlin.reflect.KClass
 
 class OnboardingStateHolder(
@@ -241,7 +240,7 @@ class OnboardingStateHolder(
     private fun OnboardingState.Content.toOnboardingData(): OnboardingData {
         val currency = checkNotNull(selectedCurrency) { "Currency must be selected" }
         val budgetValue = monthlyBudgetInput.toDoubleOrNull() ?: 0.0
-        val minorUnits = (budgetValue * 10.0.pow(currency.decimalPlaces)).roundToLong()
+        val minorUnits = budgetValue.toMinorUnits(currency.decimalPlaces)
 
         return OnboardingData(
             displayName = displayName.takeIf { it.isNotBlank() },

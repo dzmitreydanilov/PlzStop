@@ -2,10 +2,10 @@ package com.please.stop.app.features.expenses.presentation.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,15 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.expenses.presentation.KeyboardOperator
 import com.please.stop.app.features.expenses.presentation.NumericKey
-import androidx.compose.ui.tooling.preview.Preview
 import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.ic_add_note
 import plzstop.composeapp.generated.resources.ic_backspace
 import plzstop.composeapp.generated.resources.ic_check
-import plzstop.composeapp.generated.resources.ic_add_note
 
 private val BUTTON_SPACING = 8.dp
 private val CORNER_RADIUS = 12.dp

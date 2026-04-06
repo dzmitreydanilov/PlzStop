@@ -11,10 +11,9 @@ import com.please.stop.app.features.expenses.domain.model.ExpenseCategory
 import com.please.stop.app.features.expenses.domain.model.ExpenseDetail
 import com.please.stop.app.features.expenses.domain.model.ExpenseSubcategory
 import com.please.stop.app.features.expenses.domain.repository.AddExpenseRepository
-import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.domain.model.Subcategory
-import com.please.stop.app.features.onboarding.domain.repository.CurrencyRepository
 import com.please.stop.app.features.onboarding.domain.repository.SubcategoryRepository
+import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -27,13 +26,10 @@ class AddExpenseRepositoryImpl(
     private val userProfileDao: UserProfileDao,
     private val categoryDao: CategoryDao,
     private val expenseDao: ExpenseDao,
-    private val currencyRepository: CurrencyRepository,
     private val subcategoryRepository: SubcategoryRepository,
     private val featureFlags: FeatureFlags,
     private val ioDispatcher: CoroutineDispatcher,
 ) : AddExpenseRepository {
-
-    private var currencyCache: List<Currency>? = null
 
     override fun observeFormData(): Flow<AddExpenseFormData> {
         return categoryDao.observeAll()
@@ -69,12 +65,11 @@ class AddExpenseRepositoryImpl(
         currencyConversionEnabled: Boolean,
     ): AddExpenseFormData {
         val profile = userProfileDao.get()
-        val currency = resolveCurrency(profile?.currencyCode)
 
         return AddExpenseFormData(
-            currencyCode = currency?.code ?: "",
-            currencySymbol = currency?.symbol ?: "$",
-            decimalPlaces = currency?.decimalPlaces ?: 2,
+            currencyCode = profile?.currencyCode.orEmpty(),
+            currencySymbol = profile?.currencySymbol.orEmpty(),
+            decimalPlaces = profile?.decimalPlaces ?: DEFAULT_CURRENCY_DECIMAL_PLACES,
             categories = categories.map { entity ->
                 ExpenseCategory(
                     id = entity.id,
@@ -164,15 +159,6 @@ class AddExpenseRepositoryImpl(
 
     override suspend fun deleteExpense(id: Long): Result<Unit> = runCatching {
         expenseDao.softDelete(id)
-    }
-
-    private suspend fun resolveCurrency(code: String?): Currency? {
-        if (code == null) return null
-        val currencies = currencyCache ?: currencyRepository.getAllCurrencies()
-            .getOrNull()
-            ?.also { currencyCache = it }
-            ?: return null
-        return currencies.find { it.code == code }
     }
 }
 

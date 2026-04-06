@@ -78,7 +78,8 @@ class MonthlyExpensesStateHolder(
         is ObserveMonthlyExpensesResult.Failure -> {
             val prevPageState = previous.pageStateFor(result.year, result.month)
             previous.withPage(
-                result.year, result.month, MonthPageState.Error(
+                result.year, result.month,
+                MonthPageState.Error(
                     errorType = result.errorType,
                     dayGroups = prevPageState.dayGroups,
                     totalFormatted = prevPageState.totalFormatted,

@@ -8,7 +8,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -44,7 +43,7 @@ class CurrencyRepositoryImpl(
                     logDebugWithTag(tag = TAG, message = "Loaded ${dtos.size} currencies from Remote Config")
                     return dtos.map { it.toDomain() }
                 }
-            }  catch (e: Exception) {
+            } catch (e: Exception) {
                 logErrorWithTag(tag = TAG, message = "Failed to parse Remote Config currencies", throwable = e)
             }
         }

@@ -24,5 +24,7 @@ actual val platformModule: Module = module {
     single { PassphraseProvider(context = get()) }
     single { AppDatabaseFactory(context = get(), passphraseProvider = get(), buildSettingsProvider = get()) }
     single<FirebaseCallableFunctions> { AndroidFirebaseCallableFunctions() }
-    single { AndroidApplicationCoroutinesScope() } binds arrayOf(ICoroutineScopeProvider::class, DefaultLifecycleObserver::class)
+    single {
+        AndroidApplicationCoroutinesScope()
+    } binds arrayOf(ICoroutineScopeProvider::class, DefaultLifecycleObserver::class)
 }

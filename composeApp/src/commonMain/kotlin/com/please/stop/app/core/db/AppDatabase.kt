@@ -26,7 +26,7 @@ import com.please.stop.app.core.db.entity.UserProfileEntity
         SubcategoryEntity::class,
         ReceiptEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -143,6 +143,17 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_expense_receiptId` ON `expense` (`receiptId`)"
+                )
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "ALTER TABLE `user_profile` ADD COLUMN `currencySymbol` TEXT NOT NULL DEFAULT ''"
+                )
+                connection.execSQL(
+                    "ALTER TABLE `user_profile` ADD COLUMN `decimalPlaces` INTEGER NOT NULL DEFAULT 2"
                 )
             }
         }

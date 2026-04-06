@@ -18,7 +18,6 @@ val homeModule = module {
             userProfileDao = get<AppDatabase>().userProfileDao(),
             categoryDao = get<AppDatabase>().categoryDao(),
             expenseDao = get<AppDatabase>().expenseDao(),
-            currencyRepository = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }

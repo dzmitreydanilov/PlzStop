@@ -15,14 +15,15 @@ import com.please.stop.app.features.expenses.presentation.KeyboardCalculator
 import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
 import com.please.stop.app.features.expenses.receiptitems.ReceiptItemsArgsHolder
 import com.please.stop.app.navigation.routes.ReceiptItemsRoute
+import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.date.nowMillis
+import com.please.stop.app.utils.minorUnitsMultiplier
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
-import kotlin.math.pow
 import kotlin.reflect.KClass
 import com.please.stop.app.core.models.domain.Result as DomainResult
 
@@ -35,8 +36,9 @@ class ReceiptItemsStateHolder(
 
     override val tag = "ReceiptItemsStateHolder"
 
-    private var keyboardCalculator = KeyboardCalculator(decimalPlaces = 2, currencySymbol = "")
-    private var decimalPlaces: Int = 2
+    private var keyboardCalculator =
+        KeyboardCalculator(decimalPlaces = DEFAULT_CURRENCY_DECIMAL_PLACES, currencySymbol = "")
+    private var decimalPlaces: Int = DEFAULT_CURRENCY_DECIMAL_PLACES
     private var defaultCategoryId: Long? = null
     private var formCurrencyCode: String = ""
     private var formCurrencySymbol: String = ""
@@ -53,7 +55,7 @@ class ReceiptItemsStateHolder(
             dateMillis = parsedDateMillis ?: nowMillis(),
             isDateAutoAssigned = parsedDateMillis == null,
             items = items,
-            currency = CurrencyConfig(symbol = "", decimalPlaces = 2),
+            currency = CurrencyConfig(symbol = "", decimalPlaces = DEFAULT_CURRENCY_DECIMAL_PLACES),
             totalAmountMinorUnits = items.sumOf { it.amountMinorUnits },
         )
     }
@@ -62,14 +64,12 @@ class ReceiptItemsStateHolder(
 
     override fun getNavigationResults(): Set<KClass<out DomainResult>> =
         setOf(
-            ReceiptItemsResult.PopTwice::class,
-            ReceiptItemsResult.PopOnce::class,
-            ReceiptItemsResult.GoBack::class
+            ReceiptItemsResult.Saved::class,
+            ReceiptItemsResult.GoBack::class,
         )
 
     override fun getNavigationByResult(result: DomainResult): Navigation? = when (result) {
-        is ReceiptItemsResult.PopTwice -> ReceiptItemsNavigation.PopTwice
-        is ReceiptItemsResult.PopOnce -> ReceiptItemsNavigation.PopOnce
+        is ReceiptItemsResult.Saved -> ReceiptItemsNavigation.Saved
         is ReceiptItemsResult.GoBack -> ReceiptItemsNavigation.GoBack
         else -> null
     }
@@ -160,60 +160,75 @@ class ReceiptItemsStateHolder(
             )
         }
 
-        is ReceiptItemsEvent.ItemCategoryChanged -> flowOf(updateContent {
-            updateItem(event.itemId) {
-                copy(
-                    categoryId = event.categoryId,
-                    categoryName = categories.firstOrNull { it.id == event.categoryId }?.name,
-                    subcategoryId = null,
-                    subcategoryName = null,
-                )
+        is ReceiptItemsEvent.ItemCategoryChanged -> flowOf(
+            updateContent {
+                updateItem(event.itemId) {
+                    copy(
+                        categoryId = event.categoryId,
+                        categoryName = categories.firstOrNull { it.id == event.categoryId }?.name,
+                        subcategoryId = null,
+                        subcategoryName = null,
+                    )
+                }
             }
-        })
+        )
 
-        is ReceiptItemsEvent.ItemSubcategoryChanged -> flowOf(updateContent {
-            updateItem(event.itemId) {
-                copy(
-                    subcategoryId = event.subcategoryId,
-                    subcategoryName = subcategories.firstOrNull { it.id == event.subcategoryId }?.name,
-                )
+        is ReceiptItemsEvent.ItemSubcategoryChanged -> flowOf(
+            updateContent {
+                updateItem(event.itemId) {
+                    copy(
+                        subcategoryId = event.subcategoryId,
+                        subcategoryName = subcategories.firstOrNull { it.id == event.subcategoryId }?.name,
+                    )
+                }
             }
-        })
+        )
 
-        is ReceiptItemsEvent.DeleteItem -> flowOf(updateContent {
-            val updated = items.filter { it.id != event.itemId }.toImmutableList()
-            copy(items = updated, totalAmountMinorUnits = updated.sumOf { it.amountMinorUnits })
-        })
+        is ReceiptItemsEvent.DeleteItem -> flowOf(
+            updateContent {
+                val updated = items.filter { it.id != event.itemId }.toImmutableList()
+                copy(items = updated, totalAmountMinorUnits = updated.sumOf { it.amountMinorUnits })
+            }
+        )
 
-        is ReceiptItemsEvent.DateChanged -> flowOf(updateContent {
-            copy(dateMillis = event.epochMillis, isDateAutoAssigned = false, showDatePicker = false)
-        })
+        is ReceiptItemsEvent.DateChanged -> flowOf(
+            updateContent {
+                copy(dateMillis = event.epochMillis, isDateAutoAssigned = false, showDatePicker = false)
+            }
+        )
 
-        is ReceiptItemsEvent.ShowDateWarningDialog -> flowOf(updateContent {
-            copy(showDateWarningDialog = true)
-        })
+        is ReceiptItemsEvent.ShowDateWarningDialog -> flowOf(
+            updateContent {
+                copy(showDateWarningDialog = true)
+            }
+        )
 
-        is ReceiptItemsEvent.DismissDateWarningDialog -> flowOf(updateContent {
-            copy(showDateWarningDialog = false)
-        })
+        is ReceiptItemsEvent.DismissDateWarningDialog -> flowOf(
+            updateContent {
+                copy(showDateWarningDialog = false)
+            }
+        )
 
         is ReceiptItemsEvent.ShowDatePicker -> flowOf(updateContent { copy(showDatePicker = true) })
         is ReceiptItemsEvent.DismissDatePicker -> flowOf(updateContent { copy(showDatePicker = false) })
-        is ReceiptItemsEvent.AddItem -> flowOf(updateContent {
-            val newItem = ReceiptItemUiModel(
-                id = "manual_${items.size}",
-                name = "",
-                amountInput = keyboardCalculator.formatFromMinorUnits(0L),
-                amountMinorUnits = 0L,
-                categoryId = route.categoryId ?: defaultCategoryId,
-                subcategoryId = route.subcategoryId,
-            )
-            val updated = (items + newItem).toImmutableList()
-            copy(items = updated, editingItemId = newItem.id)
-        })
+        is ReceiptItemsEvent.AddItem -> flowOf(
+            updateContent {
+                val newItem = ReceiptItemUiModel(
+                    id = "manual_${items.size}",
+                    name = "",
+                    amountInput = keyboardCalculator.formatFromMinorUnits(0L),
+                    amountMinorUnits = 0L,
+                    categoryId = route.categoryId ?: defaultCategoryId,
+                    subcategoryId = route.subcategoryId,
+                )
+                val updated = (items + newItem).toImmutableList()
+                copy(items = updated, editingItemId = newItem.id)
+            }
+        )
 
         is ReceiptItemsEvent.ConfirmAll -> handleConfirmAll()
         is ReceiptItemsEvent.BackClicked -> flowOf(ReceiptItemsResult.GoBack)
+        is ReceiptItemsEvent.DismissError -> flowOf(ReceiptItemsResult.GoBack)
     }
 
     private fun handleConfirmAll(): Flow<DomainResult> = flow {
@@ -250,12 +265,7 @@ class ReceiptItemsStateHolder(
 
         when (result) {
             is SaveReceiptExpensesUseCase.Result.Success -> {
-                val popResult = if (route.isManualEntry) {
-                    ReceiptItemsResult.PopOnce
-                } else {
-                    ReceiptItemsResult.PopTwice
-                }
-                emit(popResult)
+                emit(ReceiptItemsResult.Saved)
             }
 
             is SaveReceiptExpensesUseCase.Result.Failure -> emit(updateContent { copy(isSaving = false) })
@@ -265,7 +275,7 @@ class ReceiptItemsStateHolder(
 
     private fun parseAmountInput(input: String): Long {
         val value = input.toDoubleOrNull() ?: return 0L
-        val multiplier = 10.0.pow(decimalPlaces).toLong()
+        val multiplier = minorUnitsMultiplier(decimalPlaces)
         return (value * multiplier).toLong()
     }
 
@@ -302,8 +312,7 @@ private fun ReceiptExpenseItem.toUiModel(
 )
 
 private sealed interface ReceiptItemsResult : DomainResult {
-    data object PopTwice : ReceiptItemsResult
-    data object PopOnce : ReceiptItemsResult
+    data object Saved : ReceiptItemsResult
     data object GoBack : ReceiptItemsResult
     data class UpdateContent(
         val updater: ReceiptItemsState.Content.() -> ReceiptItemsState

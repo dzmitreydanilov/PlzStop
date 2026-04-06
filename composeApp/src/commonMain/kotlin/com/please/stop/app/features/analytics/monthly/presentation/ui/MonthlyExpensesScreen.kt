@@ -329,7 +329,7 @@ private fun ReceiptGroupCard(
             )
             Icon(
                 imageVector = if (isExpanded) vectorResource(Res.drawable.ic_keyboard_arrow_up)
-                    else vectorResource(Res.drawable.ic_keyboard_arrow_down),
+                else vectorResource(Res.drawable.ic_keyboard_arrow_down),
                 contentDescription = stringResource(
                     if (isExpanded) Res.string.monthly_expenses_collapse_receipt
                     else Res.string.monthly_expenses_expand_receipt
