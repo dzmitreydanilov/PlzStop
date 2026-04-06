@@ -32,6 +32,7 @@ val monthlyExpensesModule = module {
     viewModel {
         MonthlyExpensesStateHolder(
             observeMonthlyExpensesUseCase = get(),
+            deleteExpenseUseCase = get(),
         )
     }
 }

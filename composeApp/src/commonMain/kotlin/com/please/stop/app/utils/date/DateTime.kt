@@ -153,3 +153,9 @@ fun pageIndexToYearMonth(pageIndex: Int): Pair<Int, Int> =
 @OptIn(ExperimentalTime::class)
 fun currentMonthPageIndex(): Int =
     localDateToday().let { monthPageIndex(it.year, it.monthNumber) }
+
+fun LocalDate.lengthOfMonth(): Int {
+    val firstOfMonth = LocalDate(year, monthNumber, 1)
+    val nextMonthStart = firstOfMonth.plus(1, DateTimeUnit.MONTH)
+    return (nextMonthStart.toEpochDays() - firstOfMonth.toEpochDays()).toInt()
+}

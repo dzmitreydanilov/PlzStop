@@ -10,6 +10,7 @@ import com.please.stop.app.features.expenses.domain.model.MonthlyExpenseEntry
 import com.please.stop.app.features.expenses.domain.model.MonthlyExpensesData
 import com.please.stop.app.features.expenses.domain.usecase.ObserveMonthlyExpensesResult
 import com.please.stop.app.features.expenses.domain.usecase.ObserveMonthlyExpensesUseCase
+import com.please.stop.app.features.expenses.edit.domain.usecase.DeleteExpenseUseCase
 import com.please.stop.app.utils.date.formatDayLabel
 import com.please.stop.app.utils.date.isBeforeCurrentMonth
 import com.please.stop.app.utils.date.localDateToday
@@ -35,6 +36,7 @@ import com.please.stop.app.core.models.domain.Result as DomainResult
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
 class MonthlyExpensesStateHolder(
     private val observeMonthlyExpensesUseCase: ObserveMonthlyExpensesUseCase,
+    private val deleteExpenseUseCase: DeleteExpenseUseCase,
 ) : StateHolder<MonthlyWindowState, MonthlyExpensesEvent>() {
 
     override val tag = "MonthlyExpensesStateHolder"
@@ -105,6 +107,11 @@ class MonthlyExpensesStateHolder(
             previous.withPage(result.year, result.month, current.copy(expandedReceiptIds = updated))
         }
 
+        is MonthlyResult.ShowDeleteDialog -> previous.copy(deleteConfirmExpenseId = result.expenseId)
+        is MonthlyResult.HideDeleteDialog -> previous.copy(deleteConfirmExpenseId = null)
+        is DeleteExpenseUseCase.Result.Success -> previous
+        is DeleteExpenseUseCase.Result.Failure -> previous
+
         else -> super.getStateByResult(previous, result)
     }
 
@@ -130,6 +137,19 @@ class MonthlyExpensesStateHolder(
 
             is MonthlyExpensesEvent.ExpenseClicked -> {
                 flowOf(MonthlyResult.NavigateToEdit(event.expenseId))
+            }
+
+            is MonthlyExpensesEvent.ExpenseLongClicked -> {
+                flowOf(MonthlyResult.ShowDeleteDialog(event.expenseId))
+            }
+
+            is MonthlyExpensesEvent.ConfirmDeleteExpense -> flow {
+                emit(MonthlyResult.HideDeleteDialog)
+                emit(deleteExpenseUseCase(event.expenseId))
+            }
+
+            MonthlyExpensesEvent.DismissDeleteDialog -> {
+                flowOf(MonthlyResult.HideDeleteDialog)
             }
 
             is MonthlyExpensesEvent.ReceiptGroupClicked -> flowOf(
@@ -212,4 +232,6 @@ private sealed interface MonthlyResult : DomainResult {
     data class PageLoading(val year: Int, val month: Int) : MonthlyResult
     data class NavigateToEdit(val expenseId: Long) : MonthlyResult
     data class ToggleReceipt(val receiptId: Long, val year: Int, val month: Int) : MonthlyResult
+    data class ShowDeleteDialog(val expenseId: Long) : MonthlyResult
+    data object HideDeleteDialog : MonthlyResult
 }

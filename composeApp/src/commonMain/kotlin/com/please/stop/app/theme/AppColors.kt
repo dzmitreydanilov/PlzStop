@@ -25,6 +25,16 @@ data class AppColors(
     val headerGradient: Brush,
     // Category tile background gradients
     val categoryGradients: ImmutableList<Brush>,
+    // Budget burn progress: safe zone
+    val budgetBurnGreen: Color,
+    // Budget burn progress: warning zone
+    val budgetBurnYellow: Color,
+    // Budget burn progress: over-budget zone
+    val budgetBurnRed: Color,
+    // Actual-spending line on daily trends chart
+    val spendingLine: Color,
+    // Budget-pacing ghost line on daily trends chart
+    val ghostLine: Color,
 )
 
 // ── Light theme ──
@@ -53,6 +63,11 @@ val LightAppColors = AppColors(
         Brush.linearGradient(listOf(Color(0xFF9B8EA6), Color(0xFF887A94))),
         Brush.linearGradient(listOf(Color(0xFFB87D6E), Color(0xFFA06A5C))),
     ),
+    budgetBurnGreen = Color(0xFF4A9A5B),
+    budgetBurnYellow = Color(0xFFBF8C30),
+    budgetBurnRed = Color(0xFFCC4B4B),
+    spendingLine = Color(0xFF6B8F71),
+    ghostLine = Color(0xFF9E9E9E),
 )
 
 // ── Dark theme ──
@@ -81,6 +96,11 @@ val DarkAppColors = AppColors(
         Brush.linearGradient(listOf(Color(0xFFB8AAC6), Color(0xFF9F90B0))),
         Brush.linearGradient(listOf(Color(0xFFD49A8C), Color(0xFFBF8070))),
     ),
+    budgetBurnGreen = Color(0xFF6BCB77),
+    budgetBurnYellow = Color(0xFFE0A840),
+    budgetBurnRed = Color(0xFFEF6B6B),
+    spendingLine = Color(0xFF9CC6A1),
+    ghostLine = Color(0xFF6E6E6E),
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }

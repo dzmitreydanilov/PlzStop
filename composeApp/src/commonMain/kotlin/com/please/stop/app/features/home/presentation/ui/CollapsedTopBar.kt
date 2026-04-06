@@ -62,6 +62,7 @@ internal fun CollapsingHomeHeader(
     displayName: String?,
     totalSpentFormatted: String,
     onProfileClicked: () -> Unit,
+    onTotalSpentClick: () -> Unit,
     currentHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
@@ -88,6 +89,7 @@ internal fun CollapsingHomeHeader(
             displayName = displayName,
             totalSpentFormatted = totalSpentFormatted,
             onProfileClicked = onProfileClicked,
+            onTotalSpentClick = onTotalSpentClick,
             modifier = Modifier.graphicsLayer { alpha = 1f - fraction },
         )
 
@@ -106,6 +108,7 @@ private fun ExpandedContent(
     displayName: String?,
     totalSpentFormatted: String,
     onProfileClicked: () -> Unit,
+    onTotalSpentClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val shimmerOffset = rememberShimmerOffset()
@@ -163,6 +166,7 @@ private fun ExpandedContent(
         Spacer(modifier = Modifier.height(20.dp))
 
         Card(
+            onClick = onTotalSpentClick,
             colors = CardDefaults.cardColors(
                 containerColor = Color.White.copy(alpha = 0.15f),
             ),

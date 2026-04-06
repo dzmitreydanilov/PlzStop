@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
@@ -77,7 +78,7 @@ fun AppModalBottomSheet(
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             ProvideContentColor(MaterialTheme.colorScheme.onSurface) {
-                Column {
+                Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
                     if (showDragIndicator) {
                         DragIndication(
                             Modifier

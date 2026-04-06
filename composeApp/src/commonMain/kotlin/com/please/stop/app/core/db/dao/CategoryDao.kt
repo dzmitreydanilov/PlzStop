@@ -3,6 +3,7 @@ package com.please.stop.app.core.db.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.please.stop.app.core.db.entity.CategoryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -17,6 +18,15 @@ interface CategoryDao {
 
     @Insert
     suspend fun insert(category: CategoryEntity): Long
+
+    @Update
+    suspend fun update(category: CategoryEntity)
+
+    @Query("DELETE FROM category WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("SELECT * FROM category WHERE id = :id")
+    suspend fun getById(id: Long): CategoryEntity?
 
     @Query("SELECT COALESCE(MAX(sortOrder), 0) + 1 FROM category")
     suspend fun getNextSortOrder(): Int

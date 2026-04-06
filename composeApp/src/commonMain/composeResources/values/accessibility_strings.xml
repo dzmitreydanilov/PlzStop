@@ -19,6 +19,16 @@
     <!-- Progress -->
     <string name="content_desc_step_progress">Step %1$d of %2$d</string>
 
+    <!-- Categories -->
+    <string name="content_desc_add_category">Add new category</string>
+    <string name="content_desc_add_subcategory">Add subcategory</string>
+    <string name="content_desc_edit_category">Edit category</string>
+    <string name="content_desc_delete_category">Delete category</string>
+    <string name="content_desc_delete_subcategory">Delete subcategory %1$s</string>
+
+    <!-- Analytics -->
+    <string name="analytics_heatmap_cell_cd">Day %1$d, spent %2$s. Tap to see details.</string>
+
     <!-- Receipt items -->
     <string name="content_desc_date_warning">Date warning</string>
     <string name="content_desc_change_date">Change date</string>

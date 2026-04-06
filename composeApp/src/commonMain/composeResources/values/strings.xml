@@ -4,6 +4,7 @@
     <string name="skip">Skip</string>
     <string name="close">Close</string>
     <string name="retry">Retry</string>
+    <string name="add">Add</string>
     <string name="error_dialog_title">Ooops Something went wrong</string>
     <string name="error_occurred_internet">Looks like you're offline. Please check your internet connection and try again</string>
     <string name="error_occurred_we_are_fixing">An error occurred. We’re fixing the issue — hang tight and try again soon.</string>
@@ -108,6 +109,28 @@
     <string name="receipt_items_add_item">+ Add item</string>
     <string name="receipt_items_conversion_summary">1 %1$s = %2$s → %3$s%4$s</string>
 
+    <string name="categories_screen_title">Categories</string>
+    <string name="categories_add_category">Add Category</string>
+    <string name="categories_add_subcategory">Add Subcategory</string>
+    <string name="categories_name_label">Name</string>
+    <string name="categories_comment_label">Comment</string>
+    <string name="categories_confirm">Confirm</string>
+    <string name="categories_edit_category">Edit Category</string>
+    <string name="categories_delete">Delete</string>
+    <string name="categories_delete_confirm_title">Delete category?</string>
+    <string name="categories_delete_confirm_message">This category will be permanently removed.</string>
+    <string name="categories_delete_has_expenses_title">This category has expenses</string>
+    <string name="categories_delete_has_expenses_message">%1$d expense(s) are assigned to this category. What would you like to do?</string>
+    <string name="categories_delete_move_expenses">Move to another category</string>
+    <string name="categories_delete_delete_expenses">Delete expenses too</string>
+    <string name="categories_delete_select_target">Select category</string>
+    <string name="categories_delete_success">Category deleted</string>
+    <string name="categories_icon_label">Icon</string>
+    <string name="categories_save">Save</string>
+    <string name="categories_delete_subcategory_title">Delete subcategory?</string>
+    <string name="categories_delete_subcategory_message">"%1$s" will be permanently removed.</string>
+    <string name="categories_subcategory_limit_reached">Maximum 10 subcategories per category</string>
+
     <string name="onboarding_home_coming_soon">Home — coming soon</string>
     <string name="onboarding_analytics_coming_soon">Analytics — coming soon</string>
     <string name="onboarding_settings_coming_soon">Settings — coming soon</string>
@@ -151,6 +174,42 @@
         <item>Saturday</item>
         <item>Sunday</item>
     </string-array>
+
+    <string-array name="day_of_week_short">
+        <item>M</item>
+        <item>T</item>
+        <item>W</item>
+        <item>T</item>
+        <item>F</item>
+        <item>S</item>
+        <item>S</item>
+    </string-array>
+
+    <string name="analytics_spending_frequency">Spending Frequency</string>
+    <string name="analytics_insights_subtitle">Insights &amp; Reports</string>
+    <string name="analytics_spending_overview">Spending Overview</string>
+    <string name="analytics_monthly_comparison">Monthly Comparison</string>
+    <string name="analytics_daily_trends">Daily Spending Trends</string>
+    <string name="analytics_category_breakdown">Category Breakdown</string>
+    <string name="analytics_loading">Loading insights…</string>
+    <string name="analytics_empty_title">No spending data yet</string>
+    <string name="analytics_empty_hint">Add your first expense to see charts and insights here.</string>
+    <string name="analytics_stat_total_spent">Total Spent</string>
+    <string name="analytics_stat_categories">Categories</string>
+    <string name="analytics_stat_active">Active</string>
+    <string name="analytics_budget_pulse">Budget Pulse</string>
+    <string name="analytics_budget_spent_of">%1$s of %2$s</string>
+    <string name="analytics_daily_allowance">%1$s/day left</string>
+    <string name="analytics_projected_on_track">On track to spend %1$s this month</string>
+    <string name="analytics_projected_over">%1$s over your %2$s budget</string>
+    <string name="analytics_projected_under">%1$s under your %2$s budget</string>
+    <string name="analytics_avg_daily">/day</string>
+    <string name="analytics_heatmap_low">Low</string>
+    <string name="analytics_heatmap_high">High</string>
+    <string name="analytics_budget_line">Budget pace</string>
+    <string name="analytics_day_expenses_title">Expenses on %1$s</string>
+    <string name="analytics_day_no_expenses">No expenses on this day</string>
+    <string name="analytics_day_total">Total: %1$s</string>
 </resources>
 
 
