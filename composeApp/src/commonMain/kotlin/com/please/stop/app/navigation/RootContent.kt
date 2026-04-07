@@ -17,7 +17,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
-import com.please.stop.app.features.analytics.monthly.presentation.ui.MonthlyExpensesScreen
 import com.please.stop.app.features.categories.presentation.archived.ArchivedCategoriesScreen
 import com.please.stop.app.features.categories.presentation.ui.CategoriesScreen
 import com.please.stop.app.features.expenses.presentation.ui.CreateExpenseScreen
@@ -42,7 +41,6 @@ import com.please.stop.app.navigation.routes.CategoriesRoute
 import com.please.stop.app.navigation.routes.CreateExpenseRoute
 import com.please.stop.app.navigation.routes.EditExpenseRoute
 import com.please.stop.app.navigation.routes.MainBottomTabs
-import com.please.stop.app.navigation.routes.MonthlyExpensesRoute
 import com.please.stop.app.navigation.routes.OnboardingRoute
 import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
@@ -175,7 +173,6 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
             onNavigateToSettings = {},
             onNavigateToCreateExpense = { router.push(CreateExpenseRoute()) },
             onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
-            onNavigateToMonthlyExpenses = { router.push(MonthlyExpensesRoute) },
             onNavigateToCategories = { router.push(CategoriesRoute) },
         )
     }
@@ -199,12 +196,6 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
         ReceiptItemsScreen(
             onGoBack = { router.pop() },
             onSaved = { router.pop() },
-        )
-    }
-
-    entry<MonthlyExpensesRoute> {
-        MonthlyExpensesScreen(
-            onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
         )
     }
 

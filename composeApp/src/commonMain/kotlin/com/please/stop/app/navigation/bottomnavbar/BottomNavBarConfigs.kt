@@ -27,12 +27,16 @@ import plzstop.composeapp.generated.resources.ic_analytics_filled
 import plzstop.composeapp.generated.resources.ic_analytics_outlined
 import plzstop.composeapp.generated.resources.ic_home_filled
 import plzstop.composeapp.generated.resources.ic_home_outlined
+import plzstop.composeapp.generated.resources.ic_operations_filled
+import plzstop.composeapp.generated.resources.ic_operations_outlined
 import plzstop.composeapp.generated.resources.ic_settings
 import plzstop.composeapp.generated.resources.ic_settings_filled
+import plzstop.composeapp.generated.resources.operations_tab
 import plzstop.composeapp.generated.resources.settings_tab
 
 val bottomNavBarRoutes = persistentSetOf<MainBottomTabs>(
     MainBottomTabs.Home,
+    MainBottomTabs.Operations,
     MainBottomTabs.Analytics,
     MainBottomTabs.Settings,
 )
@@ -80,6 +84,7 @@ fun BottomBarItemIcon(
 
 private fun MainBottomTabs.toDestination(): TopLevelDestination = when (this) {
     MainBottomTabs.Home -> TopLevelDestination.Home
+    MainBottomTabs.Operations -> TopLevelDestination.Operations
     MainBottomTabs.Analytics -> TopLevelDestination.Analytics
     MainBottomTabs.Settings -> TopLevelDestination.Settings
 }
@@ -95,6 +100,12 @@ internal sealed interface TopLevelDestination {
         override val selectedIcon = Res.drawable.ic_home_filled
         override val unselectedIcon = Res.drawable.ic_home_outlined
         override val label = Res.string.home_tab
+    }
+
+    data object Operations : TopLevelDestination {
+        override val selectedIcon = Res.drawable.ic_operations_filled
+        override val unselectedIcon = Res.drawable.ic_operations_outlined
+        override val label = Res.string.operations_tab
     }
 
     data object Analytics : TopLevelDestination {

@@ -13,6 +13,9 @@ sealed interface MainBottomTabs : NavKey {
     data object Home : MainBottomTabs
 
     @Serializable
+    data object Operations : MainBottomTabs
+
+    @Serializable
     data object Analytics : MainBottomTabs
 
     @Serializable

@@ -18,6 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +62,8 @@ import plzstop.composeapp.generated.resources.add_expense_cancel
 import plzstop.composeapp.generated.resources.add_expense_delete
 import plzstop.composeapp.generated.resources.add_expense_delete_message
 import plzstop.composeapp.generated.resources.add_expense_delete_title
+import plzstop.composeapp.generated.resources.home_add_expense
+import plzstop.composeapp.generated.resources.ic_add
 import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_arrow_forward
 import plzstop.composeapp.generated.resources.ic_keyboard_arrow_down
@@ -72,10 +75,12 @@ import plzstop.composeapp.generated.resources.monthly_expenses_item_count
 import plzstop.composeapp.generated.resources.monthly_expenses_next_month
 import plzstop.composeapp.generated.resources.monthly_expenses_previous_month
 import plzstop.composeapp.generated.resources.monthly_expenses_receipt_fallback
+import plzstop.composeapp.generated.resources.monthly_expenses_total_spent
 
 @Composable
 fun MonthlyExpensesScreen(
     onNavigateToEditExpense: (expenseId: Long) -> Unit,
+    onNavigateToCreateExpense: () -> Unit = {},
 ) {
     val stateHolder = koinViewModel<MonthlyExpensesStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()
@@ -110,6 +115,18 @@ fun MonthlyExpensesScreen(
         onDismiss = {},
     ) {
         Scaffold(
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = onNavigateToCreateExpense,
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                ) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.ic_add),
+                        contentDescription = stringResource(Res.string.home_add_expense),
+                    )
+                }
+            },
             topBar = {
                 MonthHeader(
                     monthLabel = "${monthName(currentMonth)} $currentYear",
@@ -189,6 +206,7 @@ private fun MonthBody(
         }
 
         else -> MonthlyExpenseList(
+            totalFormatted = state.totalFormatted,
             dayGroups = state.dayGroups,
             expandedReceiptIds = state.expandedReceiptIds,
             modifier = modifier,
@@ -242,6 +260,7 @@ private fun MonthHeader(
 
 @Composable
 private fun MonthlyExpenseList(
+    totalFormatted: String?,
     dayGroups: ImmutableList<DayGroupUiModel>,
     expandedReceiptIds: ImmutableSet<Long>,
     modifier: Modifier = Modifier,
@@ -253,6 +272,11 @@ private fun MonthlyExpenseList(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
+        if (totalFormatted != null) {
+            item(key = "monthly_total") {
+                MonthTotalHeader(totalFormatted = totalFormatted)
+            }
+        }
         dayGroups.forEach { group ->
             stickyHeader(key = group.dayEpochMillis) {
                 DayGroupHeader(group)
@@ -283,6 +307,28 @@ private fun MonthlyExpenseList(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MonthTotalHeader(totalFormatted: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(Res.string.monthly_expenses_total_spent),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = totalFormatted,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 

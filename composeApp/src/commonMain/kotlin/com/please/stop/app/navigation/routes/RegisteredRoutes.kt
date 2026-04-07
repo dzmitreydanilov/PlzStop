@@ -14,7 +14,6 @@ private fun PolymorphicModuleBuilder<NavKey>.registerGlobalRoutes() {
     subclass(CreateExpenseRoute::class)
     subclass(EditExpenseRoute::class)
     subclass(ReceiptItemsRoute::class)
-    subclass(MonthlyExpensesRoute::class)
     subclass(CategoriesRoute::class)
     subclass(ArchivedCategoriesRoute::class)
 }

@@ -10,6 +10,7 @@
     <string name="error_occurred_we_are_fixing">An error occurred. We’re fixing the issue — hang tight and try again soon.</string>
 
     <string name="home_tab">Home</string>
+    <string name="operations_tab">Operations</string>
     <string name="analytics_tab">Analytics</string>
     <string name="settings_tab">Settings</string>
 
@@ -73,6 +74,7 @@
     <string name="add_expense_receipt_unreadable">Couldn\'t read this receipt. Try a clearer photo or enter manually.</string>
     <string name="add_expense_receipt_no_network">Receipt scan requires an internet connection.</string>
     <string name="monthly_expenses_receipt_fallback">Receipt</string>
+    <string name="monthly_expenses_total_spent">Total spent</string>
     <string name="monthly_expenses_empty">No expenses this month</string>
     <string name="monthly_expenses_previous_month">Previous month</string>
     <string name="monthly_expenses_next_month">Next month</string>
