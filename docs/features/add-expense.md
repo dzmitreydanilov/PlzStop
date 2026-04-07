@@ -176,7 +176,7 @@ NumericKey:
 | Category | id, name, iconKey, isDefault, sortOrder |
 | Subcategory | id, parentCategoryId, name, iconKey, isDefault, sortOrder |
 
-- Default categories: 10 (not deletable). Custom: up to 10.
+- Default categories: 10. Custom: up to 10. All categories (default and custom) are deletable.
 - Default subcategories per category: 3. Custom per category: up to 7. Total per category: 10.
 - Deleting a subcategory sets `subcategoryId = NULL` on linked expenses.
 - Deleting a parent category cascades to its subcategories.

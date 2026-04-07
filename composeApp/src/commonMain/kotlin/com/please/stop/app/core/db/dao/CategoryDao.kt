@@ -10,8 +10,20 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CategoryDao {
 
-    @Query("SELECT * FROM category ORDER BY sortOrder ASC")
+    @Query("SELECT * FROM category WHERE isArchived = 0 ORDER BY sortOrder ASC")
     fun observeAll(): Flow<List<CategoryEntity>>
+
+    @Query("SELECT * FROM category WHERE isArchived = 1 ORDER BY name ASC")
+    fun observeArchived(): Flow<List<CategoryEntity>>
+
+    @Query("SELECT * FROM category ORDER BY sortOrder ASC")
+    fun observeAllIncludingArchived(): Flow<List<CategoryEntity>>
+
+    @Query("UPDATE category SET isArchived = 1 WHERE id = :id")
+    suspend fun archiveById(id: Long)
+
+    @Query("UPDATE category SET isArchived = 0 WHERE id = :id")
+    suspend fun unarchiveById(id: Long)
 
     @Insert
     suspend fun insertAll(categories: List<CategoryEntity>)

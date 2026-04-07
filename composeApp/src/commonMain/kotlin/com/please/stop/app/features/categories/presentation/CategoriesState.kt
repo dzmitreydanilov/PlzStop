@@ -16,9 +16,8 @@ sealed interface CategoriesState {
     val showAddCategorySheet: Boolean
     val addSubcategoryForCategoryId: Long?
     val editingCategory: CategoryRowUiModel?
-    val deletionDialog: CategoryDeletionDialog?
+    val archiveDialog: CategoryArchiveDialog?
     val subcategoryToDelete: SubcategoryChipUiModel?
-    val successMessage: String?
 
     @Serializable
     data object Loading : CategoriesState {
@@ -26,9 +25,8 @@ sealed interface CategoriesState {
         override val showAddCategorySheet: Boolean = false
         override val addSubcategoryForCategoryId: Long? = null
         override val editingCategory: CategoryRowUiModel? = null
-        override val deletionDialog: CategoryDeletionDialog? = null
+        override val archiveDialog: CategoryArchiveDialog? = null
         override val subcategoryToDelete: SubcategoryChipUiModel? = null
-        override val successMessage: String? = null
     }
 
     @Serializable
@@ -38,9 +36,8 @@ sealed interface CategoriesState {
         override val showAddCategorySheet: Boolean,
         override val addSubcategoryForCategoryId: Long?,
         override val editingCategory: CategoryRowUiModel?,
-        override val deletionDialog: CategoryDeletionDialog? = null,
+        override val archiveDialog: CategoryArchiveDialog? = null,
         override val subcategoryToDelete: SubcategoryChipUiModel? = null,
-        override val successMessage: String? = null,
     ) : CategoriesState
 
     @Serializable
@@ -51,31 +48,13 @@ sealed interface CategoriesState {
         override val showAddCategorySheet: Boolean,
         override val addSubcategoryForCategoryId: Long?,
         override val editingCategory: CategoryRowUiModel?,
-        override val deletionDialog: CategoryDeletionDialog? = null,
+        override val archiveDialog: CategoryArchiveDialog? = null,
         override val subcategoryToDelete: SubcategoryChipUiModel? = null,
-        override val successMessage: String? = null,
     ) : CategoriesState
 }
 
 @Serializable
-sealed interface CategoryDeletionDialog {
-    val categoryId: Long
-
-    @Serializable
-    data class SimpleConfirm(override val categoryId: Long) : CategoryDeletionDialog
-
-    @Serializable
-    data class WithExpenses(
-        override val categoryId: Long,
-        val expenseCount: Int,
-        @Serializable(with = ImmutableListSerializer::class)
-        val availableTargets: ImmutableList<CategoryTargetUiModel>,
-    ) : CategoryDeletionDialog
-}
-
-@Stable
-@Serializable
-data class CategoryTargetUiModel(val id: Long, val name: String, val iconKey: String)
+data class CategoryArchiveDialog(val categoryId: Long, val categoryName: String)
 
 /**
  * @param subcategories `null` when subcategories feature is disabled,

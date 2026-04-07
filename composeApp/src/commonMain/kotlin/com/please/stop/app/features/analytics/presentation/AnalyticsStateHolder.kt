@@ -51,7 +51,6 @@ class AnalyticsStateHolder(
     override fun getStateByResult(previous: AnalyticsState, result: DomainResult): AnalyticsState {
         return when (result) {
             is ObserveAnalyticsDataUseCase.Result.Success -> result.data.toContent(previous)
-            is ObserveAnalyticsDataUseCase.Result.Failure -> previous.toError(ErrorType.Network)
             is AnalyticsResult.DismissError -> AnalyticsState.Loading
             is AnalyticsResult.SheetLoading -> previous.updateContent { copy(isDaySheetLoading = true) }
             is AnalyticsResult.DismissSheet -> previous.updateContent {
@@ -80,7 +79,10 @@ class AnalyticsStateHolder(
     }
 
     override fun getErrorStateByResult(result: DomainResult, errorType: ErrorType): AnalyticsState {
-        return state.value.toError(errorType)
+        return when (result) {
+            is ObserveAnalyticsDataUseCase.Result.Failure -> state.value.toError(result.errorType)
+            else -> state.value.toError(errorType)
+        }
     }
 
     private fun AnalyticsData.toContent(previous: AnalyticsState): AnalyticsState.Content {
@@ -183,7 +185,7 @@ class AnalyticsStateHolder(
         dailyPoints: List<DailySpendingPoint>,
     ): List<HeatmapDayUi> {
         val today = localDateToday()
-        val firstDayOfMonth = LocalDate(today.year, today.monthNumber, 1)
+        val firstDayOfMonth = LocalDate(today.year, today.month.number, 1)
         val firstDayOfWeek = firstDayOfMonth.dayOfWeek.ordinal + 1
 
         val dailyMap = dailyPoints.associate { it.dayOfMonth to it.totalMinorUnits }

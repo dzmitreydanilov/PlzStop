@@ -60,7 +60,7 @@ class AnalyticsRepositoryImpl(
         val ctx = currentMonthContext()
 
         return combine(
-            categoryDao.observeAll(),
+            categoryDao.observeAllIncludingArchived(),
             expenseDao.observeSpendingByCategory(ctx.fromMillis, ctx.toMillis),
             expenseDao.observeTotalSpending(ctx.fromMillis, ctx.toMillis),
             expenseDao.observeExpensesInRange(ctx.fromMillis, ctx.toMillis),
@@ -88,8 +88,8 @@ class AnalyticsRepositoryImpl(
         val ctx = currentMonthContext()
 
         return combine(
-            categoryDao.observeAll(),
-            subcategoryDao.observeAll(),
+            categoryDao.observeAllIncludingArchived(),
+            subcategoryDao.observeAllIncludingArchived(),
             expenseDao.observeSpendingByCategoryAndSubcategory(ctx.fromMillis, ctx.toMillis),
             expenseDao.observeTotalSpending(ctx.fromMillis, ctx.toMillis),
             expenseDao.observeExpensesInRange(ctx.fromMillis, ctx.toMillis),
@@ -217,10 +217,10 @@ class AnalyticsRepositoryImpl(
             val toMillis = dayStart.plus(1, DateTimeUnit.DAY).atStartOfDayIn(tz).toEpochMilliseconds()
 
             val expenses = expenseDao.getExpensesInRange(fromMillis, toMillis)
-            val categories = categoryDao.observeAll().first().associateBy { it.id }
+            val categories = categoryDao.observeAllIncludingArchived().first().associateBy { it.id }
             val subcatsEnabled = featureFlags.subcategoriesEnabled()
             val subcategoryMap = if (subcatsEnabled) {
-                subcategoryDao.observeAll().first().associateBy { it.id }
+                subcategoryDao.observeAllIncludingArchived().first().associateBy { it.id }
             } else {
                 emptyMap()
             }

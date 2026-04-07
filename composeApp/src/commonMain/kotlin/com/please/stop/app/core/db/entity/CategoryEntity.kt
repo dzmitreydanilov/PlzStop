@@ -11,4 +11,5 @@ data class CategoryEntity(
     val isDefault: Boolean,
     val sortOrder: Int,
     val comment: String? = null,
+    val isArchived: Boolean = false,
 )

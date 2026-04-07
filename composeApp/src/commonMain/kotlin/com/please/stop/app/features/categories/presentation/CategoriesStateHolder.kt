@@ -3,11 +3,11 @@ package com.please.stop.app.features.categories.presentation
 import com.please.stop.app.core.BootstrapTiming
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
+import com.please.stop.app.core.models.presentation.UiEffect
 import com.please.stop.app.features.categories.domain.model.CategoryWithSubcategories
-import com.please.stop.app.features.categories.domain.model.ExpenseDeletionAction
 import com.please.stop.app.features.categories.domain.usecase.AddCategoryUseCase
 import com.please.stop.app.features.categories.domain.usecase.AddSubcategoryUseCase
-import com.please.stop.app.features.categories.domain.usecase.DeleteCategoryUseCase
+import com.please.stop.app.features.categories.domain.usecase.ArchiveCategoryUseCase
 import com.please.stop.app.features.categories.domain.usecase.DeleteSubcategoryUseCase
 import com.please.stop.app.features.categories.domain.usecase.ObserveCategoriesUseCase
 import com.please.stop.app.features.categories.domain.usecase.UpdateCategoryUseCase
@@ -16,6 +16,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlin.reflect.KClass
 import com.please.stop.app.core.models.domain.Result as DomainResult
 
 class CategoriesStateHolder(
@@ -23,7 +24,7 @@ class CategoriesStateHolder(
     private val addCategoryUseCase: AddCategoryUseCase,
     private val addSubcategoryUseCase: AddSubcategoryUseCase,
     private val updateCategoryUseCase: UpdateCategoryUseCase,
-    private val deleteCategoryUseCase: DeleteCategoryUseCase,
+    private val archiveCategoryUseCase: ArchiveCategoryUseCase,
     private val deleteSubcategoryUseCase: DeleteSubcategoryUseCase,
 ) : StateHolder<CategoriesState, CategoriesEvent>() {
 
@@ -31,6 +32,15 @@ class CategoriesStateHolder(
     override val bootstrapTiming = BootstrapTiming.DEFERRED
 
     override fun getInitial(): CategoriesState = CategoriesState.Loading
+
+    override fun getEffectResults(): Set<KClass<out DomainResult>> = setOf(
+        CategoriesResult.ShowSuccessMessage::class,
+    )
+
+    override fun getEffectByResult(result: DomainResult): UiEffect? = when (result) {
+        is CategoriesResult.ShowSuccessMessage -> UiEffect.ShowMessage(result.message)
+        else -> null
+    }
 
     override fun collectFlowsOnInit(): Flow<DomainResult> = observeCategoriesUseCase()
 
@@ -54,25 +64,17 @@ class CategoriesStateHolder(
 
         is CategoriesEvent.ConfirmEditCategory -> handleEditCategory(event)
         CategoriesEvent.DismissEditCategorySheet -> flowOf(CategoriesResult.HideEditCategorySheet)
-        is CategoriesEvent.DeleteCategoryClicked -> handleCheckDeleteCategory(event.categoryId)
-        is CategoriesEvent.ConfirmDeleteCategory -> handleDeleteEmpty(event.categoryId)
-        is CategoriesEvent.ConfirmDeleteCategoryMoveExpenses -> {
-            handleDeleteWithAction(
-                event.categoryId,
-                ExpenseDeletionAction.MoveToCategory(event.targetCategoryId)
-            )
-        }
-
-        is CategoriesEvent.ConfirmDeleteCategoryDeleteExpenses -> {
-            handleDeleteWithAction(event.categoryId, ExpenseDeletionAction.DeleteExpenses)
-        }
-
-        CategoriesEvent.DismissDeletionDialog -> flowOf(CategoriesResult.HideDeletionDialog)
+        is CategoriesEvent.ArchiveCategoryClicked -> handleShowArchiveDialog(event.categoryId)
+        is CategoriesEvent.ConfirmArchiveCategory -> handleArchiveCategory(event.categoryId)
+        CategoriesEvent.DismissArchiveDialog -> flowOf(CategoriesResult.HideArchiveDialog)
         is CategoriesEvent.DeleteSubcategoryClicked -> {
             flowOf(CategoriesResult.ShowDeleteSubcategoryDialog(event.subcategory))
         }
 
-        is CategoriesEvent.ConfirmDeleteSubcategory -> handleDeleteSubcategory(event.subcategoryId)
+        is CategoriesEvent.ConfirmDeleteSubcategory -> {
+            handleDeleteSubcategory(event.subcategoryId)
+        }
+
         CategoriesEvent.DismissDeleteSubcategoryDialog -> {
             flowOf(CategoriesResult.HideDeleteSubcategoryDialog)
         }
@@ -101,27 +103,17 @@ class CategoriesStateHolder(
             is CategoriesResult.HideAddSubcategorySheet -> previous.updateSubcategorySheet(null)
             is CategoriesResult.ShowEditCategorySheet -> previous.updateEditingCategory(result.category)
             is CategoriesResult.HideEditCategorySheet -> previous.updateEditingCategory(null)
-            is CategoriesResult.HideDeletionDialog -> previous.withDeletionDialog(null)
-            is CategoriesResult.ShowSuccessMessage -> previous.withSuccessMessage(result.message)
+            is CategoriesResult.HideArchiveDialog -> previous.withArchiveDialog(null)
+            is CategoriesResult.ShowArchiveDialog -> {
+                previous.withArchiveDialog(
+                    CategoryArchiveDialog(result.categoryId, result.categoryName),
+                )
+            }
 
             is AddCategoryUseCase.Result.Success -> previous.updateSheet(showAddCategory = false)
             is AddSubcategoryUseCase.Result.Success -> previous.updateSubcategorySheet(null)
             is UpdateCategoryUseCase.Result.Success -> previous.updateEditingCategory(null)
-            is DeleteCategoryUseCase.Result.HasExpenses -> {
-                val targets = previous.categories
-                    .filter { it.id != result.categoryId }
-                    .map { CategoryTargetUiModel(it.id, it.name, it.iconKey) }
-                    .toImmutableList()
-                previous.withDeletionDialog(
-                    CategoryDeletionDialog.WithExpenses(result.categoryId, result.count, targets),
-                )
-            }
-
-            is DeleteCategoryUseCase.Result.NoExpenses -> {
-                previous.withDeletionDialog(CategoryDeletionDialog.SimpleConfirm(result.categoryId))
-            }
-
-            is DeleteCategoryUseCase.Result.Success -> previous.withDeletionDialog(null)
+            is ArchiveCategoryUseCase.Result.Success -> previous.withArchiveDialog(null)
             is CategoriesResult.ShowDeleteSubcategoryDialog -> {
                 previous.withSubcategoryToDelete(result.subcategory)
             }
@@ -142,8 +134,8 @@ class CategoriesStateHolder(
                 state.value.withSubcategoryToDelete(null).toError(result.errorType)
             }
 
-            is DeleteCategoryUseCase.Result.Failure -> {
-                state.value.withDeletionDialog(null).toError(result.errorType)
+            is ArchiveCategoryUseCase.Result.Failure -> {
+                state.value.withArchiveDialog(null).toError(result.errorType)
             }
 
             is UpdateCategoryUseCase.Result.Failure -> {
@@ -154,7 +146,7 @@ class CategoriesStateHolder(
                 state.value.updateSubcategorySheet(null).toError(result.errorType)
             }
 
-            is CategoriesResult.ClearError -> state.value.toContent().withSuccessMessage(null)
+            is CategoriesResult.ClearError -> state.value.toContent()
 
             else -> state.value.toError(errorType)
         }
@@ -184,37 +176,17 @@ class CategoriesStateHolder(
             emit(updateCategoryUseCase(event.id, event.name.trim(), event.iconKey, trimmedComment))
         }
 
-    private fun handleCheckDeleteCategory(categoryId: Long): Flow<DomainResult> = flow {
-        emit(deleteCategoryUseCase.checkExpenses(categoryId))
+    private fun handleShowArchiveDialog(categoryId: Long): Flow<DomainResult> = flow {
+        val name = state.value.categories.find { it.id == categoryId }?.name.orEmpty()
+        emit(CategoriesResult.ShowArchiveDialog(categoryId, name))
     }
 
-    private fun handleDeleteEmpty(categoryId: Long): Flow<DomainResult> = flow {
+    private fun handleArchiveCategory(categoryId: Long): Flow<DomainResult> = flow {
         val name = state.value.categories.find { it.id == categoryId }?.name
-        val result = deleteCategoryUseCase.deleteEmpty(categoryId)
+        val result = archiveCategoryUseCase(categoryId)
         emit(result)
-        if (result is DeleteCategoryUseCase.Result.Success && name != null) {
-            emit(CategoriesResult.ShowSuccessMessage("Category $name deleted"))
-        }
-    }
-
-    private fun handleDeleteWithAction(
-        categoryId: Long,
-        action: ExpenseDeletionAction,
-    ): Flow<DomainResult> = flow {
-        val categories = state.value.categories
-        val name = categories.find { it.id == categoryId }?.name
-        val result = deleteCategoryUseCase(categoryId, action)
-        emit(result)
-        if (result is DeleteCategoryUseCase.Result.Success && name != null) {
-            val message = when (action) {
-                is ExpenseDeletionAction.MoveToCategory -> {
-                    val targetName = categories.find { it.id == action.targetCategoryId }?.name
-                    "Category $name deleted. Expenses moved to $targetName"
-                }
-
-                ExpenseDeletionAction.DeleteExpenses -> "Category $name deleted"
-            }
-            emit(CategoriesResult.ShowSuccessMessage(message))
+        if (result is ArchiveCategoryUseCase.Result.Success && name != null) {
+            emit(CategoriesResult.ShowSuccessMessage("Category $name archived"))
         }
     }
 
@@ -243,7 +215,7 @@ class CategoriesStateHolder(
             showAddCategorySheet = showAddCategorySheet,
             addSubcategoryForCategoryId = addSubcategoryForCategoryId,
             editingCategory = editingCategory,
-            deletionDialog = deletionDialog,
+            archiveDialog = archiveDialog,
             subcategoryToDelete = subcategoryToDelete,
         )
     }
@@ -255,7 +227,7 @@ class CategoriesStateHolder(
             showAddCategorySheet = showAddCategorySheet,
             addSubcategoryForCategoryId = addSubcategoryForCategoryId,
             editingCategory = editingCategory,
-            deletionDialog = deletionDialog,
+            archiveDialog = archiveDialog,
             subcategoryToDelete = subcategoryToDelete,
         )
 
@@ -265,7 +237,7 @@ class CategoriesStateHolder(
             showAddCategorySheet = showAddCategorySheet,
             addSubcategoryForCategoryId = addSubcategoryForCategoryId,
             editingCategory = editingCategory,
-            deletionDialog = deletionDialog,
+            archiveDialog = archiveDialog,
             subcategoryToDelete = subcategoryToDelete,
         )
 
@@ -294,11 +266,11 @@ class CategoriesStateHolder(
         CategoriesState.Loading -> this
     }
 
-    private fun CategoriesState.withDeletionDialog(
-        dialog: CategoryDeletionDialog?,
+    private fun CategoriesState.withArchiveDialog(
+        dialog: CategoryArchiveDialog?,
     ): CategoriesState = when (this) {
-        is CategoriesState.Content -> copy(deletionDialog = dialog)
-        is CategoriesState.Error -> copy(deletionDialog = dialog)
+        is CategoriesState.Content -> copy(archiveDialog = dialog)
+        is CategoriesState.Error -> copy(archiveDialog = dialog)
         CategoriesState.Loading -> this
     }
 
@@ -309,13 +281,6 @@ class CategoriesStateHolder(
         is CategoriesState.Error -> copy(subcategoryToDelete = subcategory)
         CategoriesState.Loading -> this
     }
-
-    private fun CategoriesState.withSuccessMessage(message: String?): CategoriesState =
-        when (this) {
-            is CategoriesState.Content -> copy(successMessage = message)
-            is CategoriesState.Error -> copy(successMessage = message)
-            CategoriesState.Loading -> this
-        }
 }
 
 private fun List<CategoryWithSubcategories>.toUiModels(): ImmutableList<CategoryRowUiModel> =
@@ -338,7 +303,8 @@ private sealed interface CategoriesResult : DomainResult {
     data object HideAddSubcategorySheet : CategoriesResult
     data class ShowEditCategorySheet(val category: CategoryRowUiModel) : CategoriesResult
     data object HideEditCategorySheet : CategoriesResult
-    data object HideDeletionDialog : CategoriesResult
+    data class ShowArchiveDialog(val categoryId: Long, val categoryName: String) : CategoriesResult
+    data object HideArchiveDialog : CategoriesResult
     data class ShowDeleteSubcategoryDialog(val subcategory: SubcategoryChipUiModel) :
         CategoriesResult
 

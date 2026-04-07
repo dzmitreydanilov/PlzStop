@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.please.stop.app.core.models.domain.ErrorType
+import com.please.stop.app.core.models.presentation.UiEffect
 import com.please.stop.app.uicomponents.NoTitleTopBar
 import com.please.stop.app.uicomponents.buttons.ApplicationButton
 import com.please.stop.app.uicomponents.buttons.SingleTopBarTextButton
@@ -41,6 +42,8 @@ import com.please.stop.app.uicomponents.snackbar.ui.BottomBannerContent
 import com.please.stop.app.uicomponents.snackbar.ui.models.BannerMessage
 import com.please.stop.app.uicomponents.snackbar.ui.models.ErrorBannerMessage
 import com.please.stop.app.uicomponents.snackbar.ui.models.InfoBannerMessage
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.close
@@ -53,9 +56,10 @@ import plzstop.composeapp.generated.resources.retry
 fun ScreenOverlayContainer(
     overlay: ScreenOverlay?,
     onDismiss: () -> Unit,
+    effects: Flow<UiEffect> = emptyFlow(),
     onAutoDismiss: () -> Unit = {},
     onRetry: () -> Unit = {},
-    successSnackbarDuration: SnackbarDuration = SnackbarDuration.Short,
+    messageSnackbarDuration: SnackbarDuration = SnackbarDuration.Short,
     errorSnackbarDuration: SnackbarDuration = SnackbarDuration.Short,
     snackBarBottomPadding: Dp = 8.dp,
     snackbarComponent: SnackbarComponent<BannerMessage> = remember { SnackbarComponent() },
@@ -80,23 +84,27 @@ fun ScreenOverlayContainer(
                 )
             }
 
-            is ScreenOverlay.Message -> {
-                snackbarComponent.show(
-                    SnackbarMessage(
-                        duration = successSnackbarDuration,
-                        content = InfoBannerMessage(
-                            title = overlay.title,
-                            subtitle = overlay.subtitle.orEmpty(),
-                        ),
-                        alignment = when (overlay.position) {
-                            SnackbarPosition.Top -> Alignment.TopCenter
-                            SnackbarPosition.Bottom -> Alignment.BottomCenter
-                        },
-                    )
-                )
-            }
+            null -> snackbarComponent.hide()
+            else -> { /* Network errors handled below as full-screen dialog */ }
+        }
+    }
 
-            else -> snackbarComponent.hide()
+    LaunchedEffect(Unit) {
+        effects.collect { effect ->
+            when (effect) {
+                is UiEffect.ShowMessage -> {
+                    snackbarComponent.show(
+                        SnackbarMessage(
+                            duration = messageSnackbarDuration,
+                            content = InfoBannerMessage(
+                                title = effect.message,
+                                subtitle = "",
+                            ),
+                            alignment = effect.alignment,
+                        ),
+                    )
+                }
+            }
         }
     }
 

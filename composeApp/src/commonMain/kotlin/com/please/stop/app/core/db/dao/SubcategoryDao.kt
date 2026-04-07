@@ -7,14 +7,30 @@ import androidx.room.Update
 import com.please.stop.app.core.db.entity.SubcategoryEntity
 import kotlinx.coroutines.flow.Flow
 
+@Suppress("TooManyFunctions")
 @Dao
 interface SubcategoryDao {
 
-    @Query("SELECT * FROM subcategory WHERE parentCategoryId = :parentId ORDER BY sortOrder ASC")
+    @Query("SELECT * FROM subcategory WHERE parentCategoryId = :parentId AND isArchived = 0 ORDER BY sortOrder ASC")
     fun observeByParent(parentId: Long): Flow<List<SubcategoryEntity>>
 
-    @Query("SELECT * FROM subcategory ORDER BY sortOrder ASC")
+    @Query("SELECT * FROM subcategory WHERE isArchived = 0 ORDER BY sortOrder ASC")
     fun observeAll(): Flow<List<SubcategoryEntity>>
+
+    @Query("SELECT * FROM subcategory ORDER BY sortOrder ASC")
+    fun observeAllIncludingArchived(): Flow<List<SubcategoryEntity>>
+
+    @Query("UPDATE subcategory SET isArchived = 1 WHERE id = :id")
+    suspend fun archiveById(id: Long)
+
+    @Query("UPDATE subcategory SET isArchived = 0 WHERE id = :id")
+    suspend fun unarchiveById(id: Long)
+
+    @Query("UPDATE subcategory SET isArchived = 1 WHERE parentCategoryId = :categoryId")
+    suspend fun archiveByParentCategoryId(categoryId: Long)
+
+    @Query("UPDATE subcategory SET isArchived = 0 WHERE parentCategoryId = :categoryId")
+    suspend fun unarchiveByParentCategoryId(categoryId: Long)
 
     @Insert
     suspend fun insertAll(subcategories: List<SubcategoryEntity>)

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,10 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,16 +46,13 @@ import com.composables.core.rememberModalBottomSheetState
 import com.please.stop.app.features.categories.presentation.CategoriesEvent
 import com.please.stop.app.features.categories.presentation.CategoriesState
 import com.please.stop.app.features.categories.presentation.CategoriesStateHolder
-import com.please.stop.app.features.categories.presentation.CategoryDeletionDialog
 import com.please.stop.app.features.categories.presentation.CategoryRowUiModel
-import com.please.stop.app.features.categories.presentation.CategoryTargetUiModel
 import com.please.stop.app.features.categories.presentation.SubcategoryChipUiModel
 import com.please.stop.app.theme.AppTheme
 import com.please.stop.app.uicomponents.allCategoryIcons
 import com.please.stop.app.uicomponents.buttons.ApplicationButton
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
-import com.please.stop.app.uicomponents.error.SnackbarPosition
 import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
 import kotlinx.collections.immutable.persistentListOf
@@ -69,15 +63,12 @@ import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.add_expense_cancel
 import plzstop.composeapp.generated.resources.categories_add_category
 import plzstop.composeapp.generated.resources.categories_add_subcategory
+import plzstop.composeapp.generated.resources.categories_archive
+import plzstop.composeapp.generated.resources.categories_archive_confirm_message
+import plzstop.composeapp.generated.resources.categories_archive_confirm_title
 import plzstop.composeapp.generated.resources.categories_comment_label
 import plzstop.composeapp.generated.resources.categories_confirm
 import plzstop.composeapp.generated.resources.categories_delete
-import plzstop.composeapp.generated.resources.categories_delete_confirm_message
-import plzstop.composeapp.generated.resources.categories_delete_confirm_title
-import plzstop.composeapp.generated.resources.categories_delete_delete_expenses
-import plzstop.composeapp.generated.resources.categories_delete_has_expenses_message
-import plzstop.composeapp.generated.resources.categories_delete_has_expenses_title
-import plzstop.composeapp.generated.resources.categories_delete_move_expenses
 import plzstop.composeapp.generated.resources.categories_delete_subcategory_message
 import plzstop.composeapp.generated.resources.categories_delete_subcategory_title
 import plzstop.composeapp.generated.resources.categories_edit_category
@@ -87,37 +78,35 @@ import plzstop.composeapp.generated.resources.categories_save
 import plzstop.composeapp.generated.resources.categories_screen_title
 import plzstop.composeapp.generated.resources.content_desc_add_category
 import plzstop.composeapp.generated.resources.content_desc_navigate_back
+import plzstop.composeapp.generated.resources.content_desc_view_archived
 import plzstop.composeapp.generated.resources.ic_add
+import plzstop.composeapp.generated.resources.ic_archive
 import plzstop.composeapp.generated.resources.ic_arrow_back
 
-private const val DEFAULT_ICON_KEY = "ic_other"
-
 @Composable
-fun CategoriesScreen(onGoBack: () -> Unit) {
+fun CategoriesScreen(onGoBack: () -> Unit, onOpenArchive: () -> Unit) {
     val stateHolder = koinViewModel<CategoriesStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()
 
     ScreenOverlayContainer(
         overlay = state.asOverlay,
         onDismiss = { stateHolder.processEvent(CategoriesEvent.DismissError) },
-        onAutoDismiss = { stateHolder.processEvent(CategoriesEvent.DismissError) },
+        effects = stateHolder.getEffects(),
     ) {
         DisplayFullScreenProgress(showProgress = state is CategoriesState.Loading)
-        CategoriesContent(state = state, onEvent = stateHolder::processEvent, onGoBack = onGoBack)
+        CategoriesContent(
+            state = state,
+            onEvent = stateHolder::processEvent,
+            onGoBack = onGoBack,
+            onOpenArchive = onOpenArchive,
+        )
     }
 }
 
 internal val CategoriesState.asOverlay: ScreenOverlay?
-    @Composable get() {
-        val message = successMessage
-        return when {
-            this is CategoriesState.Error -> ScreenOverlay.Error(type = errorType)
-            message != null -> ScreenOverlay.Message(
-                title = message,
-                position = SnackbarPosition.Bottom,
-            )
-            else -> null
-        }
+    get() = when (this) {
+        is CategoriesState.Error -> ScreenOverlay.Error(type = errorType)
+        else -> null
     }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,6 +115,7 @@ private fun CategoriesContent(
     state: CategoriesState,
     onEvent: (CategoriesEvent) -> Unit,
     onGoBack: () -> Unit,
+    onOpenArchive: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -136,6 +126,16 @@ private fun CategoriesContent(
                         Icon(
                             imageVector = vectorResource(Res.drawable.ic_arrow_back),
                             contentDescription = stringResource(Res.string.content_desc_navigate_back),
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenArchive) {
+                        Icon(
+                            imageVector = vectorResource(Res.drawable.ic_archive),
+                            contentDescription = stringResource(
+                                Res.string.content_desc_view_archived,
+                            ),
                         )
                     }
                 },
@@ -171,14 +171,14 @@ private fun CategoriesContent(
                         onEvent(CategoriesEvent.DeleteSubcategoryClicked(subcategory))
                     },
                     onEditClick = { onEvent(CategoriesEvent.EditCategoryClicked(category)) },
-                    onDeleteClick = { onEvent(CategoriesEvent.DeleteCategoryClicked(category.id)) },
+                    onDeleteClick = { onEvent(CategoriesEvent.ArchiveCategoryClicked(category.id)) },
                 )
             }
         }
     }
 
     CategoriesSheets(state = state, onEvent = onEvent)
-    CategoriesDeletionDialogs(state = state, onEvent = onEvent)
+    ArchiveCategoryDialog(state = state, onEvent = onEvent)
     DeleteSubcategoryDialog(state = state, onEvent = onEvent)
 }
 
@@ -227,7 +227,7 @@ private fun AddCategorySheet(
 ) {
     var name by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
-    var selectedIconKey by remember { mutableStateOf(DEFAULT_ICON_KEY) }
+    var selectedIconKey by remember { mutableStateOf<String?>(null) }
 
     val sheetState = rememberModalBottomSheetState(
         initialDetent = SheetDetent.FullyExpanded,
@@ -276,8 +276,8 @@ private fun AddCategorySheet(
             )
             Spacer(modifier = Modifier.height(16.dp))
             ApplicationButton(
-                onClick = { onConfirm(name, selectedIconKey, comment.ifBlank { null }) },
-                enabled = name.isNotBlank(),
+                onClick = { onConfirm(name, selectedIconKey.orEmpty(), comment.ifBlank { null }) },
+                enabled = name.isNotBlank() && selectedIconKey != null,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(Res.string.categories_confirm))
@@ -409,29 +409,30 @@ private fun AddSubcategorySheet(
 }
 
 @Composable
-private fun CategoriesDeletionDialogs(
+private fun ArchiveCategoryDialog(
     state: CategoriesState,
     onEvent: (CategoriesEvent) -> Unit,
 ) {
-    when (val dialog = state.deletionDialog) {
-        is CategoryDeletionDialog.SimpleConfirm -> SimpleDeleteCategoryDialog(
-            onConfirm = { onEvent(CategoriesEvent.ConfirmDeleteCategory(dialog.categoryId)) },
-            onDismiss = { onEvent(CategoriesEvent.DismissDeletionDialog) },
-        )
-        is CategoryDeletionDialog.WithExpenses -> DeleteCategoryWithExpensesDialog(
-            dialog = dialog,
-            onMoveExpenses = { targetId ->
-                onEvent(
-                    CategoriesEvent.ConfirmDeleteCategoryMoveExpenses(dialog.categoryId, targetId),
-                )
-            },
-            onDeleteExpenses = {
-                onEvent(CategoriesEvent.ConfirmDeleteCategoryDeleteExpenses(dialog.categoryId))
-            },
-            onDismiss = { onEvent(CategoriesEvent.DismissDeletionDialog) },
-        )
-        null -> Unit
-    }
+    val dialog = state.archiveDialog ?: return
+    AlertDialog(
+        onDismissRequest = { onEvent(CategoriesEvent.DismissArchiveDialog) },
+        title = {
+            Text(stringResource(Res.string.categories_archive_confirm_title, dialog.categoryName))
+        },
+        text = { Text(stringResource(Res.string.categories_archive_confirm_message)) },
+        confirmButton = {
+            TextButton(
+                onClick = { onEvent(CategoriesEvent.ConfirmArchiveCategory(dialog.categoryId)) },
+            ) {
+                Text(stringResource(Res.string.categories_archive))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onEvent(CategoriesEvent.DismissArchiveDialog) }) {
+                Text(stringResource(Res.string.add_expense_cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -444,147 +445,33 @@ private fun DeleteSubcategoryDialog(
         onDismissRequest = { onEvent(CategoriesEvent.DismissDeleteSubcategoryDialog) },
         title = { Text(stringResource(Res.string.categories_delete_subcategory_title)) },
         text = {
-            Text(stringResource(Res.string.categories_delete_subcategory_message, subcategory.name))
+            Text(
+                stringResource(Res.string.categories_delete_subcategory_message, subcategory.name),
+            )
         },
         confirmButton = {
             TextButton(
-                onClick = { onEvent(CategoriesEvent.ConfirmDeleteSubcategory(subcategory.id)) },
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
+                onClick = {
+                    onEvent(CategoriesEvent.ConfirmDeleteSubcategory(subcategory.id))
+                },
             ) {
                 Text(stringResource(Res.string.categories_delete))
             }
         },
         dismissButton = {
-            TextButton(onClick = { onEvent(CategoriesEvent.DismissDeleteSubcategoryDialog) }) {
-                Text(stringResource(Res.string.add_expense_cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun SimpleDeleteCategoryDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.categories_delete_confirm_title)) },
-        text = { Text(stringResource(Res.string.categories_delete_confirm_message)) },
-        confirmButton = {
             TextButton(
-                onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
+                onClick = { onEvent(CategoriesEvent.DismissDeleteSubcategoryDialog) },
             ) {
-                Text(stringResource(Res.string.categories_delete))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
                 Text(stringResource(Res.string.add_expense_cancel))
             }
         },
     )
-}
-
-@Composable
-private fun DeleteCategoryWithExpensesDialog(
-    dialog: CategoryDeletionDialog.WithExpenses,
-    onMoveExpenses: (targetCategoryId: Long) -> Unit,
-    onDeleteExpenses: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.categories_delete_has_expenses_title)) },
-        text = {
-            Column {
-                Text(
-                    text = stringResource(
-                        Res.string.categories_delete_has_expenses_message,
-                        dialog.expenseCount,
-                    ),
-                )
-                if (dialog.availableTargets.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(Res.string.categories_delete_move_expenses),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    HorizontalDivider()
-                    LazyColumn(modifier = Modifier.height(200.dp)) {
-                        items(
-                            items = dialog.availableTargets,
-                            key = { it.id },
-                        ) { target ->
-                            CategoryTargetRow(
-                                target = target,
-                                onClick = { onMoveExpenses(target.id) },
-                            )
-                        }
-                    }
-                    HorizontalDivider()
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onDeleteExpenses,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                ),
-            ) {
-                Text(stringResource(Res.string.categories_delete_delete_expenses))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.add_expense_cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun CategoryTargetRow(
-    target: CategoryTargetUiModel,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        val icon = allCategoryIcons.find { it.key == target.iconKey }
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(text = icon?.emoji.orEmpty(), style = MaterialTheme.typography.bodyLarge)
-        }
-        Text(
-            text = target.name,
-            style = MaterialTheme.typography.bodyLarge,
-        )
-    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EmojiPickerGrid(
-    selectedIconKey: String,
+    selectedIconKey: String?,
     onSelectIcon: (String) -> Unit,
 ) {
     FlowRow(
@@ -650,10 +537,11 @@ private fun CategoriesContentPreview() {
                 showAddCategorySheet = false,
                 addSubcategoryForCategoryId = null,
                 editingCategory = null,
-                deletionDialog = null,
+                archiveDialog = null,
             ),
             onEvent = {},
             onGoBack = {},
+            onOpenArchive = {},
         )
     }
 }
@@ -668,10 +556,11 @@ private fun CategoriesContentEmptyPreview() {
                 showAddCategorySheet = false,
                 addSubcategoryForCategoryId = null,
                 editingCategory = null,
-                deletionDialog = null,
+                archiveDialog = null,
             ),
             onEvent = {},
             onGoBack = {},
+            onOpenArchive = {},
         )
     }
 }
