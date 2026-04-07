@@ -191,6 +191,7 @@
     <string name="analytics_monthly_comparison">Monthly Comparison</string>
     <string name="analytics_daily_trends">Daily Spending Trends</string>
     <string name="analytics_category_breakdown">Category Breakdown</string>
+    <string name="analytics_uncategorized_subcategory">Other</string>
     <string name="analytics_loading">Loading insights…</string>
     <string name="analytics_empty_title">No spending data yet</string>
     <string name="analytics_empty_hint">Add your first expense to see charts and insights here.</string>

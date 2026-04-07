@@ -11,6 +11,7 @@ data class DayExpenseItem(
     val id: Long,
     val title: String,
     val categoryIconKey: String,
+    val subcategoryName: String? = null,
     val amountMinorUnits: Long,
     val dateEpochMillis: Long,
 )

@@ -17,7 +17,9 @@ val analyticsModule = module {
         AnalyticsRepositoryImpl(
             userProfileDao = get<AppDatabase>().userProfileDao(),
             categoryDao = get<AppDatabase>().categoryDao(),
+            subcategoryDao = get<AppDatabase>().subcategoryDao(),
             expenseDao = get<AppDatabase>().expenseDao(),
+            featureFlags = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }

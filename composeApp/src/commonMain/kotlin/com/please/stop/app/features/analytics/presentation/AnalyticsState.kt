@@ -1,8 +1,9 @@
 package com.please.stop.app.features.analytics.presentation
 
 import androidx.compose.runtime.Stable
-import androidx.compose.ui.graphics.Color
+import com.please.stop.app.core.models.domain.ErrorType
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Stable
 sealed interface AnalyticsState {
@@ -24,6 +25,8 @@ sealed interface AnalyticsState {
         override val categoriesCount: Int,
         override val activeCategoriesCount: Int,
         override val hasAnyExpenses: Boolean,
+        val currentYear: Int,
+        val currentMonth: Int,
         val budgetBurn: BudgetBurnUi?,
         val projectedTotal: ProjectedTotalUi?,
         val budgetPacingPoints: ImmutableList<Float>,
@@ -37,6 +40,7 @@ sealed interface AnalyticsState {
     ) : AnalyticsState
 
     data class Error(
+        val errorType: ErrorType,
         override val totalSpentFormatted: String?,
         override val categoriesCount: Int,
         override val activeCategoriesCount: Int,
@@ -65,7 +69,6 @@ data class SpendingSlice(
     val formattedAmount: String,
     val formattedAvgDaily: String,
     val amount: Float,
-    val color: Color,
 )
 
 @Stable
@@ -98,13 +101,21 @@ data class CategoryProgressUi(
     val iconKey: String,
     val percentage: Float,
     val formattedAmount: String,
-    val color: Color,
+    val subcategories: ImmutableList<SubcategoryProgressUi> = persistentListOf(),
+)
+
+@Stable
+data class SubcategoryProgressUi(
+    val name: String,
+    val percentage: Float,
+    val formattedAmount: String,
 )
 
 @Stable
 data class DayExpenseUiItem(
     val title: String,
     val categoryEmoji: String,
+    val subcategoryName: String? = null,
     val formattedAmount: String,
 )
 

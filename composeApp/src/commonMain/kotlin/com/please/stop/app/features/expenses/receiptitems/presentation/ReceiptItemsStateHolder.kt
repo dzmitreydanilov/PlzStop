@@ -14,7 +14,8 @@ import com.please.stop.app.features.expenses.presentation.CurrencyConfig
 import com.please.stop.app.features.expenses.presentation.KeyboardCalculator
 import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
 import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
-import com.please.stop.app.utils.date.currentMonthMillisRange
+import com.please.stop.app.utils.date.localDateToday
+import com.please.stop.app.utils.date.monthMillisRange
 import com.please.stop.app.utils.date.nowMillis
 import com.please.stop.app.utils.minorUnitsMultiplier
 import kotlinx.collections.immutable.toImmutableList
@@ -35,7 +36,7 @@ class ReceiptItemsStateHolder(
     override val tag = "ReceiptItemsStateHolder"
     override val bootstrapTiming = BootstrapTiming.DEFERRED
 
-    private val monthRange = currentMonthMillisRange()
+    private val monthRange = localDateToday().let { monthMillisRange(it.year, it.monthNumber) }
     private var keyboardCalculator =
         KeyboardCalculator(decimalPlaces = DEFAULT_CURRENCY_DECIMAL_PLACES, currencySymbol = "")
 

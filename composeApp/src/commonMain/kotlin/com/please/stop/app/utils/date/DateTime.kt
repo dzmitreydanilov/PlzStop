@@ -13,6 +13,8 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
+const val DAYS_IN_WEEK = 7
+
 @OptIn(ExperimentalTime::class)
 fun localDateTimeSince(
     fromEpochSeconds: Long = 0,
@@ -129,18 +131,6 @@ fun monthMillisRange(
     )
 }
 
-@OptIn(ExperimentalTime::class)
-fun currentMonthMillisRange(
-    timeZone: TimeZone = TimeZone.currentSystemDefault(),
-): EpochMillisRange {
-    val today = localDateToday(timeZone)
-    val monthStart = LocalDate(today.year, today.month, 1)
-    val nextMonthStart = monthStart.plus(1, DateTimeUnit.MONTH)
-    return EpochMillisRange(
-        fromMillis = monthStart.atStartOfDayIn(timeZone).toEpochMilliseconds(),
-        toMillis = nextMonthStart.atStartOfDayIn(timeZone).toEpochMilliseconds(),
-    )
-}
 
 private const val PAGER_BASE_YEAR = 2000
 

@@ -9,7 +9,8 @@ import com.please.stop.app.features.home.domain.model.HomeCategoryItem
 import com.please.stop.app.features.home.domain.model.HomeData
 import com.please.stop.app.features.home.domain.repository.HomeRepository
 import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
-import com.please.stop.app.utils.date.currentMonthMillisRange
+import com.please.stop.app.utils.date.localDateToday
+import com.please.stop.app.utils.date.monthMillisRange
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -23,7 +24,8 @@ class HomeRepositoryImpl(
 ) : HomeRepository {
 
     override fun observeHomeData(): Flow<HomeData> {
-        val monthRange = currentMonthMillisRange()
+        val today = localDateToday()
+        val monthRange = monthMillisRange(today.year, today.monthNumber)
 
         return combine(
             categoryDao.observeAll(),

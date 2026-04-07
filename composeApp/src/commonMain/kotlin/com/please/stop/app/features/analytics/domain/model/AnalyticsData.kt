@@ -17,6 +17,13 @@ data class CategorySpendingItem(
     val name: String,
     val iconKey: String,
     val spentMinorUnits: Long,
+    val subcategorySpending: List<SubcategorySpendingItem> = emptyList(),
+)
+
+data class SubcategorySpendingItem(
+    val subcategoryId: Long,
+    val name: String,
+    val spentMinorUnits: Long,
 )
 
 data class DailySpendingPoint(

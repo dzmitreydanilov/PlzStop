@@ -9,6 +9,9 @@ description: Code style and layer rules — null safety, DI conventions, reposit
 
 Never use `!!`. Prefer `?: error("reason")`, `?.let { }`, or `?: return`.
 
+## Always use Named arguments
+For functions that have more than 2 parameters, or any parameters of the same type, use named arguments at the call site for clarity.
+
 ## Layer rules
 
 ### DI modules

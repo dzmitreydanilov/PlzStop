@@ -69,6 +69,10 @@ ScreenOverlayContainer(
 
 Behaviour: `ErrorType.Network` → full-screen dialog (close + retry). Other errors → error snackbar. `ScreenOverlay.Message` → info snackbar.
 
+
+# Loading Indicator
+Use `DisplayFullScreenProgress` when the screen is in `Loading` state. Because `Loading` is a variant of the same sealed interface, it can be rendered unconditionally inside `ScreenOverlayContainer` without branching.
+
 ## StateHolder
 
 Required overrides:

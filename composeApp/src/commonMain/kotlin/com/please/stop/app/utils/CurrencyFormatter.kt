@@ -19,6 +19,9 @@ fun formatCurrencyAmount(
 
 fun minorUnitsMultiplier(decimalPlaces: Int): Long = 10.0.pow(decimalPlaces).toLong()
 
+fun minorUnitsToFloat(minorUnits: Long, decimalPlaces: Int): Float =
+    (minorUnits.toDouble() / 10.0.pow(decimalPlaces)).toFloat()
+
 fun Double.toMinorUnits(decimalPlaces: Int): Long = (this * 10.0.pow(decimalPlaces)).roundToLong()
 
 private fun Double.toBigDecimalString(decimalPlaces: Int): String {
