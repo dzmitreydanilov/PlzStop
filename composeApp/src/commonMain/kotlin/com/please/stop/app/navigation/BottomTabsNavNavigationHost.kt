@@ -23,6 +23,7 @@ import com.please.stop.app.navigation.nav3.navigators.bottom.toEntries
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.navigation.tabs.analyticsTabEntries
 import com.please.stop.app.navigation.tabs.homeTabEntries
+import com.please.stop.app.navigation.tabs.operationsTabEntries
 import com.please.stop.app.navigation.tabs.settingsTabEntries
 import com.please.stop.app.navigation.ui.getNavigationSuiteItemColors
 import kotlinx.serialization.modules.PolymorphicModuleBuilder
@@ -40,6 +41,7 @@ val AppNavConfiguration = SavedStateConfiguration {
 
 private fun PolymorphicModuleBuilder<NavKey>.registerMainBottomNavigation() {
     subclass(MainBottomTabs.Home::class)
+    subclass(MainBottomTabs.Operations::class)
     subclass(MainBottomTabs.Analytics::class)
     subclass(MainBottomTabs.Settings::class)
 }
@@ -52,7 +54,6 @@ fun BottomTabsNavNavigationHost(
     onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToEditExpense: (expenseId: Long) -> Unit = {},
-    onNavigateToMonthlyExpenses: () -> Unit,
     onNavigateToCategories: () -> Unit,
 ) {
     val bottomNavIntentHolder = LocalBottomNavIntentHolder.current
@@ -92,7 +93,6 @@ fun BottomTabsNavNavigationHost(
                         onNavigateToCreateExpense = onNavigateToCreateExpense,
                         onNavigateToSettings = onNavigateToSettings,
                         onNavigateToEditExpense = onNavigateToEditExpense,
-                        onNavigateToMonthlyExpenses = onNavigateToMonthlyExpenses,
                         onNavigateToCategories = onNavigateToCategories,
                     )
                 },
@@ -143,14 +143,15 @@ private fun EntryProviderScope<NavKey>.bottomNavigationEntries(
     onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToEditExpense: (expenseId: Long) -> Unit,
-    onNavigateToMonthlyExpenses: () -> Unit,
     onNavigateToCategories: () -> Unit,
 ) {
     homeTabEntries(
         onNavigateToAddExpense = onNavigateToAddExpense,
-        onNavigateToCreateExpense = onNavigateToCreateExpense,
         onNavigateToSettings = onNavigateToSettings,
-        onNavigateToMonthlyExpenses = onNavigateToMonthlyExpenses,
+    )
+    operationsTabEntries(
+        onNavigateToEditExpense = onNavigateToEditExpense,
+        onNavigateToCreateExpense = onNavigateToCreateExpense,
     )
     analyticsTabEntries(onNavigateToEditExpense = onNavigateToEditExpense)
     settingsTabEntries(onNavigateToCategories = onNavigateToCategories)

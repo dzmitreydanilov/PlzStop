@@ -31,9 +31,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun HomeScreen(
     onNavigateToAddExpense: (selectedCategoryId: Long) -> Unit,
-    onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToMonthlyExpenses: () -> Unit,
 ) {
     val stateHolder = koinViewModel<HomeStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()
@@ -44,9 +42,7 @@ fun HomeScreen(
     ) { navigation ->
         when (navigation) {
             is HomeNavigation.NavigateToAddExpense -> onNavigateToAddExpense(navigation.expenseCategoryId)
-            is HomeNavigation.NavigateToCreateExpense -> onNavigateToCreateExpense()
             HomeNavigation.NavigateToSettings -> onNavigateToSettings()
-            HomeNavigation.NavigateToMonthlyExpenses -> onNavigateToMonthlyExpenses()
         }
     }
     ScreenOverlayContainer(
@@ -104,11 +100,7 @@ private fun HomeContent(
         }
     }
 
-    Scaffold(
-        floatingActionButton = {
-            HomeFab(onEvent = onEvent)
-        },
-    ) { paddingValues ->
+    Scaffold { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,7 +111,6 @@ private fun HomeContent(
                 displayName = state.displayName,
                 totalSpentFormatted = state.totalSpentFormatted.orEmpty(),
                 onProfileClicked = { onEvent(HomeEvent.ProfileClicked) },
-                onTotalSpentClick = { onEvent(HomeEvent.TotalSpentCardClick) },
                 currentHeight = currentHeight,
                 modifier = if (expandedHeightPx == 0f) {
                     Modifier.onGloballyPositioned { coordinates ->

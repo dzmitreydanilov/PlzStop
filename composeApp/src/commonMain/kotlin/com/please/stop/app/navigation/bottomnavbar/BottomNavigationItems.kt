@@ -28,6 +28,7 @@ fun bottomNavigationItems(
 
 private fun MainBottomTabs.toTestTag(): String = when (this) {
     MainBottomTabs.Home -> TestTags.NAV_TAB_HOME
+    MainBottomTabs.Operations -> TestTags.NAV_TAB_OPERATIONS
     MainBottomTabs.Analytics -> TestTags.NAV_TAB_ANALYTICS
     MainBottomTabs.Settings -> TestTags.NAV_TAB_SETTINGS
 }

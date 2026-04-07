@@ -29,27 +29,21 @@ class HomeStateHolder(
 
     override fun resolveEventResult(event: HomeEvent): Flow<Result> = when (event) {
         is HomeEvent.CategoryClicked -> flowOf(HomeResult.NavigateToAddExpense(event.categoryId))
-        HomeEvent.AddExpenseClicked -> flowOf(HomeResult.NavigateToCreateExpense)
         HomeEvent.AddCategoryClicked -> flowOf(HomeResult.ShowAddCategorySheet)
         is HomeEvent.ConfirmAddCategory -> handleAddCategory(event.name)
         HomeEvent.DismissAddCategorySheet -> flowOf(HomeResult.HideAddCategorySheet)
         HomeEvent.DismissError -> flowOf(HomeResult.ClearError)
         HomeEvent.ProfileClicked -> flowOf(HomeResult.NavigateToSettings)
-        HomeEvent.TotalSpentCardClick -> flowOf(HomeResult.NavigateToMonthlyExpenses)
     }
 
     override fun getNavigationResults(): Set<KClass<out Result>> = setOf(
         HomeResult.NavigateToAddExpense::class,
-        HomeResult.NavigateToCreateExpense::class,
         HomeResult.NavigateToSettings::class,
-        HomeResult.NavigateToMonthlyExpenses::class,
     )
 
     override fun getNavigationByResult(result: Result): Navigation? = when (result) {
         is HomeResult.NavigateToAddExpense -> HomeNavigation.NavigateToAddExpense(result.categoryId)
-        is HomeResult.NavigateToCreateExpense -> HomeNavigation.NavigateToCreateExpense
         is HomeResult.NavigateToSettings -> HomeNavigation.NavigateToSettings
-        is HomeResult.NavigateToMonthlyExpenses -> HomeNavigation.NavigateToMonthlyExpenses
         else -> null
     }
 
@@ -136,9 +130,7 @@ class HomeStateHolder(
 
 private sealed interface HomeResult : Result {
     data class NavigateToAddExpense(val categoryId: Long) : HomeResult
-    data object NavigateToCreateExpense : HomeResult
     data object NavigateToSettings : HomeResult
-    data object NavigateToMonthlyExpenses : HomeResult
     data object ShowAddCategorySheet : HomeResult
     data object HideAddCategorySheet : HomeResult
     data object ClearError : HomeResult
