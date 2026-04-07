@@ -113,11 +113,19 @@ private fun ExpenseRow(item: DayExpenseUiItem) {
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(modifier = Modifier.padding(start = 12.dp))
-        Text(
-            text = item.title,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (item.subcategoryName != null) {
+                Text(
+                    text = item.subcategoryName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Text(
             text = item.formattedAmount,
             style = MaterialTheme.typography.bodyMedium,

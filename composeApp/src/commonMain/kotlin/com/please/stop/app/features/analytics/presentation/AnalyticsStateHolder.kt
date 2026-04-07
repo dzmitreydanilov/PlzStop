@@ -1,6 +1,5 @@
 package com.please.stop.app.features.analytics.presentation
 
-import androidx.compose.ui.graphics.Color
 import com.please.stop.app.core.BootstrapTiming
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
@@ -10,9 +9,11 @@ import com.please.stop.app.features.analytics.domain.model.DayExpensesData
 import com.please.stop.app.features.analytics.domain.usecase.LoadDayExpensesUseCase
 import com.please.stop.app.features.analytics.domain.usecase.ObserveAnalyticsDataUseCase
 import com.please.stop.app.uicomponents.categoryEmojiForKey
+import com.please.stop.app.utils.date.DAYS_IN_WEEK
 import com.please.stop.app.utils.date.formatDayLabel
 import com.please.stop.app.utils.date.localDateToday
 import com.please.stop.app.utils.formatCurrencyAmount
+import com.please.stop.app.utils.minorUnitsToFloat
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -20,7 +21,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
-import kotlin.math.pow
+import kotlinx.datetime.number
 import com.please.stop.app.core.models.domain.Result as DomainResult
 
 class AnalyticsStateHolder(
@@ -31,9 +32,6 @@ class AnalyticsStateHolder(
     override val tag = "AnalyticsStateHolder"
     override val bootstrapTiming = BootstrapTiming.DEFERRED
 
-    private var currentYear: Int = 0
-    private var currentMonth: Int = 0
-
     override fun getInitial(): AnalyticsState = AnalyticsState.Loading
 
     override fun collectFlowsOnInit(): Flow<DomainResult> = observeAnalyticsDataUseCase()
@@ -41,64 +39,74 @@ class AnalyticsStateHolder(
     override fun resolveEventResult(event: AnalyticsEvent): Flow<DomainResult> = when (event) {
         is AnalyticsEvent.DayTapped -> handleDayTapped(event.dayOfMonth)
         AnalyticsEvent.DismissDaySheet -> flowOf(AnalyticsResult.DismissSheet)
+        AnalyticsEvent.DismissError -> flowOf(AnalyticsResult.DismissError)
     }
 
     private fun handleDayTapped(dayOfMonth: Int): Flow<DomainResult> = flow {
+        val content = state.value as? AnalyticsState.Content ?: return@flow
         emit(AnalyticsResult.SheetLoading)
-        emit(loadDayExpensesUseCase(currentYear, currentMonth, dayOfMonth))
+        emit(loadDayExpensesUseCase(content.currentYear, content.currentMonth, dayOfMonth))
     }
 
     override fun getStateByResult(previous: AnalyticsState, result: DomainResult): AnalyticsState {
         return when (result) {
             is ObserveAnalyticsDataUseCase.Result.Success -> result.data.toContent(previous)
-            is ObserveAnalyticsDataUseCase.Result.Failure -> previous.toError()
-            is AnalyticsResult.SheetLoading -> (previous as? AnalyticsState.Content)
-                ?.copy(isDaySheetLoading = true) ?: previous
-            is AnalyticsResult.DismissSheet -> (previous as? AnalyticsState.Content)
-                ?.copy(selectedDaySheet = null, isDaySheetLoading = false) ?: previous
-            is LoadDayExpensesUseCase.Result.Success -> (previous as? AnalyticsState.Content)
-                ?.copy(
-                    selectedDaySheet = result.data.toSheetUi(),
+            is ObserveAnalyticsDataUseCase.Result.Failure -> previous.toError(ErrorType.Network)
+            is AnalyticsResult.DismissError -> AnalyticsState.Loading
+            is AnalyticsResult.SheetLoading -> previous.updateContent { copy(isDaySheetLoading = true) }
+            is AnalyticsResult.DismissSheet -> previous.updateContent {
+                copy(selectedDaySheet = null, isDaySheetLoading = false)
+            }
+            is LoadDayExpensesUseCase.Result.Success -> previous.updateContent {
+                copy(
+                    selectedDaySheet = result.data.toSheetUi(currentYear, currentMonth),
                     isDaySheetLoading = false,
-                ) ?: previous
-            is LoadDayExpensesUseCase.Result.Failure -> (previous as? AnalyticsState.Content)
-                ?.copy(isDaySheetLoading = false) ?: previous
+                )
+            }
+            is LoadDayExpensesUseCase.Result.Failure -> previous.updateContent {
+                copy(isDaySheetLoading = false)
+            }
             else -> super.getStateByResult(previous, result)
         }
     }
 
+    private inline fun AnalyticsState.updateContent(
+        transform: AnalyticsState.Content.() -> AnalyticsState.Content,
+    ): AnalyticsState = when (this) {
+        is AnalyticsState.Content -> transform()
+        is AnalyticsState.Loading,
+        is AnalyticsState.Error,
+        -> this
+    }
+
     override fun getErrorStateByResult(result: DomainResult, errorType: ErrorType): AnalyticsState {
-        return state.value.toError()
+        return state.value.toError(errorType)
     }
 
     private fun AnalyticsData.toContent(previous: AnalyticsState): AnalyticsState.Content {
         val today = localDateToday()
-        currentYear = today.year
-        currentMonth = today.monthNumber
 
         val activeCategories = categorySpending.filter { it.spentMinorUnits > 0 }
-        val divisor = 10.0.pow(decimalPlaces).toFloat()
         val hasBudget = monthlyBudgetMinorUnits > 0
 
         val budgetBurn = if (hasBudget) buildBudgetBurn() else null
         val projectedTotal = if (hasBudget && currentDayOfMonth > 0) buildProjectedTotal() else null
-        val budgetPacingPoints = if (hasBudget) buildBudgetPacingPoints(divisor) else emptyList()
+        val budgetPacingPoints = if (hasBudget) buildBudgetPacingPoints() else emptyList()
 
-        val spendingSlices = activeCategories.mapIndexed { i, item ->
+        val spendingSlices = activeCategories.mapIndexed { _, item ->
             val avgDaily = if (currentDayOfMonth > 0) item.spentMinorUnits / currentDayOfMonth else 0L
             SpendingSlice(
                 name = item.name,
                 formattedAmount = formatCurrencyAmount(item.spentMinorUnits, currencySymbol, decimalPlaces),
                 formattedAvgDaily = formatCurrencyAmount(avgDaily, currencySymbol, decimalPlaces),
-                amount = item.spentMinorUnits / divisor,
-                color = chartColor(i),
+                amount = minorUnitsToFloat(item.spentMinorUnits, decimalPlaces),
             )
         }.toImmutableList()
 
         val dailyUiPoints = dailySpending.map { point ->
             DailySpendingUiPoint(
                 dayOfMonth = point.dayOfMonth,
-                amount = point.totalMinorUnits / divisor,
+                amount = minorUnitsToFloat(point.totalMinorUnits, decimalPlaces),
                 formattedAmount = formatCurrencyAmount(point.totalMinorUnits, currencySymbol, decimalPlaces),
             )
         }.toImmutableList()
@@ -106,7 +114,7 @@ class AnalyticsStateHolder(
         val monthlyBarItems = monthlyTotals.map { month ->
             MonthlyBarUiItem(
                 label = month.label,
-                amount = month.totalMinorUnits / divisor,
+                amount = minorUnitsToFloat(month.totalMinorUnits, decimalPlaces),
                 formattedAmount = formatCurrencyAmount(month.totalMinorUnits, currencySymbol, decimalPlaces),
                 isCurrent = month.isCurrent,
             )
@@ -122,6 +130,8 @@ class AnalyticsStateHolder(
             categoriesCount = categorySpending.size,
             activeCategoriesCount = activeCategories.size,
             hasAnyExpenses = totalSpentMinorUnits > 0,
+            currentYear = today.year,
+            currentMonth = today.month.number,
             budgetBurn = budgetBurn,
             projectedTotal = projectedTotal,
             budgetPacingPoints = budgetPacingPoints.toImmutableList(),
@@ -163,8 +173,8 @@ class AnalyticsStateHolder(
         )
     }
 
-    private fun AnalyticsData.buildBudgetPacingPoints(divisor: Float): List<Float> {
-        val budgetFloat = monthlyBudgetMinorUnits / divisor
+    private fun AnalyticsData.buildBudgetPacingPoints(): List<Float> {
+        val budgetFloat = minorUnitsToFloat(monthlyBudgetMinorUnits, decimalPlaces)
         val dailyBudget = budgetFloat / daysInMonth
         return (1..daysInMonth).map { day -> dailyBudget * day }
     }
@@ -200,20 +210,27 @@ class AnalyticsStateHolder(
         activeCategories: List<com.please.stop.app.features.analytics.domain.model.CategorySpendingItem>,
     ): List<CategoryProgressUi> {
         val total = totalSpentMinorUnits.coerceAtLeast(1L)
-        return activeCategories.mapIndexed { i, item ->
+        return activeCategories.mapIndexed { _, item ->
+            val categoryTotal = item.spentMinorUnits.coerceAtLeast(1L)
             CategoryProgressUi(
                 name = item.name,
                 iconKey = item.iconKey,
                 percentage = item.spentMinorUnits.toFloat() / total,
                 formattedAmount = formatCurrencyAmount(item.spentMinorUnits, currencySymbol, decimalPlaces),
-                color = chartColor(i),
+                subcategories = item.subcategorySpending.map { sub ->
+                    SubcategoryProgressUi(
+                        name = sub.name,
+                        percentage = sub.spentMinorUnits.toFloat() / categoryTotal,
+                        formattedAmount = formatCurrencyAmount(sub.spentMinorUnits, currencySymbol, decimalPlaces),
+                    )
+                }.toImmutableList(),
             )
         }
     }
 
-    private fun DayExpensesData.toSheetUi(): DayExpensesSheetUi {
+    private fun DayExpensesData.toSheetUi(year: Int, month: Int): DayExpensesSheetUi {
         val tz = TimeZone.currentSystemDefault()
-        val dayStartMillis = LocalDate(currentYear, currentMonth, dayOfMonth)
+        val dayStartMillis = LocalDate(year, month, dayOfMonth)
             .atStartOfDayIn(tz)
             .toEpochMilliseconds()
         val total = expenses.sumOf { it.amountMinorUnits }
@@ -225,13 +242,15 @@ class AnalyticsStateHolder(
                 DayExpenseUiItem(
                     title = item.title,
                     categoryEmoji = categoryEmojiForKey(item.categoryIconKey),
+                    subcategoryName = item.subcategoryName,
                     formattedAmount = formatCurrencyAmount(item.amountMinorUnits, currencySymbol, decimalPlaces),
                 )
             }.toImmutableList(),
         )
     }
 
-    private fun AnalyticsState.toError(): AnalyticsState.Error = AnalyticsState.Error(
+    private fun AnalyticsState.toError(errorType: ErrorType): AnalyticsState.Error = AnalyticsState.Error(
+        errorType = errorType,
         totalSpentFormatted = totalSpentFormatted,
         categoriesCount = categoriesCount,
         activeCategoriesCount = activeCategoriesCount,
@@ -239,25 +258,13 @@ class AnalyticsStateHolder(
     )
 
     companion object {
-        private const val DAYS_IN_WEEK = 7
         private const val MAX_BURN_PERCENTAGE = 1.5f
-
-        private val CHART_PALETTE = listOf(
-            Color(0xFF14B8A6),
-            Color(0xFF3B82F6),
-            Color(0xFF8B5CF6),
-            Color(0xFF10B981),
-            Color(0xFFF59E0B),
-            Color(0xFFEC4899),
-        )
-
-        private fun chartColor(index: Int): Color =
-            CHART_PALETTE[index % CHART_PALETTE.size]
     }
 }
 
 private sealed interface AnalyticsResult : DomainResult {
     data object SheetLoading : AnalyticsResult
     data object DismissSheet : AnalyticsResult
+    data object DismissError : AnalyticsResult
 }
 

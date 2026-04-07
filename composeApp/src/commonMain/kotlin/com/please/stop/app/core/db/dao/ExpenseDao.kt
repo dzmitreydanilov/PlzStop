@@ -7,6 +7,7 @@ import androidx.room.Update
 import com.please.stop.app.core.db.entity.ExpenseEntity
 import kotlinx.coroutines.flow.Flow
 
+@Suppress("TooManyFunctions")
 @Dao
 interface ExpenseDao {
 
@@ -48,6 +49,21 @@ interface ExpenseDao {
         fromEpochMillis: Long,
         toEpochMillis: Long,
     ): Flow<List<CategorySpending>>
+
+    @Query(
+        """
+        SELECT categoryId, subcategoryId, SUM(amountMinorUnits) AS totalMinorUnits
+        FROM expense
+        WHERE isDeleted = 0
+          AND dateEpochMillis >= :fromEpochMillis
+          AND dateEpochMillis < :toEpochMillis
+        GROUP BY categoryId, subcategoryId
+        """
+    )
+    fun observeSpendingByCategoryAndSubcategory(
+        fromEpochMillis: Long,
+        toEpochMillis: Long,
+    ): Flow<List<CategorySubcategorySpending>>
 
     @Query(
         """
@@ -94,5 +110,11 @@ interface ExpenseDao {
 
 data class CategorySpending(
     val categoryId: Long,
+    val totalMinorUnits: Long,
+)
+
+data class CategorySubcategorySpending(
+    val categoryId: Long,
+    val subcategoryId: Long?,
     val totalMinorUnits: Long,
 )

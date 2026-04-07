@@ -101,7 +101,8 @@
       "Bash(do echo:*)",
       "Read(//Users/dmitry.danilov/StudioProjects/PlzStop/**)",
       "Bash(done)",
-      "WebFetch(domain:insert-koin.io)"
+      "WebFetch(domain:insert-koin.io)",
+      "Bash(/Users/dmitry.danilov/StudioProjects/PlzStop/.commit-msg:*)"
     ]
   },
   "enabledMcpjsonServers": [
