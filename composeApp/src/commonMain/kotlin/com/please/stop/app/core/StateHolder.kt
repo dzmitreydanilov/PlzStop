@@ -8,6 +8,7 @@ import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.domain.Result
 import com.please.stop.app.core.models.domain.toErrorType
 import com.please.stop.app.core.models.presentation.Navigation
+import com.please.stop.app.core.models.presentation.UiEffect
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,6 +55,7 @@ enum class BootstrapTiming {
 abstract class StateHolder<S, E> : ViewModel() {
 
     private val navigationChannel: Channel<Navigation> = Channel(capacity = BUFFERED)
+    private val effectChannel: Channel<UiEffect> = Channel(capacity = BUFFERED)
     private val events = MutableSharedFlow<E>()
     open val sharingStarted: SharingStarted = SharingStarted.WhileSubscribed(5_000L)
     private val onceInitCompleted = atomic(false)
@@ -104,6 +106,9 @@ abstract class StateHolder<S, E> : ViewModel() {
             collect { result ->
                 navigate(result)
                 if (getNavigationResults().any { it.isInstance(result) }) return@collect
+
+                dispatchEffect(result)
+                if (getEffectResults().any { it.isInstance(result) }) return@collect
 
                 acc = getStateByResultWithErrorHandling(acc, result)
                 lastEmittedState.value = acc
@@ -214,6 +219,12 @@ abstract class StateHolder<S, E> : ViewModel() {
     open fun getNavigation(): Flow<Navigation> = navigationChannel.receiveAsFlow()
 
     /**
+     * Returns a flow of one-time UI effects (snackbar messages, toasts, etc.) that the UI
+     * should collect and consume exactly once.
+     */
+    fun getEffects(): Flow<UiEffect> = effectChannel.receiveAsFlow()
+
+    /**
      * Emits an event that will trigger a state change, use cases execution.
      *
      * @param event The event to process.
@@ -245,6 +256,22 @@ abstract class StateHolder<S, E> : ViewModel() {
     }
 
     /**
+     * Specifies a set of [Result] types that are effect-only and should be skipped
+     * during state reduction. Mirrors [getNavigationResults].
+     */
+    protected open fun getEffectResults(): Set<KClass<out Result>> {
+        return emptySet()
+    }
+
+    /**
+     * Maps a result to a one-time [UiEffect]. Subclasses override to convert specific results
+     * into fire-and-forget UI effects (snackbars, toasts, etc.). Mirrors [getNavigationByResult].
+     */
+    protected open fun getEffectByResult(result: Result): UiEffect? {
+        return null
+    }
+
+    /**
      * Maps an event to a flow of results. This function is called whenever an event is processed
      * and is responsible for determining the resulting flow of state changes.
      *
@@ -271,6 +298,15 @@ abstract class StateHolder<S, E> : ViewModel() {
         }
 
         return true
+    }
+
+    /**
+     * Determines if a given result should trigger a UI effect, and if so, sends it.
+     * Mirrors [navigate].
+     */
+    private fun dispatchEffect(result: Result) {
+        val effect = getEffectByResult(result) ?: return
+        viewModelScope.launch { effectChannel.send(effect) }
     }
 
     /**

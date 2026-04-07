@@ -26,7 +26,7 @@ import com.please.stop.app.core.db.entity.UserProfileEntity
         SubcategoryEntity::class,
         ReceiptEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -162,6 +162,17 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL("ALTER TABLE `category` ADD COLUMN `comment` TEXT DEFAULT NULL")
                 connection.execSQL("ALTER TABLE `subcategory` ADD COLUMN `comment` TEXT DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "ALTER TABLE `category` ADD COLUMN `isArchived` INTEGER NOT NULL DEFAULT 0",
+                )
+                connection.execSQL(
+                    "ALTER TABLE `subcategory` ADD COLUMN `isArchived` INTEGER NOT NULL DEFAULT 0",
+                )
             }
         }
     }

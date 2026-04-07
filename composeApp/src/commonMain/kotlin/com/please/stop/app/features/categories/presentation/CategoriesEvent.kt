@@ -26,13 +26,8 @@ sealed interface CategoriesEvent {
         val comment: String?,
     ) : CategoriesEvent
     data object DismissEditCategorySheet : CategoriesEvent
-    data class DeleteCategoryClicked(val categoryId: Long) : CategoriesEvent
-    data class ConfirmDeleteCategory(val categoryId: Long) : CategoriesEvent
-    data class ConfirmDeleteCategoryMoveExpenses(
-        val categoryId: Long,
-        val targetCategoryId: Long,
-    ) : CategoriesEvent
-    data class ConfirmDeleteCategoryDeleteExpenses(val categoryId: Long) : CategoriesEvent
-    data object DismissDeletionDialog : CategoriesEvent
+    data class ArchiveCategoryClicked(val categoryId: Long) : CategoriesEvent
+    data class ConfirmArchiveCategory(val categoryId: Long) : CategoriesEvent
+    data object DismissArchiveDialog : CategoriesEvent
     data object DismissError : CategoriesEvent
 }

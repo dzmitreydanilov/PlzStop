@@ -25,6 +25,7 @@
     <string name="content_desc_edit_category">Edit category</string>
     <string name="content_desc_delete_category">Delete category</string>
     <string name="content_desc_delete_subcategory">Delete subcategory %1$s</string>
+    <string name="content_desc_archive_subcategory">Archive subcategory %1$s</string>
 
     <!-- Analytics -->
     <string name="analytics_heatmap_cell_cd">Day %1$d, spent %2$s. Tap to see details.</string>

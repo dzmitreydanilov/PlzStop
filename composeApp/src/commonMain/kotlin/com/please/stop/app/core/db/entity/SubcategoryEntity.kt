@@ -25,4 +25,5 @@ data class SubcategoryEntity(
     val isDefault: Boolean,
     val sortOrder: Int,
     val comment: String? = null,
+    val isArchived: Boolean = false,
 )

@@ -2,7 +2,6 @@
 
 package com.please.stop.app.uicomponents.snackbar.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,7 +25,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.please.stop.app.uicomponents.error.MessageType
 import com.please.stop.app.uicomponents.icons.CloseIconButton
 import com.please.stop.app.uicomponents.snackbar.ui.models.BannerMessage
 import com.please.stop.app.uicomponents.snackbar.ui.models.ErrorBannerMessage
@@ -55,9 +53,7 @@ fun BottomBannerContent(
             InfoBannerMessageContent(
                 modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 title = message.title,
-                type = MessageType.Success,
                 subtitle = message.subtitle,
-                onCloseClick = { message.onCloseClick() }
             )
     }
 }
@@ -66,11 +62,8 @@ fun BottomBannerContent(
 @Composable
 private fun InfoBannerMessageContent(
     title: String,
-    type: MessageType,
     subtitle: String,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
-    onCloseClick: () -> Unit = {},
 ) {
     Card(
         modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
@@ -78,7 +71,7 @@ private fun InfoBannerMessageContent(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
-        Box(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             Row {
                 Column(
                     Modifier
@@ -99,11 +92,6 @@ private fun InfoBannerMessageContent(
                     }
 
                     AutoSizedSubtitle(text = subtitle)
-                }
-                if (type != MessageType.Success) {
-                    CloseIconButton(
-                        onClick = onCloseClick
-                    )
                 }
             }
             HorizontalDivider(

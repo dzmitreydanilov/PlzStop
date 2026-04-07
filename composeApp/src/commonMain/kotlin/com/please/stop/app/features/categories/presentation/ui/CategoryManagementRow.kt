@@ -35,10 +35,11 @@ import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.add
 import plzstop.composeapp.generated.resources.content_desc_add_subcategory
-import plzstop.composeapp.generated.resources.content_desc_delete_category
+import plzstop.composeapp.generated.resources.content_desc_archive_subcategory
 import plzstop.composeapp.generated.resources.content_desc_delete_subcategory
 import plzstop.composeapp.generated.resources.content_desc_edit_category
 import plzstop.composeapp.generated.resources.ic_add
+import plzstop.composeapp.generated.resources.ic_archive
 import plzstop.composeapp.generated.resources.ic_delete
 import plzstop.composeapp.generated.resources.ic_edit
 
@@ -87,8 +88,8 @@ internal fun CategoryManagementRow(
                 }
                 IconButton(onClick = onDeleteClick, modifier = Modifier.size(32.dp)) {
                     Icon(
-                        imageVector = vectorResource(Res.drawable.ic_delete),
-                        contentDescription = stringResource(Res.string.content_desc_delete_category),
+                        imageVector = vectorResource(Res.drawable.ic_archive),
+                        contentDescription = stringResource(Res.string.content_desc_archive_subcategory),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.error,
                     )

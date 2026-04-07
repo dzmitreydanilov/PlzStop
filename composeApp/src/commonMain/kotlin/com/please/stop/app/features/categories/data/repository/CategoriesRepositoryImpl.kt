@@ -1,13 +1,11 @@
 package com.please.stop.app.features.categories.data.repository
 
 import com.please.stop.app.core.db.dao.CategoryDao
-import com.please.stop.app.core.db.dao.ExpenseDao
 import com.please.stop.app.core.db.dao.SubcategoryDao
 import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.db.entity.SubcategoryEntity
 import com.please.stop.app.core.featureflags.FeatureFlags
 import com.please.stop.app.features.categories.domain.model.CategoryWithSubcategories
-import com.please.stop.app.features.categories.domain.model.ExpenseDeletionAction
 import com.please.stop.app.features.categories.domain.repository.CategoriesRepository
 import com.please.stop.app.features.onboarding.domain.model.Category
 import com.please.stop.app.features.onboarding.domain.model.Subcategory
@@ -17,10 +15,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 
+@Suppress("TooManyFunctions")
 class CategoriesRepositoryImpl(
     private val categoryDao: CategoryDao,
     private val subcategoryDao: SubcategoryDao,
-    private val expenseDao: ExpenseDao,
     private val featureFlags: FeatureFlags,
     private val ioDispatcher: CoroutineDispatcher,
 ) : CategoriesRepository {
@@ -74,37 +72,53 @@ class CategoriesRepositoryImpl(
         categoryDao.update(existing.copy(name = name, iconKey = iconKey, comment = comment))
     }
 
-    override suspend fun countExpensesForCategory(categoryId: Long): Result<Int> = runCatching {
-        expenseDao.countActiveByCategory(categoryId)
+    override suspend fun countSubcategories(parentCategoryId: Long): Result<Int> = runCatching {
+        subcategoryDao.countByParent(parentCategoryId)
     }
 
-    override suspend fun deleteCategoryWithExpenses(
-        categoryId: Long,
-        action: ExpenseDeletionAction,
-    ): Result<Unit> = runCatching {
-        when (action) {
-            is ExpenseDeletionAction.MoveToCategory -> {
-                expenseDao.reassignCategory(categoryId, action.targetCategoryId)
-            }
-            ExpenseDeletionAction.DeleteExpenses -> {
-                expenseDao.hardDeleteByCategory(categoryId)
-            }
-        }
-        categoryDao.deleteById(categoryId)
+    override suspend fun archiveCategory(id: Long): Result<Unit> = runCatching {
+        categoryDao.archiveById(id)
+        subcategoryDao.archiveByParentCategoryId(id)
     }
 
-    override suspend fun deleteCategory(id: Long): Result<Unit> = runCatching {
-        expenseDao.hardDeleteByCategory(id)
-        categoryDao.deleteById(id)
+    override suspend fun unarchiveCategory(id: Long): Result<Unit> = runCatching {
+        categoryDao.unarchiveById(id)
+        subcategoryDao.unarchiveByParentCategoryId(id)
+    }
+
+    override suspend fun archiveSubcategory(id: Long): Result<Unit> = runCatching {
+        subcategoryDao.archiveById(id)
+    }
+
+    override suspend fun unarchiveSubcategory(id: Long): Result<Unit> = runCatching {
+        subcategoryDao.unarchiveById(id)
     }
 
     override suspend fun deleteSubcategory(id: Long): Result<Unit> = runCatching {
         subcategoryDao.deleteById(id)
     }
 
-    override suspend fun countSubcategories(parentCategoryId: Long): Result<Int> = runCatching {
-        subcategoryDao.countByParent(parentCategoryId)
-    }
+    override fun observeArchivedCategoriesWithSubcategories(): Flow<List<CategoryWithSubcategories>> =
+        combine(
+            categoryDao.observeArchived(),
+            subcategoryDao.observeAllIncludingArchived(),
+            featureFlags.observeSubcategoriesEnabled(),
+        ) { categories, subcategories, subcategoriesEnabled ->
+            val subcategoryMap = subcategories.groupBy { it.parentCategoryId }
+            categories.map { entity ->
+                CategoryWithSubcategories(
+                    category = entity.toDomain(),
+                    subcategories = if (subcategoriesEnabled) {
+                        subcategoryMap[entity.id]
+                            .orEmpty()
+                            .map { it.toDomain() }
+                            .toImmutableList()
+                    } else {
+                        null
+                    },
+                )
+            }
+        }.flowOn(ioDispatcher)
 
     override suspend fun addSubcategory(
         parentCategoryId: Long,

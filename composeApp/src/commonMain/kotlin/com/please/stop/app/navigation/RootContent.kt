@@ -18,6 +18,8 @@ import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.please.stop.app.features.analytics.monthly.presentation.ui.MonthlyExpensesScreen
+import com.please.stop.app.features.categories.presentation.archived.ArchivedCategoriesScreen
+import com.please.stop.app.features.categories.presentation.ui.CategoriesScreen
 import com.please.stop.app.features.expenses.presentation.ui.CreateExpenseScreen
 import com.please.stop.app.features.expenses.presentation.ui.EditExpenseScreen
 import com.please.stop.app.features.expenses.receiptitems.presentation.ui.ReceiptItemsScreen
@@ -35,6 +37,8 @@ import com.please.stop.app.navigation.deeplink.DeepLinkResult
 import com.please.stop.app.navigation.deeplink.parseDeepLinkUri
 import com.please.stop.app.navigation.nav3.Nav3Host
 import com.please.stop.app.navigation.nav3.Router
+import com.please.stop.app.navigation.routes.ArchivedCategoriesRoute
+import com.please.stop.app.navigation.routes.CategoriesRoute
 import com.please.stop.app.navigation.routes.CreateExpenseRoute
 import com.please.stop.app.navigation.routes.EditExpenseRoute
 import com.please.stop.app.navigation.routes.MainBottomTabs
@@ -172,6 +176,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
             onNavigateToCreateExpense = { router.push(CreateExpenseRoute()) },
             onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
             onNavigateToMonthlyExpenses = { router.push(MonthlyExpensesRoute) },
+            onNavigateToCategories = { router.push(CategoriesRoute) },
         )
     }
 
@@ -201,6 +206,17 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
         MonthlyExpensesScreen(
             onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
         )
+    }
+
+    entry<CategoriesRoute> {
+        CategoriesScreen(
+            onGoBack = { router.pop() },
+            onOpenArchive = { router.push(ArchivedCategoriesRoute) },
+        )
+    }
+
+    entry<ArchivedCategoriesRoute> {
+        ArchivedCategoriesScreen(onGoBack = { router.pop() })
     }
 }
 

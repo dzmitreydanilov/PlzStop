@@ -20,7 +20,6 @@ import com.please.stop.app.navigation.nav3.navigators.bottom.BottomNavigationNav
 import com.please.stop.app.navigation.nav3.navigators.bottom.BottomNavigationState
 import com.please.stop.app.navigation.nav3.navigators.bottom.rememberBottomNavigationState
 import com.please.stop.app.navigation.nav3.navigators.bottom.toEntries
-import com.please.stop.app.navigation.routes.CategoriesRoute
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.navigation.tabs.analyticsTabEntries
 import com.please.stop.app.navigation.tabs.homeTabEntries
@@ -43,7 +42,6 @@ private fun PolymorphicModuleBuilder<NavKey>.registerMainBottomNavigation() {
     subclass(MainBottomTabs.Home::class)
     subclass(MainBottomTabs.Analytics::class)
     subclass(MainBottomTabs.Settings::class)
-    subclass(CategoriesRoute::class)
 }
 
 @Composable
@@ -55,6 +53,7 @@ fun BottomTabsNavNavigationHost(
     onNavigateToSettings: () -> Unit,
     onNavigateToEditExpense: (expenseId: Long) -> Unit = {},
     onNavigateToMonthlyExpenses: () -> Unit,
+    onNavigateToCategories: () -> Unit,
 ) {
     val bottomNavIntentHolder = LocalBottomNavIntentHolder.current
 
@@ -89,12 +88,12 @@ fun BottomTabsNavNavigationHost(
             val entries = hostState.toEntries(
                 entryProvider = entryProvider {
                     bottomNavigationEntries(
-                        router = router,
                         onNavigateToAddExpense = onNavigateToAddExpense,
                         onNavigateToCreateExpense = onNavigateToCreateExpense,
                         onNavigateToSettings = onNavigateToSettings,
                         onNavigateToEditExpense = onNavigateToEditExpense,
                         onNavigateToMonthlyExpenses = onNavigateToMonthlyExpenses,
+                        onNavigateToCategories = onNavigateToCategories,
                     )
                 },
             )
@@ -140,12 +139,12 @@ private fun PushPendingNestedRouteAfterTabSwitch(
 }
 
 private fun EntryProviderScope<NavKey>.bottomNavigationEntries(
-    router: Router<NavKey>,
     onNavigateToAddExpense: (categoryId: Long) -> Unit,
     onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToEditExpense: (expenseId: Long) -> Unit,
     onNavigateToMonthlyExpenses: () -> Unit,
+    onNavigateToCategories: () -> Unit,
 ) {
     homeTabEntries(
         onNavigateToAddExpense = onNavigateToAddExpense,
@@ -154,5 +153,5 @@ private fun EntryProviderScope<NavKey>.bottomNavigationEntries(
         onNavigateToMonthlyExpenses = onNavigateToMonthlyExpenses,
     )
     analyticsTabEntries(onNavigateToEditExpense = onNavigateToEditExpense)
-    settingsTabEntries(router = router)
+    settingsTabEntries(onNavigateToCategories = onNavigateToCategories)
 }

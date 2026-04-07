@@ -40,7 +40,7 @@ class MonthlyExpensesRepositoryImpl(
         val range = monthMillisRange(year, month)
         return expenseDao.observeExpensesInRange(range.fromMillis, range.toMillis)
             .map { entities ->
-                val categoryMap = categoryDao.observeAll().first().associateBy { it.id }
+                val categoryMap = categoryDao.observeAllIncludingArchived().first().associateBy { it.id }
                 val receiptIds = entities.mapNotNull { it.receiptId }.distinct()
                 val receiptMap = if (receiptIds.isNotEmpty()) {
                     receiptDao.getByIds(receiptIds).associateBy { it.id }

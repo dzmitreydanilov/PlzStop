@@ -130,6 +130,15 @@
     <string name="categories_delete_subcategory_title">Delete subcategory?</string>
     <string name="categories_delete_subcategory_message">"%1$s" will be permanently removed.</string>
     <string name="categories_subcategory_limit_reached">Maximum 10 subcategories per category</string>
+    <string name="categories_archive">Archive</string>
+    <string name="categories_archive_confirm_title">Archive "%1$s"?</string>
+    <string name="categories_archive_confirm_message">This category will be hidden from pickers and the home screen. Existing expenses keep their category. You can restore it anytime.</string>
+    <string name="categories_archive_subcategory_title">Archive subcategory?</string>
+    <string name="categories_archive_subcategory_message">"%1$s" will be hidden. You can restore it anytime.</string>
+    <string name="categories_archived_title">Archived Categories</string>
+    <string name="categories_archived_empty">No archived categories</string>
+    <string name="categories_restore">Restore</string>
+    <string name="content_desc_view_archived">View archived categories</string>
 
     <string name="onboarding_home_coming_soon">Home — coming soon</string>
     <string name="onboarding_analytics_coming_soon">Analytics — coming soon</string>

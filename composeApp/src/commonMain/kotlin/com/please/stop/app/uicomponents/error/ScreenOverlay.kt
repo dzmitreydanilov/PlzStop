@@ -10,15 +10,4 @@ sealed interface ScreenOverlay {
         val title: String? = null,
         val subtitle: String? = null
     ) : ScreenOverlay
-
-    data class Message(
-        val title: String,
-        val subtitle: String? = null,
-        val type: MessageType = MessageType.Info,
-        val position: SnackbarPosition = SnackbarPosition.Top,
-    ) : ScreenOverlay
 }
-
-enum class MessageType { Info, Success }
-
-enum class SnackbarPosition { Top, Bottom }
