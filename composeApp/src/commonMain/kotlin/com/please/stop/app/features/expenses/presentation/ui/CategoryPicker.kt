@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
+import com.please.stop.app.theme.LocalAppColors
+import com.please.stop.app.theme.LocalAppDimens
 import com.please.stop.app.uicomponents.categoryEmojiForKey
 import kotlinx.collections.immutable.ImmutableList
 
@@ -37,16 +39,17 @@ internal fun CategoryPicker(
     onCategorySelected: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val dimens = LocalAppDimens.current
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = dimens.small2),
+        verticalArrangement = Arrangement.spacedBy(dimens.extraSmall),
     ) {
         categories.chunked(COLUMNS).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(dimens.extraSmall),
             ) {
                 row.forEach { category ->
                     CategoryTile(
@@ -71,6 +74,8 @@ private fun CategoryTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appColors = LocalAppColors.current
+    val dimens = LocalAppDimens.current
     val tileScale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isSelected) 1.03f else 1f,
         animationSpec = androidx.compose.animation.core.spring(
@@ -87,37 +92,40 @@ private fun CategoryTile(
         },
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primary
+                appColors.cardGlass
             } else {
                 MaterialTheme.colorScheme.surfaceContainerLow
             },
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(dimens.radiusLarge),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = if (!isSelected) {
+        border = if (isSelected) {
+            androidx.compose.foundation.BorderStroke(
+                1.dp,
+                appColors.cardGlassBorder,
+            )
+        } else {
             androidx.compose.foundation.BorderStroke(
                 1.dp,
                 MaterialTheme.colorScheme.outlineVariant,
             )
-        } else {
-            null
         },
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(dimens.small1),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
+                    .size(dimens.expenseCategoryIconSize)
+                    .clip(RoundedCornerShape(dimens.layoutGridGap))
+                    .then(
                         if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f)
+                            Modifier.background(brush = appColors.primaryGradient)
                         } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
+                            Modifier.background(color = MaterialTheme.colorScheme.surfaceContainerHigh)
                         }
                     ),
                 contentAlignment = Alignment.Center,
@@ -127,7 +135,7 @@ private fun CategoryTile(
                     style = MaterialTheme.typography.titleSmall,
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(dimens.extraSmall))
             Text(
                 text = category.name,
                 style = MaterialTheme.typography.labelMedium,
@@ -135,7 +143,7 @@ private fun CategoryTile(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = if (isSelected) {
-                    MaterialTheme.colorScheme.onPrimary
+                    MaterialTheme.colorScheme.onSurface
                 } else {
                     MaterialTheme.colorScheme.onSurface
                 },

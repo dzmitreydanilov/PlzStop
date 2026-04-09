@@ -4,6 +4,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 data class Dimens(
+    val xxSmall: Dp = 0.dp,
+    val xSmall: Dp = 0.dp,
     val extraSmall: Dp = 0.dp,
     val small1: Dp = 0.dp,
     val small2: Dp = 0.dp,
@@ -12,10 +14,23 @@ data class Dimens(
     val medium2: Dp = 0.dp,
     val medium3: Dp = 0.dp,
     val large: Dp = 0.dp,
-    val extraLarge: Dp = 0.dp
+    val extraLarge: Dp = 0.dp,
+    val layoutGridGap: Dp = 0.dp,
+    val radiusMedium: Dp = 0.dp,
+    val radiusLarge: Dp = 0.dp,
+    val onboardingTopSpacing: Dp = 0.dp,
+    val onboardingSectionSpacing: Dp = 0.dp,
+    val onboardingButtonHeight: Dp = 0.dp,
+    val onboardingLogoSize: Dp = 0.dp,
+    val homeCategoryIconSize: Dp = 0.dp,
+    val expenseCategoryIconSize: Dp = 0.dp,
+    val homeHeaderAvatarExpandedSize: Dp = 0.dp,
+    val homeHeaderAvatarCollapsedSize: Dp = 0.dp,
 )
 
 val CompactDimens = Dimens(
+    xxSmall = 2.dp,
+    xSmall = 4.dp,
     extraSmall = 8.dp,
     small1 = 12.dp,
     small2 = 16.dp,
@@ -24,10 +39,23 @@ val CompactDimens = Dimens(
     medium2 = 36.dp,
     medium3 = 44.dp,
     large = 54.dp,
-    extraLarge = 64.dp
+    extraLarge = 64.dp,
+    layoutGridGap = 10.dp,
+    radiusMedium = 12.dp,
+    radiusLarge = 16.dp,
+    onboardingTopSpacing = 48.dp,
+    onboardingSectionSpacing = 24.dp,
+    onboardingButtonHeight = 52.dp,
+    onboardingLogoSize = 84.dp,
+    homeCategoryIconSize = 40.dp,
+    expenseCategoryIconSize = 36.dp,
+    homeHeaderAvatarExpandedSize = 44.dp,
+    homeHeaderAvatarCollapsedSize = 36.dp,
 )
 
 val MediumDimens = Dimens(
+    xxSmall = 2.dp,
+    xSmall = 4.dp,
     extraSmall = 10.dp,
     small1 = 14.dp,
     small2 = 18.dp,
@@ -36,9 +64,22 @@ val MediumDimens = Dimens(
     medium2 = 38.dp,
     medium3 = 46.dp,
     large = 56.dp,
+    layoutGridGap = 12.dp,
+    radiusMedium = 14.dp,
+    radiusLarge = 18.dp,
+    onboardingTopSpacing = 52.dp,
+    onboardingSectionSpacing = 28.dp,
+    onboardingButtonHeight = 54.dp,
+    onboardingLogoSize = 90.dp,
+    homeCategoryIconSize = 44.dp,
+    expenseCategoryIconSize = 40.dp,
+    homeHeaderAvatarExpandedSize = 46.dp,
+    homeHeaderAvatarCollapsedSize = 38.dp,
 )
 
 val ExpandedDimens = Dimens(
+    xxSmall = 2.dp,
+    xSmall = 4.dp,
     extraSmall = 12.dp,
     small1 = 18.dp,
     small2 = 24.dp,
@@ -47,4 +88,15 @@ val ExpandedDimens = Dimens(
     medium2 = 48.dp,
     medium3 = 56.dp,
     large = 66.dp,
+    layoutGridGap = 14.dp,
+    radiusMedium = 16.dp,
+    radiusLarge = 20.dp,
+    onboardingTopSpacing = 56.dp,
+    onboardingSectionSpacing = 32.dp,
+    onboardingButtonHeight = 56.dp,
+    onboardingLogoSize = 96.dp,
+    homeCategoryIconSize = 48.dp,
+    expenseCategoryIconSize = 44.dp,
+    homeHeaderAvatarExpandedSize = 52.dp,
+    homeHeaderAvatarCollapsedSize = 44.dp,
 )

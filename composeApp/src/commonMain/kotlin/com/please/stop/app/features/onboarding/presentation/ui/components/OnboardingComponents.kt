@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,21 +26,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.presentation.OnboardingStep
+import com.please.stop.app.theme.LocalAppColors
+import com.please.stop.app.theme.LocalAppDimens
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.onboarding_get_started
 import plzstop.composeapp.generated.resources.onboarding_next
-
-private val BUTTON_HEIGHT = 52.dp
 
 @Composable
 fun OnboardingStepIndicator(
     currentStep: OnboardingStep,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val dimens = LocalAppDimens.current
 
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(dimens.extraSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OnboardingStep.entries.forEach { step ->
@@ -47,7 +49,7 @@ fun OnboardingStepIndicator(
             val isCurrent = step == currentStep
 
             val width by animateDpAsState(
-                targetValue = if (isCurrent) 24.dp else 8.dp,
+                targetValue = if (isCurrent) dimens.onboardingSectionSpacing else dimens.extraSmall,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessMedium,
@@ -61,7 +63,7 @@ fun OnboardingStepIndicator(
             Box(
                 modifier = Modifier
                     .width(width)
-                    .height(8.dp)
+                    .height(dimens.extraSmall)
                     .clip(CircleShape)
                     .background(color),
             )
@@ -76,17 +78,25 @@ fun OnboardingPrimaryButton(
     isSaving: Boolean,
     onClick: () -> Unit,
 ) {
+    val appColors = LocalAppColors.current
+    val dimens = LocalAppDimens.current
     Button(
         onClick = onClick,
         enabled = isEnabled && !isSaving,
         modifier = Modifier
             .fillMaxWidth()
-            .height(BUTTON_HEIGHT),
-        shape = RoundedCornerShape(16.dp),
+            .height(dimens.onboardingButtonHeight),
+        shape = RoundedCornerShape(dimens.radiusLarge),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = appColors.ghostLine.copy(alpha = 0.35f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        ),
     ) {
         if (isSaving) {
             CircularProgressIndicator(
-                strokeWidth = 2.dp,
+                strokeWidth = dimens.xxSmall,
                 color = MaterialTheme.colorScheme.onPrimary,
             )
         } else {

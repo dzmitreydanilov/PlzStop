@@ -23,6 +23,16 @@ data class AppColors(
     val chartColors: ImmutableList<Color>,
     // Header gradient (splash, home, analytics, settings headers)
     val headerGradient: Brush,
+    // Primary gradient for action accents
+    val primaryGradient: Brush,
+    // Success-state accent gradient
+    val successGradient: Brush,
+    // Warning-state accent gradient
+    val warningGradient: Brush,
+    // Mesh-like screen background gradient
+    val meshBackground: Brush,
+    // Glass card gradient fill
+    val glassCardGradient: Brush,
     // Category tile background gradients
     val categoryGradients: ImmutableList<Brush>,
     // Budget burn progress: safe zone
@@ -39,68 +49,98 @@ data class AppColors(
 
 // ── Light theme ──
 val LightAppColors = AppColors(
-    onboardingBackground = Color(0xFFFAF8F5),
-    onboardingGradientTop = Color(0xFF6B8F71),
-    onboardingGradientMid = Color(0xFFEEF3EF),
-    cardGlass = Color(0x14000000),
-    cardGlassBorder = Color(0x0A000000),
+    onboardingBackground = Color(0xFFF5F9FF),
+    onboardingGradientTop = Color(0xFF60A5FA),
+    onboardingGradientMid = Color(0xFFEFF6FF),
+    cardGlass = Color(0x66FFFFFF),
+    cardGlassBorder = Color(0x99FFFFFF),
     chartColors = persistentListOf(
-        Color(0xFF6B8F71), // sage
-        Color(0xFFA07855), // clay
-        Color(0xFFC4A265), // wheat
-        Color(0xFF7A8FA6), // dusty blue
-        Color(0xFF9B8EA6), // lavender
-        Color(0xFFB87D6E), // rose
+        Color(0xFF3B82F6),
+        Color(0xFF14B8A6),
+        Color(0xFF0EA5E9),
+        Color(0xFF6366F1),
+        Color(0xFF8B5CF6),
+        Color(0xFFF59E0B),
     ),
     headerGradient = Brush.linearGradient(
-        listOf(Color(0xFF6B8F71), Color(0xFF5A7D60), Color(0xFF4A6B50)),
+        listOf(Color(0xFF60A5FA), Color(0xFF3B82F6), Color(0xFF2563EB)),
+    ),
+    primaryGradient = Brush.linearGradient(
+        listOf(Color(0xFF60A5FA), Color(0xFF3B82F6), Color(0xFF2563EB)),
+    ),
+    successGradient = Brush.linearGradient(
+        listOf(Color(0xFF14B8A6), Color(0xFF0D9488)),
+    ),
+    warningGradient = Brush.linearGradient(
+        listOf(Color(0xFFF59E0B), Color(0xFFEF4444)),
+    ),
+    meshBackground = Brush.radialGradient(
+        colors = listOf(Color(0x263B82F6), Color(0x1260A5FA), Color(0x00FFFFFF)),
+    ),
+    glassCardGradient = Brush.linearGradient(
+        listOf(Color(0xB3FFFFFF), Color(0x66FFFFFF)),
     ),
     categoryGradients = persistentListOf(
-        Brush.linearGradient(listOf(Color(0xFF6B8F71), Color(0xFF5A7D60))),
-        Brush.linearGradient(listOf(Color(0xFFA07855), Color(0xFF8B6545))),
-        Brush.linearGradient(listOf(Color(0xFFC4A265), Color(0xFFB09050))),
-        Brush.linearGradient(listOf(Color(0xFF7A8FA6), Color(0xFF6A7D94))),
-        Brush.linearGradient(listOf(Color(0xFF9B8EA6), Color(0xFF887A94))),
-        Brush.linearGradient(listOf(Color(0xFFB87D6E), Color(0xFFA06A5C))),
+        Brush.linearGradient(listOf(Color(0xFF3B82F6), Color(0xFF2563EB))),
+        Brush.linearGradient(listOf(Color(0xFF14B8A6), Color(0xFF0D9488))),
+        Brush.linearGradient(listOf(Color(0xFF0EA5E9), Color(0xFF0284C7))),
+        Brush.linearGradient(listOf(Color(0xFF6366F1), Color(0xFF4F46E5))),
+        Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF7C3AED))),
+        Brush.linearGradient(listOf(Color(0xFFF59E0B), Color(0xFFEF4444))),
     ),
-    budgetBurnGreen = Color(0xFF4A9A5B),
-    budgetBurnYellow = Color(0xFFBF8C30),
-    budgetBurnRed = Color(0xFFCC4B4B),
-    spendingLine = Color(0xFF6B8F71),
-    ghostLine = Color(0xFF9E9E9E),
+    budgetBurnGreen = Color(0xFF14B8A6),
+    budgetBurnYellow = Color(0xFFF59E0B),
+    budgetBurnRed = Color(0xFFEF4444),
+    spendingLine = Color(0xFF3B82F6),
+    ghostLine = Color(0xFF94A3B8),
 )
 
 // ── Dark theme ──
 val DarkAppColors = AppColors(
-    onboardingBackground = Color(0xFF1C1B18),
-    onboardingGradientTop = Color(0xFF31302D),
-    onboardingGradientMid = Color(0xFF252420),
-    cardGlass = Color(0x0DFFFFFF),
-    cardGlassBorder = Color(0x14FFFFFF),
+    onboardingBackground = Color(0xFF0B1220),
+    onboardingGradientTop = Color(0xFF1E3A8A),
+    onboardingGradientMid = Color(0xFF111827),
+    cardGlass = Color(0x33FFFFFF),
+    cardGlassBorder = Color(0x4DFFFFFF),
     chartColors = persistentListOf(
-        Color(0xFF9CC6A1), // sage (light)
-        Color(0xFFD4A87A), // clay (light)
-        Color(0xFFC4A265), // wheat
-        Color(0xFF9BB1C6), // dusty blue (light)
-        Color(0xFFB8AAC6), // lavender (light)
-        Color(0xFFD49A8C), // rose (light)
+        Color(0xFF93C5FD),
+        Color(0xFF5EEAD4),
+        Color(0xFF7DD3FC),
+        Color(0xFFA5B4FC),
+        Color(0xFFC4B5FD),
+        Color(0xFFFBBF24),
     ),
     headerGradient = Brush.linearGradient(
-        listOf(Color(0xFF302F2B), Color(0xFF252420), Color(0xFF1C1B18)),
+        listOf(Color(0xFF1E3A8A), Color(0xFF1D4ED8), Color(0xFF1E40AF)),
+    ),
+    primaryGradient = Brush.linearGradient(
+        listOf(Color(0xFF60A5FA), Color(0xFF3B82F6), Color(0xFF2563EB)),
+    ),
+    successGradient = Brush.linearGradient(
+        listOf(Color(0xFF2DD4BF), Color(0xFF14B8A6)),
+    ),
+    warningGradient = Brush.linearGradient(
+        listOf(Color(0xFFFBBF24), Color(0xFFEF4444)),
+    ),
+    meshBackground = Brush.radialGradient(
+        colors = listOf(Color(0x332563EB), Color(0x1A3B82F6), Color(0x00000000)),
+    ),
+    glassCardGradient = Brush.linearGradient(
+        listOf(Color(0x40FFFFFF), Color(0x14FFFFFF)),
     ),
     categoryGradients = persistentListOf(
-        Brush.linearGradient(listOf(Color(0xFF9CC6A1), Color(0xFF7AAF80))),
-        Brush.linearGradient(listOf(Color(0xFFD4A87A), Color(0xFFBF9060))),
-        Brush.linearGradient(listOf(Color(0xFFC4A265), Color(0xFFAE8E50))),
-        Brush.linearGradient(listOf(Color(0xFF9BB1C6), Color(0xFF809AB0))),
-        Brush.linearGradient(listOf(Color(0xFFB8AAC6), Color(0xFF9F90B0))),
-        Brush.linearGradient(listOf(Color(0xFFD49A8C), Color(0xFFBF8070))),
+        Brush.linearGradient(listOf(Color(0xFF60A5FA), Color(0xFF3B82F6))),
+        Brush.linearGradient(listOf(Color(0xFF2DD4BF), Color(0xFF14B8A6))),
+        Brush.linearGradient(listOf(Color(0xFF38BDF8), Color(0xFF0EA5E9))),
+        Brush.linearGradient(listOf(Color(0xFF818CF8), Color(0xFF6366F1))),
+        Brush.linearGradient(listOf(Color(0xFFA78BFA), Color(0xFF8B5CF6))),
+        Brush.linearGradient(listOf(Color(0xFFFBBF24), Color(0xFFEF4444))),
     ),
-    budgetBurnGreen = Color(0xFF6BCB77),
-    budgetBurnYellow = Color(0xFFE0A840),
-    budgetBurnRed = Color(0xFFEF6B6B),
-    spendingLine = Color(0xFF9CC6A1),
-    ghostLine = Color(0xFF6E6E6E),
+    budgetBurnGreen = Color(0xFF2DD4BF),
+    budgetBurnYellow = Color(0xFFFBBF24),
+    budgetBurnRed = Color(0xFFF87171),
+    spendingLine = Color(0xFF93C5FD),
+    ghostLine = Color(0xFF64748B),
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }

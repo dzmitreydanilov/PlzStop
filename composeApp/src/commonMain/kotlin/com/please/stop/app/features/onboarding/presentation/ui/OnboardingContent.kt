@@ -1,5 +1,6 @@
 package com.please.stop.app.features.onboarding.presentation.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +34,7 @@ import com.please.stop.app.features.onboarding.presentation.ui.steps.CurrencySte
 import com.please.stop.app.features.onboarding.presentation.ui.steps.NameStep
 import com.please.stop.app.features.onboarding.presentation.ui.steps.WelcomeStep
 import com.please.stop.app.navigation.nav3.HandleNavigationBack
+import com.please.stop.app.theme.LocalAppDimens
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.skip
@@ -44,6 +47,7 @@ fun OnboardingContent(
     state: OnboardingState.Content,
     onEvent: (OnboardingEvent) -> Unit,
 ) {
+    val dimens = LocalAppDimens.current
     val pagerState = rememberPagerState(
         initialPage = state.currentStep.ordinal,
         pageCount = { OnboardingStep.entries.size },
@@ -63,12 +67,13 @@ fun OnboardingContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 24.dp),
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                    .padding(horizontal = dimens.onboardingSectionSpacing)
+                    .padding(bottom = dimens.onboardingSectionSpacing),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 OnboardingStepIndicator(currentStep = state.currentStep)
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(dimens.small2))
                 OnboardingPrimaryButton(
                     currentStep = state.currentStep,
                     isEnabled = state.isNextEnabled,

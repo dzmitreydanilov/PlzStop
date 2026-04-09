@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
+import com.please.stop.app.theme.LocalAppDimens
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.onboarding_choose_currency
@@ -36,7 +37,8 @@ fun CurrencyStep(
     state: Content,
     onEvent: (OnboardingEvent) -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(48.dp))
+    val dimens = LocalAppDimens.current
+    Spacer(modifier = Modifier.height(dimens.onboardingTopSpacing))
 
     Text(
         text = stringResource(Res.string.onboarding_choose_currency),
@@ -46,7 +48,7 @@ fun CurrencyStep(
         textAlign = TextAlign.Center,
     )
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(dimens.onboardingSectionSpacing))
 
     CurrencySelector(
         selectedCurrency = state.selectedCurrency,
@@ -61,9 +63,9 @@ fun CurrencyStep(
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(dimens.small2),
                 ) {
-                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(dimens.onboardingTopSpacing))
                     Text(
                         text = stringResource(Res.string.onboarding_detecting_currency),
                         style = MaterialTheme.typography.bodyLarge,
@@ -79,15 +81,16 @@ private fun CurrencySelector(
     selectedCurrency: Currency?,
     onClick: () -> Unit,
 ) {
+    val dimens = LocalAppDimens.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .background(
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = RoundedCornerShape(dimens.radiusMedium),
             )
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = dimens.small2, vertical = dimens.small2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (selectedCurrency != null) {
@@ -96,7 +99,7 @@ private fun CurrencySelector(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(dimens.small1))
             Text(
                 text = "${selectedCurrency.code} — ${selectedCurrency.name}",
                 style = MaterialTheme.typography.bodyLarge,

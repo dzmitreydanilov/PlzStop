@@ -1,6 +1,7 @@
 package com.please.stop.app.features.onboarding.presentation.ui.steps
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -15,6 +16,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.please.stop.app.theme.LocalAppColors
+import com.please.stop.app.theme.LocalAppDimens
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.onboarding_app_name
@@ -22,6 +25,8 @@ import plzstop.composeapp.generated.resources.onboarding_tagline
 
 @Composable
 fun WelcomeStep() {
+    val appColors = LocalAppColors.current
+    val dimens = LocalAppDimens.current
     val tagline = stringResource(Res.string.onboarding_tagline)
     val heading = tagline.substringBefore('\n').ifBlank { tagline }
     val description = tagline.substringAfter('\n', "")
@@ -33,13 +38,14 @@ fun WelcomeStep() {
         color = MaterialTheme.colorScheme.onSurface,
     )
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(dimens.onboardingSectionSpacing))
 
     Box(
         modifier = Modifier
-            .size(84.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer),
+            .size(dimens.onboardingLogoSize)
+            .clip(RoundedCornerShape(dimens.onboardingSectionSpacing))
+            .background(brush = appColors.primaryGradient)
+            .border(1.dp, appColors.cardGlassBorder, RoundedCornerShape(dimens.onboardingSectionSpacing)),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -48,7 +54,7 @@ fun WelcomeStep() {
         )
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(dimens.onboardingSectionSpacing))
 
     Text(
         text = heading,
@@ -58,7 +64,7 @@ fun WelcomeStep() {
         textAlign = TextAlign.Center,
     )
 
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(dimens.extraSmall))
 
     Text(
         text = description.ifBlank { tagline },

@@ -1,7 +1,10 @@
 package com.please.stop.app.features.home.presentation.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -10,13 +13,14 @@ import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOWER_BOUND
 import com.please.stop.app.features.home.presentation.HomeCategoryUiModel
 import com.please.stop.app.features.home.presentation.HomeEvent
 import com.please.stop.app.features.home.presentation.HomeState
 import com.please.stop.app.theme.AppTheme
+import com.please.stop.app.theme.LocalAppColors
+import com.please.stop.app.theme.LocalAppDimens
 import kotlinx.collections.immutable.persistentListOf
 
 private const val COLUMNS_COMPACT = 3
@@ -29,6 +33,8 @@ internal fun HomeBody(
     onEvent: (HomeEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appColors = LocalAppColors.current
+    val dimens = LocalAppDimens.current
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val columnCount = when {
         windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND) -> COLUMNS_EXPANDED
@@ -36,22 +42,31 @@ internal fun HomeBody(
         else -> COLUMNS_COMPACT
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columnCount),
-        modifier = modifier.padding(horizontal = 8.dp),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(brush = appColors.meshBackground),
     ) {
-        itemsIndexed(
-            items = state.categories,
-            key = { _, it -> it.id },
-        ) { _, category ->
-            CategoryTile(
-                category = category,
-                onClick = { onEvent(HomeEvent.CategoryClicked(category.id)) },
-                modifier = Modifier.animateItem(),
-            )
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(columnCount),
+            modifier = Modifier.padding(horizontal = dimens.extraSmall),
+            contentPadding = PaddingValues(
+                top = dimens.extraSmall,
+                bottom = dimens.small2,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(dimens.layoutGridGap),
+            verticalArrangement = Arrangement.spacedBy(dimens.layoutGridGap),
+        ) {
+            itemsIndexed(
+                items = state.categories,
+                key = { _, it -> it.id },
+            ) { _, category ->
+                CategoryTile(
+                    category = category,
+                    onClick = { onEvent(HomeEvent.CategoryClicked(category.id)) },
+                    modifier = Modifier.animateItem(),
+                )
+            }
         }
     }
 }

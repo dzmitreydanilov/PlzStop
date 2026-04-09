@@ -12,9 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
+import com.please.stop.app.theme.LocalAppDimens
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.onboarding_budget_hint
@@ -26,9 +26,10 @@ fun BudgetStep(
     state: Content,
     onEvent: (OnboardingEvent) -> Unit,
 ) {
+    val dimens = LocalAppDimens.current
     val decimalPlaces = state.decimalPlaces
 
-    Spacer(modifier = Modifier.height(48.dp))
+    Spacer(modifier = Modifier.height(dimens.onboardingTopSpacing))
 
     Text(
         text = stringResource(Res.string.onboarding_set_budget),
@@ -38,7 +39,7 @@ fun BudgetStep(
         textAlign = TextAlign.Center,
     )
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(dimens.onboardingSectionSpacing))
 
     OutlinedTextField(
         value = state.monthlyBudgetInput,

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.theme.LocalAppColors
+import com.please.stop.app.theme.LocalAppDimens
 import com.please.stop.app.uicomponents.ANIMATION_DURATION_MS
 import com.please.stop.app.uicomponents.animation.rememberShimmerOffset
 import com.please.stop.app.uicomponents.animation.shimmerOverlay
@@ -66,6 +68,7 @@ internal fun CollapsingHomeHeader(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val dimens = LocalAppDimens.current
     val isCollapsed = currentHeight != Dp.Unspecified && currentHeight <= CollapsedBarHeight
     val fraction = if (isCollapsed) 1f else 0f
 
@@ -88,6 +91,7 @@ internal fun CollapsingHomeHeader(
             displayName = displayName,
             totalSpentFormatted = totalSpentFormatted,
             onProfileClicked = onProfileClicked,
+            avatarSize = dimens.homeHeaderAvatarExpandedSize,
             modifier = Modifier.graphicsLayer { alpha = 1f - fraction },
         )
 
@@ -96,6 +100,7 @@ internal fun CollapsingHomeHeader(
             totalSpentFormatted = totalSpentFormatted,
             displayName = displayName,
             onProfileClicked = onProfileClicked,
+            avatarSize = dimens.homeHeaderAvatarCollapsedSize,
             modifier = Modifier.graphicsLayer { alpha = fraction },
         )
     }
@@ -106,9 +111,12 @@ private fun ExpandedContent(
     displayName: String?,
     totalSpentFormatted: String,
     onProfileClicked: () -> Unit,
+    avatarSize: Dp,
     modifier: Modifier = Modifier,
 ) {
     val shimmerOffset = rememberShimmerOffset()
+    val appColors = LocalAppColors.current
+    val dimens = LocalAppDimens.current
 
     val headerProgress = remember { Animatable(0f) }
     val cardAlpha = remember { Animatable(0f) }
@@ -130,7 +138,7 @@ private fun ExpandedContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
+            .padding(horizontal = dimens.small3, vertical = dimens.small2 + dimens.extraSmall),
     ) {
         Row(
             modifier = Modifier
@@ -148,7 +156,7 @@ private fun ExpandedContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = SUBTITLE_ALPHA),
                 )
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(dimens.xxSmall))
                 Text(
                     text = if (!displayName.isNullOrBlank()) displayName
                     else stringResource(Res.string.home_greeting_default),
@@ -157,14 +165,14 @@ private fun ExpandedContent(
                     color = Color.White,
                 )
             }
-            InitialAvatar(name = displayName, size = 44, onClick = onProfileClicked)
+            InitialAvatar(name = displayName, size = avatarSize, onClick = onProfileClicked)
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(dimens.small3))
 
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.15f),
+                containerColor = appColors.cardGlass,
             ),
             shape = MaterialTheme.shapes.large,
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -176,29 +184,36 @@ private fun ExpandedContent(
                 }
                 .shimmerOverlay(shimmerOffset, Color.White.copy(alpha = SHIMMER_ALPHA)),
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .background(appColors.glassCardGradient)
+                    .border(1.dp, appColors.cardGlassBorder, MaterialTheme.shapes.large),
             ) {
-                Text(
-                    text = stringResource(Res.string.home_total_spent),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = CARD_LABEL_ALPHA),
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = totalSpentFormatted,
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(Res.string.home_spent_this_month, totalSpentFormatted),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = CARD_LABEL_ALPHA),
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(dimens.small3),
+                ) {
+                    Text(
+                        text = stringResource(Res.string.home_total_spent),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = CARD_LABEL_ALPHA),
+                    )
+                    Spacer(modifier = Modifier.height(dimens.xSmall))
+                    Text(
+                        text = totalSpentFormatted,
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                    )
+                    Spacer(modifier = Modifier.height(dimens.xSmall))
+                    Text(
+                        text = stringResource(Res.string.home_spent_this_month, totalSpentFormatted),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = CARD_LABEL_ALPHA),
+                    )
+                }
             }
         }
     }
@@ -209,13 +224,15 @@ private fun CollapsedBar(
     totalSpentFormatted: String,
     displayName: String?,
     onProfileClicked: () -> Unit,
+    avatarSize: Dp,
     modifier: Modifier = Modifier,
 ) {
+    val dimens = LocalAppDimens.current
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(CollapsedBarHeight)
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = dimens.small3),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -226,21 +243,21 @@ private fun CollapsedBar(
             color = Color.White,
             modifier = Modifier.weight(1f),
         )
-        Spacer(modifier = Modifier.width(12.dp))
-        InitialAvatar(name = displayName, size = 36, onClick = onProfileClicked)
+        Spacer(modifier = Modifier.width(dimens.small1))
+        InitialAvatar(name = displayName, size = avatarSize, onClick = onProfileClicked)
     }
 }
 
 @Composable
 private fun InitialAvatar(
     name: String?,
-    size: Int,
+    size: Dp,
     onClick: () -> Unit,
 ) {
     val initial = name?.firstOrNull()?.uppercase() ?: "?"
     Box(
         modifier = Modifier
-            .size(size.dp)
+            .size(size)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = AVATAR_BG_ALPHA))
             .clickable(onClick = onClick),
@@ -248,7 +265,7 @@ private fun InitialAvatar(
     ) {
         Text(
             text = initial,
-            style = if (size >= 44) MaterialTheme.typography.titleMedium
+            style = if (size >= 44.dp) MaterialTheme.typography.titleMedium
             else MaterialTheme.typography.bodyMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,

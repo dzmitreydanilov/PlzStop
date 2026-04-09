@@ -10,9 +10,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState.Content
+import com.please.stop.app.theme.LocalAppDimens
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.onboarding_name_hint
@@ -24,7 +24,8 @@ fun NameStep(
     state: Content,
     onEvent: (OnboardingEvent) -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(48.dp))
+    val dimens = LocalAppDimens.current
+    Spacer(modifier = Modifier.height(dimens.onboardingTopSpacing))
 
     Text(
         text = stringResource(Res.string.onboarding_whats_your_name),
@@ -34,7 +35,7 @@ fun NameStep(
         textAlign = TextAlign.Center,
     )
 
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(dimens.extraSmall))
 
     Text(
         text = stringResource(Res.string.onboarding_name_hint),
@@ -43,7 +44,7 @@ fun NameStep(
         textAlign = TextAlign.Center,
     )
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(dimens.onboardingSectionSpacing))
 
     OutlinedTextField(
         value = state.displayName,
