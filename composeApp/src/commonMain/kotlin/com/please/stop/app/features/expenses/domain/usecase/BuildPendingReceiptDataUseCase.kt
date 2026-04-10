@@ -39,15 +39,7 @@ object BuildPendingReceiptDataUseCase {
 
     private fun manual(categoryId: Long?, subcategoryId: Long?): PendingReceiptData =
         PendingReceiptData(
-            items = listOf(
-                ReceiptExpenseItem(
-                    id = "manual_0",
-                    name = "",
-                    amountMinorUnits = 0L,
-                    categoryId = categoryId,
-                    subcategoryId = subcategoryId,
-                )
-            ),
+            items = emptyList(),
             merchantName = null,
             currency = null,
             dateString = null,
