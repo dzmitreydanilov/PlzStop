@@ -24,3 +24,17 @@
 # Keep the generated serialization companion and constructor
 -keepnames class kotlinx.serialization.** { *; }
 -keepclassmembers class kotlinx.serialization.** { *; }
+
+# Koin — keep class names so getAll<T>() can resolve by type at runtime
+-keep class org.koin.** { *; }
+-keep class * implements androidx.lifecycle.DefaultLifecycleObserver { *; }
+
+# Firebase & GMS component registrars — R8 strips their no-arg constructors
+-keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); }
+-keep class * implements com.google.android.gms.common.internal.StringResourceValueReader { *; }
+
+# MLKit component registrar
+-keep class com.google.mlkit.** { <init>(); }
+
+# SQLCipher — keep JNI native methods and static initializer
+-keep class net.zetetic.database.sqlcipher.** { *; }

@@ -6,6 +6,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 actual fun <T : RoomDatabase> RoomDatabase.Builder<T>.encrypted(
     passphrase: String,
 ): RoomDatabase.Builder<T> {
+    System.loadLibrary("sqlcipher")
     val factory = SupportOpenHelperFactory(passphrase.toByteArray(Charsets.UTF_8))
     return openHelperFactory(factory)
 }
