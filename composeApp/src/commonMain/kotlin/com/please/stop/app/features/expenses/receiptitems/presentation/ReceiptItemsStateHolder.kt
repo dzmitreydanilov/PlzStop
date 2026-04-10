@@ -52,11 +52,11 @@ class ReceiptItemsStateHolder(
                 val parsedDateMillis = data.dateString?.let { parseDateToMillis(it) }
                 val dateMillis = parsedDateMillis ?: nowMillis()
                 emit(
-                    ReceiptItemsResult.UpdateContent {
+                    ReceiptItemsResult.Initialized(
                         ReceiptItemsState.Content(
                             merchantName = data.merchantName,
                             dateMillis = dateMillis,
-                            isDateAutoAssigned = parsedDateMillis == null,
+                            isDateAutoAssigned = parsedDateMillis == null && !data.isManualEntry,
                             items = items,
                             currency = CurrencyConfig(
                                 symbol = "",
@@ -69,7 +69,7 @@ class ReceiptItemsStateHolder(
                             defaultSubcategoryId = data.subcategoryId,
                             pendingCurrencyCode = data.currency,
                         )
-                    }
+                    )
                 )
             }
             is ConsumePendingReceiptDataUseCase.Result.NoPendingData -> {
@@ -131,6 +131,8 @@ class ReceiptItemsStateHolder(
                 defaultCategoryId = resolvedDefaultCategoryId,
             ).withDerivedFields()
         }
+
+        is ReceiptItemsResult.Initialized -> result.content.withDerivedFields()
 
         is ReceiptItemsResult.UpdateContent -> {
             val content = previous as? ReceiptItemsState.Content ?: return previous
@@ -229,7 +231,7 @@ class ReceiptItemsStateHolder(
                 val newItem = ReceiptItemUiModel(
                     id = "manual_${items.size}",
                     name = "",
-                    amountInput = keyboardCalculator.formatFromMinorUnits(0L),
+                    amountInput = "",
                     amountMinorUnits = 0L,
                     categoryId = defaultCategoryId,
                     subcategoryId = defaultSubcategoryId,
@@ -364,6 +366,7 @@ private fun ReceiptExpenseItem.toUiModel(
 private sealed interface ReceiptItemsResult : DomainResult {
     data object Saved : ReceiptItemsResult
     data object GoBack : ReceiptItemsResult
+    data class Initialized(val content: ReceiptItemsState.Content) : ReceiptItemsResult
     data class UpdateContent(
         val updater: ReceiptItemsState.Content.() -> ReceiptItemsState
     ) : ReceiptItemsResult
