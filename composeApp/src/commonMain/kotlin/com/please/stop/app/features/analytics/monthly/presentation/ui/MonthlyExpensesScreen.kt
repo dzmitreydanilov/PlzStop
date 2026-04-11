@@ -80,7 +80,7 @@ import plzstop.composeapp.generated.resources.monthly_expenses_total_spent
 @Composable
 fun MonthlyExpensesScreen(
     onNavigateToEditExpense: (expenseId: Long) -> Unit,
-    onNavigateToCreateExpense: () -> Unit = {},
+    onNavigateToCreateExpense: () -> Unit,
 ) {
     val stateHolder = koinViewModel<MonthlyExpensesStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()

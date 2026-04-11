@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.merge
+import kotlinx.datetime.number
 import kotlin.reflect.KClass
 import kotlin.time.ExperimentalTime
 import com.please.stop.app.core.models.domain.Result as DomainResult
@@ -43,7 +44,7 @@ class MonthlyExpensesStateHolder(
     override val bootstrapTiming = BootstrapTiming.IMMEDIATE
 
     private val windowFlow = MutableStateFlow(
-        localDateToday().let { today -> buildWindow(today.year, today.monthNumber) }
+        localDateToday().let { today -> buildWindow(today.year, today.month.number) }
     )
 
     override fun getInitial(): MonthlyWindowState = MonthlyWindowState()

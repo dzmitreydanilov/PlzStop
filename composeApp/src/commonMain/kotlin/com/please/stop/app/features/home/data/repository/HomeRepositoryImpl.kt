@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.datetime.number
 
 class HomeRepositoryImpl(
     private val userProfileDao: UserProfileDao,
@@ -25,7 +26,7 @@ class HomeRepositoryImpl(
 
     override fun observeHomeData(): Flow<HomeData> {
         val today = localDateToday()
-        val monthRange = monthMillisRange(today.year, today.monthNumber)
+        val monthRange = monthMillisRange(today.year, today.month.number)
 
         return combine(
             categoryDao.observeAll(),
