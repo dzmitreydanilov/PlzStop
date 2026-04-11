@@ -6,6 +6,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.minus
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
@@ -93,7 +94,7 @@ fun isBeforeCurrentMonth(
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): Boolean {
     val now = localDateToday(timeZone)
-    return year < now.year || (year == now.year && month < now.monthNumber)
+    return year < now.year || (year == now.year && month < now.month.number)
 }
 
 @OptIn(ExperimentalTime::class)
@@ -103,7 +104,7 @@ fun isCurrentOrFutureMonth(
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): Boolean {
     val now = localDateToday(timeZone)
-    return year > now.year || (year == now.year && month >= now.monthNumber)
+    return year > now.year || (year == now.year && month >= now.month.number)
 }
 
 @OptIn(ExperimentalTime::class)
@@ -114,7 +115,7 @@ fun formatDayLabel(
     val date = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(timeZone).date
     val dayOfWeek = date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
     val month = date.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
-    return "$dayOfWeek, $month ${date.dayOfMonth}"
+    return "$dayOfWeek, $month ${date.day}"
 }
 
 @OptIn(ExperimentalTime::class)
@@ -142,10 +143,10 @@ fun pageIndexToYearMonth(pageIndex: Int): Pair<Int, Int> =
 
 @OptIn(ExperimentalTime::class)
 fun currentMonthPageIndex(): Int =
-    localDateToday().let { monthPageIndex(it.year, it.monthNumber) }
+    localDateToday().let { monthPageIndex(it.year, it.month.number) }
 
 fun LocalDate.lengthOfMonth(): Int {
-    val firstOfMonth = LocalDate(year, monthNumber, 1)
+    val firstOfMonth = LocalDate(year, month.number, 1)
     val nextMonthStart = firstOfMonth.plus(1, DateTimeUnit.MONTH)
     return (nextMonthStart.toEpochDays() - firstOfMonth.toEpochDays()).toInt()
 }

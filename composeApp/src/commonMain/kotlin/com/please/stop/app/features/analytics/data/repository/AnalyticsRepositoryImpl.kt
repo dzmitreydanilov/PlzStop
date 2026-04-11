@@ -252,7 +252,7 @@ class AnalyticsRepositoryImpl(
 
     private fun currentMonthContext(): MonthContext {
         val today = localDateToday()
-        val range = monthMillisRange(today.year, today.monthNumber)
+        val range = monthMillisRange(today.year, today.month.number)
         return MonthContext(
             fromMillis = range.fromMillis,
             toMillis = range.toMillis,

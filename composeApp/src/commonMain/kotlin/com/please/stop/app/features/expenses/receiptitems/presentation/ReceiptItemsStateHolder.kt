@@ -4,15 +4,15 @@ import com.please.stop.app.core.BootstrapTiming
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.presentation.Navigation
+import com.please.stop.app.features.expenses.domain.model.AddExpenseFormData
 import com.please.stop.app.features.expenses.domain.model.ReceiptExpenseItem
 import com.please.stop.app.features.expenses.domain.usecase.ConsumePendingReceiptDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataResult
 import com.please.stop.app.features.expenses.domain.usecase.ObserveAddExpenseFormDataUseCase
 import com.please.stop.app.features.expenses.domain.usecase.SaveReceiptExpensesUseCase
-import com.please.stop.app.features.expenses.presentation.CategoryUiModel
+import com.please.stop.app.features.expenses.presentation.AddExpenseStateMapper
 import com.please.stop.app.features.expenses.presentation.CurrencyConfig
 import com.please.stop.app.features.expenses.presentation.KeyboardCalculator
-import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
 import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.date.localDateToday
 import com.please.stop.app.utils.date.monthMillisRange
@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.number
 import kotlin.reflect.KClass
 import com.please.stop.app.core.models.domain.Result as DomainResult
 
@@ -36,7 +37,7 @@ class ReceiptItemsStateHolder(
     override val tag = "ReceiptItemsStateHolder"
     override val bootstrapTiming = BootstrapTiming.DEFERRED
 
-    private val monthRange = localDateToday().let { monthMillisRange(it.year, it.monthNumber) }
+    private val monthRange = localDateToday().let { monthMillisRange(it.year, it.month.number) }
     private var keyboardCalculator =
         KeyboardCalculator(decimalPlaces = DEFAULT_CURRENCY_DECIMAL_PLACES, currencySymbol = "")
 
@@ -72,6 +73,7 @@ class ReceiptItemsStateHolder(
                     )
                 )
             }
+
             is ConsumePendingReceiptDataUseCase.Result.NoPendingData -> {
                 emit(ReceiptItemsResult.GoBack)
             }
@@ -96,41 +98,7 @@ class ReceiptItemsStateHolder(
         previous: ReceiptItemsState,
         result: DomainResult,
     ): ReceiptItemsState = when (result) {
-        is ObserveAddExpenseFormDataResult.Success -> {
-            val data = result.data
-            keyboardCalculator = KeyboardCalculator(
-                decimalPlaces = data.decimalPlaces,
-                currencySymbol = data.currencySymbol,
-            )
-            val content = previous as? ReceiptItemsState.Content ?: return previous
-            val resolvedDefaultCategoryId = content.defaultCategoryId
-                ?: data.categories.firstOrNull()?.id
-            val updatedItems = content.items.map { item ->
-                item.copy(
-                    amountInput = keyboardCalculator.formatFromMinorUnits(item.amountMinorUnits),
-                    categoryName = data.categories.firstOrNull { it.id == item.categoryId }?.name,
-                    subcategoryName = data.subcategories
-                        .firstOrNull { it.id == item.subcategoryId }?.name,
-                )
-            }.toImmutableList()
-            val categoryUiModels =
-                data.categories.map { CategoryUiModel(it.id, it.name, it.iconKey) }
-                    .toImmutableList()
-            val subcategoryUiModels = data.subcategories.map {
-                SubcategoryUiModel(it.id, it.parentCategoryId, it.name, it.iconKey)
-            }.toImmutableList()
-            content.copy(
-                currency = CurrencyConfig(
-                    code = data.currencyCode,
-                    symbol = data.currencySymbol,
-                    decimalPlaces = data.decimalPlaces,
-                ),
-                items = updatedItems,
-                categories = categoryUiModels,
-                subcategories = subcategoryUiModels,
-                defaultCategoryId = resolvedDefaultCategoryId,
-            ).withDerivedFields()
-        }
+        is ObserveAddExpenseFormDataResult.Success -> applyFormData(previous, result.data)
 
         is ReceiptItemsResult.Initialized -> result.content.withDerivedFields()
 
@@ -226,6 +194,7 @@ class ReceiptItemsStateHolder(
         is ReceiptItemsEvent.DismissDatePicker -> {
             flowOf(updateContent { copy(showDatePicker = false) })
         }
+
         is ReceiptItemsEvent.AddItem -> flowOf(
             updateContent {
                 val newItem = ReceiptItemUiModel(
@@ -244,6 +213,32 @@ class ReceiptItemsStateHolder(
         is ReceiptItemsEvent.ConfirmAll -> handleConfirmAll()
         is ReceiptItemsEvent.BackClicked -> flowOf(ReceiptItemsResult.GoBack)
         is ReceiptItemsEvent.DismissError -> flowOf(ReceiptItemsResult.GoBack)
+    }
+
+    private fun applyFormData(
+        previous: ReceiptItemsState,
+        data: AddExpenseFormData,
+    ): ReceiptItemsState {
+        keyboardCalculator = KeyboardCalculator(
+            decimalPlaces = data.decimalPlaces,
+            currencySymbol = data.currencySymbol,
+        )
+        val content = previous as? ReceiptItemsState.Content ?: return previous
+        val updatedItems = content.items.map { item ->
+            item.copy(
+                amountInput = keyboardCalculator.formatFromMinorUnits(item.amountMinorUnits),
+                categoryName = data.categories.firstOrNull { it.id == item.categoryId }?.name,
+                subcategoryName = data.subcategories
+                    .firstOrNull { it.id == item.subcategoryId }?.name,
+            )
+        }.toImmutableList()
+        return content.copy(
+            currency = AddExpenseStateMapper.toCurrencyConfig(data),
+            items = updatedItems,
+            categories = AddExpenseStateMapper.toCategoryUiModels(data),
+            subcategories = AddExpenseStateMapper.toSubcategoryUiModels(data),
+            defaultCategoryId = content.defaultCategoryId ?: data.categories.firstOrNull()?.id,
+        ).withDerivedFields()
     }
 
     private fun handleConfirmAll(): Flow<DomainResult> = flow {
