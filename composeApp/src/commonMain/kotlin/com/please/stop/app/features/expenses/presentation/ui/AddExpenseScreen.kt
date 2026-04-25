@@ -80,7 +80,7 @@ import com.please.stop.app.navigation.nav3.HandleNavigationBack
 import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
-import com.please.stop.app.uicomponents.sheets.CurrencyPickerSheet
+import com.please.stop.app.uicomponents.sheets.currency.CurrencyPickerSheet
 import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.format

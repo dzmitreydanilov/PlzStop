@@ -40,6 +40,8 @@ import com.please.stop.app.theme.LocalAppColors
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.settings_subscriptions_subtitle
+import plzstop.composeapp.generated.resources.settings_subscriptions_title
 import plzstop.composeapp.generated.resources.settings_tab
 
 private const val HEADER_ANIMATION_DURATION_MS = 400
@@ -49,14 +51,21 @@ private const val SECTION_INITIAL_OFFSET_PX = -20f
 
 internal fun EntryProviderScope<NavKey>.settingsTabEntries(
     onNavigateToCategories: () -> Unit,
+    onNavigateToSubscriptions: () -> Unit,
 ) {
     entry<MainBottomTabs.Settings> {
-        SettingsScreen(onNavigateToCategories = onNavigateToCategories)
+        SettingsScreen(
+            onNavigateToCategories = onNavigateToCategories,
+            onNavigateToSubscriptions = onNavigateToSubscriptions,
+        )
     }
 }
 
 @Composable
-private fun SettingsScreen(onNavigateToCategories: () -> Unit = {}) {
+private fun SettingsScreen(
+    onNavigateToCategories: () -> Unit = {},
+    onNavigateToSubscriptions: () -> Unit = {},
+) {
     val appColors = LocalAppColors.current
 
     val headerAlpha = remember { Animatable(0f) }
@@ -152,6 +161,12 @@ private fun SettingsScreen(onNavigateToCategories: () -> Unit = {}) {
                     onClick = onNavigateToCategories,
                 )
                 SettingsItem(emoji = "\uD83D\uDCCA", title = "Budget", subtitle = "Set monthly budget limits")
+                SettingsItem(
+                    emoji = "\uD83D\uDD14",
+                    title = stringResource(Res.string.settings_subscriptions_title),
+                    subtitle = stringResource(Res.string.settings_subscriptions_subtitle),
+                    onClick = onNavigateToSubscriptions,
+                )
             }
 
             AnimatedSettingsSection(title = "Preferences", delayMillis = 300) {

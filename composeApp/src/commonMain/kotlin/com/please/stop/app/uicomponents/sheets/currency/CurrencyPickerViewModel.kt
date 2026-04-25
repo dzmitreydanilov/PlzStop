@@ -1,4 +1,4 @@
-package com.please.stop.app.uicomponents.sheets
+package com.please.stop.app.uicomponents.sheets.currency
 
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel

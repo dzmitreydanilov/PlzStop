@@ -2,12 +2,17 @@ package com.please.stop.app.navigation
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
@@ -23,6 +28,10 @@ import com.please.stop.app.features.expenses.presentation.ui.CreateExpenseScreen
 import com.please.stop.app.features.expenses.presentation.ui.EditExpenseScreen
 import com.please.stop.app.features.expenses.receiptitems.presentation.ui.ReceiptItemsScreen
 import com.please.stop.app.features.onboarding.presentation.ui.OnboardingScreen
+import com.please.stop.app.features.subscriptions.presentation.promotion.NavigateToSubscriptionsList
+import com.please.stop.app.features.subscriptions.presentation.promotion.SubscriptionPromoBottomSheet
+import com.please.stop.app.features.subscriptions.presentation.promotion.SubscriptionPromoCoordinator
+import com.please.stop.app.features.subscriptions.presentation.ui.SubscriptionsListScreen
 import com.please.stop.app.navigation.animation.LocalSharedTransitionScope
 import com.please.stop.app.navigation.animation.predictivePopTransitionSpec
 import com.please.stop.app.navigation.animation.slideInTransitionSpec
@@ -43,9 +52,11 @@ import com.please.stop.app.navigation.routes.EditExpenseRoute
 import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.navigation.routes.OnboardingRoute
 import com.please.stop.app.navigation.routes.ReceiptItemsRoute
+import com.please.stop.app.navigation.routes.SubscriptionsListRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
+import org.koin.compose.koinInject
 
 /**
  * Root navigation host that wires the entire app graph.
@@ -62,6 +73,13 @@ fun RootContent(
 ) {
     val bottomNavIntentHolder = LocalBottomNavIntentHolder.current
     val deepLinkResolver = remember { DeepLinkResolver() }
+    val promoCoordinator = koinInject<SubscriptionPromoCoordinator>()
+    val promoState by promoCoordinator.state.collectAsStateWithLifecycle()
+
+    DisposableEffect(promoCoordinator) {
+        promoCoordinator.start()
+        onDispose { promoCoordinator.stop() }
+    }
 
     var coldStartResult by remember {
         mutableStateOf(
@@ -92,27 +110,44 @@ fun RootContent(
 
     @OptIn(ExperimentalSharedTransitionApi::class)
     Nav3Host(backStack = backStack) { backStack, onBack, router ->
-        SharedTransitionLayout {
-            CompositionLocalProvider(LocalSharedTransitionScope provides this) {
-                NavDisplay(
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    transitionSpec = slideInTransitionSpec(),
-                    popTransitionSpec = slideOutTransitionSpec(),
-                    predictivePopTransitionSpec = predictivePopTransitionSpec(),
-                    backStack = backStack,
-                    onBack = onBack,
-                    entryDecorators = listOf(
-                        rememberSaveableStateHolderNavEntryDecorator(),
-                        rememberViewModelStoreNavEntryDecorator(),
-                    ),
-                    entryProvider = entryProvider {
-                        bottomNavigationNavHost(router)
-                        onboardingEntries(router)
-                    },
-                    sceneStrategies = listOf(
-                        SinglePaneSceneStrategy(),
-                    ),
-                )
+        Box(modifier = Modifier.fillMaxSize()) {
+            SharedTransitionLayout {
+                CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                    NavDisplay(
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        transitionSpec = slideInTransitionSpec(),
+                        popTransitionSpec = slideOutTransitionSpec(),
+                        predictivePopTransitionSpec = predictivePopTransitionSpec(),
+                        backStack = backStack,
+                        onBack = onBack,
+                        entryDecorators = listOf(
+                            rememberSaveableStateHolderNavEntryDecorator(),
+                            rememberViewModelStoreNavEntryDecorator(),
+                        ),
+                        entryProvider = entryProvider {
+                            bottomNavigationNavHost(router)
+                            onboardingEntries(router)
+                        },
+                        sceneStrategies = listOf(
+                            SinglePaneSceneStrategy(),
+                        ),
+                    )
+                }
+            }
+
+            SubscriptionPromoBottomSheet(
+                state = promoState,
+                onCtaClick = promoCoordinator::onCtaClicked,
+                onDismiss = promoCoordinator::onDismissed,
+            )
+        }
+
+        CollectNavigationFlow(
+            flow = promoCoordinator.navigation,
+            key1 = promoCoordinator,
+        ) { navigation ->
+            if (navigation is NavigateToSubscriptionsList) {
+                router.push(SubscriptionsListRoute)
             }
         }
 
@@ -174,6 +209,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
             onNavigateToCreateExpense = { router.push(CreateExpenseRoute()) },
             onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
             onNavigateToCategories = { router.push(CategoriesRoute) },
+            onNavigateToSubscriptions = { router.push(SubscriptionsListRoute) },
         )
     }
 
@@ -208,6 +244,10 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
 
     entry<ArchivedCategoriesRoute> {
         ArchivedCategoriesScreen(onGoBack = { router.pop() })
+    }
+
+    entry<SubscriptionsListRoute> {
+        SubscriptionsListScreen(onGoBack = { router.pop() })
     }
 }
 

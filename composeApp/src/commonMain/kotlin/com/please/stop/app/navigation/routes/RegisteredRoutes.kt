@@ -16,6 +16,7 @@ private fun PolymorphicModuleBuilder<NavKey>.registerGlobalRoutes() {
     subclass(ReceiptItemsRoute::class)
     subclass(CategoriesRoute::class)
     subclass(ArchivedCategoriesRoute::class)
+    subclass(SubscriptionsListRoute::class)
 }
 
 fun PolymorphicModuleBuilder<NavKey>.registerBottomNavBarStartRoute() {

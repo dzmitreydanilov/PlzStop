@@ -8,6 +8,7 @@ import com.please.stop.app.features.categories.di.categoriesModule
 import com.please.stop.app.features.expenses.di.addExpenseModule
 import com.please.stop.app.features.home.di.homeModule
 import com.please.stop.app.features.onboarding.di.onboardingModule
+import com.please.stop.app.features.subscriptions.di.subscriptionPromotionModule
 import org.koin.dsl.module
 
 internal val appModule = module {
@@ -23,5 +24,6 @@ internal val appModule = module {
         addExpenseModule,
         monthlyExpensesModule,
         categoriesModule,
+        subscriptionPromotionModule,
     )
 }

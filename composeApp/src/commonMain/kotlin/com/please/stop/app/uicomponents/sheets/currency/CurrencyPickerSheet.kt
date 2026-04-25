@@ -1,4 +1,4 @@
-package com.please.stop.app.uicomponents.sheets
+package com.please.stop.app.uicomponents.sheets.currency
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
 import com.please.stop.app.features.onboarding.domain.model.Currency
+import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource

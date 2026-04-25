@@ -19,7 +19,7 @@ import com.please.stop.app.features.onboarding.domain.usecase.ObserveOnboardingC
 import com.please.stop.app.features.onboarding.presentation.OnboardingState
 import com.please.stop.app.features.onboarding.presentation.OnboardingStateHolder
 import com.please.stop.app.presentation.RootStateHolder
-import com.please.stop.app.uicomponents.sheets.CurrencyPickerViewModel
+import com.please.stop.app.uicomponents.sheets.currency.CurrencyPickerViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
