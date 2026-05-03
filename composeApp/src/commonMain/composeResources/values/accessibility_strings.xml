@@ -6,6 +6,9 @@
     <string name="content_desc_clear">Clear</string>
     <string name="content_desc_search">Search</string>
 
+    <!-- Date pickers -->
+    <string name="content_desc_open_date_range_picker">Open date range picker</string>
+
     <!-- Media -->
     <string name="content_desc_microphone">Microphone</string>
     <string name="content_desc_gallery">Gallery</string>

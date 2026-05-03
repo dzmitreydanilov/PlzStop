@@ -10,6 +10,7 @@ fun PolymorphicModuleBuilder<NavKey>.registerGlobalRotes() {
 }
 
 private fun PolymorphicModuleBuilder<NavKey>.registerGlobalRoutes() {
+    subclass(AuthRoute::class)
     subclass(OnboardingRoute::class)
     subclass(CreateExpenseRoute::class)
     subclass(EditExpenseRoute::class)

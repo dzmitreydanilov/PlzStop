@@ -1,11 +1,10 @@
 package com.please.stop.app.features.subscriptions.data.storage
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import com.please.stop.app.kvs.IKvs
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 interface ISubscriptionPromoStorage {
@@ -15,22 +14,21 @@ interface ISubscriptionPromoStorage {
 }
 
 class SubscriptionPromoStorage(
-    private val dataStore: DataStore<Preferences>,
+    private val kvs: IKvs,
 ) : ISubscriptionPromoStorage {
 
     override fun getDismissedTimestamp(): Flow<Long?> {
-        return dataStore.data.map { prefs -> prefs[DISMISSED_TIMESTAMP] }
+        return kvs.getLong(DISMISSED_TIMESTAMP)
     }
 
     override fun getShownCount(): Flow<Int> {
-        return dataStore.data.map { prefs -> prefs[SHOWN_COUNT] ?: 0 }
+        return kvs.getInt(SHOWN_COUNT).map { it ?: 0 }
     }
 
     override suspend fun recordDismissal(timestamp: Long) {
-        dataStore.edit { prefs ->
-            prefs[DISMISSED_TIMESTAMP] = timestamp
-            prefs[SHOWN_COUNT] = (prefs[SHOWN_COUNT] ?: 0) + 1
-        }
+        kvs.saveLong(DISMISSED_TIMESTAMP, timestamp)
+        val current = kvs.getInt(SHOWN_COUNT).first() ?: 0
+        kvs.saveInt(SHOWN_COUNT, current + 1)
     }
 
     private companion object {

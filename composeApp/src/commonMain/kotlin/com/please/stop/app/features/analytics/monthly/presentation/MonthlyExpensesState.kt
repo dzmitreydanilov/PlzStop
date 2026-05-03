@@ -1,6 +1,5 @@
 package com.please.stop.app.features.analytics.monthly.presentation
 
-import androidx.compose.runtime.Stable
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.serialization.ImmutableListSerializer
 import com.please.stop.app.core.serialization.ImmutableSetSerializer
@@ -11,7 +10,6 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.serialization.Serializable
 
 @Serializable
-@Stable
 data class MonthlyWindowState(
     @Serializable(with = ImmutableListSerializer::class)
     val pages: ImmutableList<MonthPageEntry> = persistentListOf(),
@@ -29,7 +27,6 @@ data class MonthPageEntry(
 )
 
 @Serializable
-@Stable
 sealed interface MonthPageState {
     val dayGroups: ImmutableList<DayGroupUiModel>
     val totalFormatted: String?
@@ -68,7 +65,6 @@ sealed interface MonthPageState {
 }
 
 @Serializable
-@Stable
 data class DayGroupUiModel(
     val dayLabel: String,
     val dayEpochMillis: Long,
@@ -78,7 +74,6 @@ data class DayGroupUiModel(
 )
 
 @Serializable
-@Stable
 sealed interface ExpenseEntryUiModel {
 
     @Serializable

@@ -1,11 +1,9 @@
 package com.please.stop.app.features.onboarding.presentation
 
-import androidx.compose.runtime.Stable
 import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import kotlinx.serialization.Serializable
 
-@Stable
 @Serializable
 sealed interface OnboardingState {
 

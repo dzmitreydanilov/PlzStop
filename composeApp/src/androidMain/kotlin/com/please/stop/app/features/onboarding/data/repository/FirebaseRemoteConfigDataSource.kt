@@ -2,6 +2,7 @@ package com.please.stop.app.features.onboarding.data.repository
 
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.please.stop.app.core.logger.logErrorWithTag
+import kotlinx.coroutines.tasks.await
 
 class FirebaseRemoteConfigDataSource(
     private val remoteConfig: FirebaseRemoteConfig,
@@ -10,7 +11,7 @@ class FirebaseRemoteConfigDataSource(
     @Suppress("TooGenericExceptionCaught")
     override suspend fun fetchString(key: String): String? {
         return try {
-            remoteConfig.fetchAndActivate()
+            remoteConfig.fetchAndActivate().await()
             val value = remoteConfig.getValue(key).asString()
             value.takeIf { it.isNotBlank() }
         } catch (e: Exception) {
@@ -26,7 +27,7 @@ class FirebaseRemoteConfigDataSource(
     @Suppress("TooGenericExceptionCaught")
     override suspend fun fetchBoolean(key: String): Boolean {
         return try {
-            remoteConfig.fetchAndActivate()
+            remoteConfig.fetchAndActivate().await()
             remoteConfig.getValue(key).asBoolean()
         } catch (e: Exception) {
             logErrorWithTag(

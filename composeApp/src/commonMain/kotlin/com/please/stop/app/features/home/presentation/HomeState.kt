@@ -1,6 +1,5 @@
 package com.please.stop.app.features.home.presentation
 
-import androidx.compose.runtime.Stable
 import com.please.stop.app.core.models.domain.Currency
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.serialization.ImmutableListSerializer
@@ -8,7 +7,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.Serializable
 
-@Stable
 @Serializable
 sealed interface HomeState {
     val displayName: String?
@@ -54,7 +52,6 @@ sealed interface HomeState {
     ) : HomeState
 }
 
-@Stable
 @Serializable
 data class HomeCategoryUiModel(
     val id: Long,

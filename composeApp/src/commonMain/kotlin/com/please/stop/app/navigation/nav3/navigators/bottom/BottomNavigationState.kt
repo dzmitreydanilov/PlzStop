@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +44,6 @@ import kotlinx.serialization.PolymorphicSerializer
  * - Each tab owns its own [NavBackStack] which retains saveable state and VM store
  *   through the decorators used when materializing entries (see [toEntries]).
  */
-@Stable
 class BottomNavigationState(
     val startRoute: NavKey,
     topLevelRoute: MutableState<NavKey>,

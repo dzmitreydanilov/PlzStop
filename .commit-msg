@@ -1,0 +1,12 @@
+refactor(cloud-functions): harden security, restructure codebases, and enhance export
+
+- Require Firebase Auth on all cloud functions (receipt analysis + export)
+- Fix formula injection in spreadsheet export (sanitize =, +, -, @ prefixes)
+- Add decompression bomb guard (10 MB limit) and cap decimalPlaces
+- Remove unused verifyGoogleToken and verifyAppleToken functions
+- Split TS and Python into separate Firebase codebases (functions/ + functions-py/)
+- Add Firestore write for export recovery when background worker is killed
+- Add subcategory breakdown and pivot summary (months as columns) for single-tab export
+- Add custom spreadsheet title support
+- Add unit tests for Python cloud function (41 tests)
+- Add API contract spec and update deploy docs

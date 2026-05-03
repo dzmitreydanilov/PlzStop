@@ -7,7 +7,7 @@ This plan delivers two sequential phases: platform authentication (Google + Appl
 ## Prerequisites
 
 - Firebase project already targets `europe-west1`; Cloud Functions Gen 2 must be enabled in the Firebase console
-- `ITokensStorage` and `IUserStorage` interfaces exist and are Koin-bound; implementations are already in place
+- `ITokensStorage` interface exists (for future custom backend bearer auth) but has **no implementation and is not Koin-bound** — out of scope for this plan; auth/export uses Firebase Auth SDK directly
 - `ExpenseDao.getExpensesInRange` returns a `List<ExpenseEntity>` — the export uses the suspend variant (not the Flow one)
 - The `FirebaseCallableFunctions` interface (`call(functionName, data)`) is already implemented for both Android (`AndroidFirebaseCallableFunctions`) and iOS (`IosFirebaseCallableFunctions`); the export Cloud Function will be invoked through it
 - Google OAuth Client ID must be provisioned in Google Cloud Console for **both** Android (SHA-1 fingerprint registered) **and** iOS (bundle ID registered) — two separate client IDs
@@ -24,23 +24,23 @@ This plan delivers two sequential phases: platform authentication (Google + Appl
 
 1. **No refresh token stored.** The app requests a fresh Google access token from the platform SDK at export time (silent re-auth, no UI). Only the connection status (email + linked flag) is persisted — not the token itself.
 2. **Two-step Google flow on Android.** Step 1: Credential Manager (`GetGoogleIdOption`) for identity (ID token). Step 2: Google Identity Services `AuthorizationRequest` for scoped access token (`spreadsheets` scope). These are separate API calls.
-3. **Export bottom sheet is the primary result path.** The FCM notification is a bonus for users who background the app. The bottom sheet always shows the result inline.
+3. **Export bottom sheet confirms enqueue only.** The bottom sheet shows "Export started" and auto-dismisses. The FCM push notification is how the user receives the spreadsheet URL.
 4. **Apple Sign-In users see the export button** — tapping it triggers inline "Connect Google Account" flow. After connecting, export proceeds automatically (no second tap).
-5. **`userEmail` is never sent from the client** in the export payload. The Cloud Function extracts email from the validated Google access token via tokeninfo.
-6. **Firebase Auth is used for user identity** — `signInWithCredential` with Google/Apple credentials. This ensures `context.auth` is populated in Cloud Functions automatically.
+5. **`userEmail` is never sent from the client** in the export payload. The Cloud Function reads email from `context.auth.token.email` (Firebase Auth server-verified) — no tokeninfo call needed.
+6. **Firebase Auth is used for user identity** — `signInWithCredential` with Google/Apple credentials. This ensures `context.auth` is populated in Cloud Functions automatically. Firebase Auth calls live **inside platform `SocialAuthProvider` implementations** (Android/iOS), not in `commonMain` — the common layer only sees `SocialAuthResult`. This follows the existing bridge pattern used by `FirebaseCallableFunctions`.
 7. **Conditional gzip compression.** Payload < 100KB → send raw JSON (typical monthly export). Payload >= 100KB → gzip + base64 (multi-month, yearly). A `compressed: true/false` flag in the payload tells the Cloud Function which format to expect. Uses `kotlinx-io` `GzipSink`/`GzipSource` in `commonMain` — no `expect/actual` needed.
 8. **Auth strategy per platform:**
    - **Android:** Credential Manager for Google Sign-In → Firebase Auth
    - **iOS:** Apple Sign-In (native `AuthenticationServices`) + Google Sign-In SDK (webview-based OAuth) → Firebase Auth
    - **Export:** Separate call to platform Google SDK for a fresh scoped access token (not stored, requested each time)
-9. **Fire-and-forget export.** User taps Export → app enqueues background work → bottom sheet shows "Export started" → dismisses. The Cloud Function sends FCM push notification when done. No spinner, no waiting. Android uses WorkManager, iOS uses `BGProcessingTask`/`Task {}`.
-10. **Push notification is the only result delivery.** Since export runs in the background, the app does not wait for the Cloud Function response. The notification with deep link is how the user gets the spreadsheet URL.
+9. **Background export with dual result delivery.** User taps Export → app enqueues background work → bottom sheet shows "Export started" → dismisses. The background worker calls the Cloud Function, **waits for the response**, and **updates local DB** with the export result (spreadsheet URL, status, timestamp). Android uses WorkManager, iOS uses `BGProcessingTask`/`Task {}`.
+10. **FCM push as notification channel.** The Cloud Function **also** sends an FCM push notification with the spreadsheet URL. This ensures the user is notified even if the worker is killed mid-flight. The worker updating local DB ensures the app has the result even if the push is missed (e.g., notifications dismissed). Two independent delivery paths — neither depends on the other.
 
 ---
 
 ## Open Questions
 
-1. Should the app support exporting a custom date range, or always the current calendar month?
+1. ~~Should the app support exporting a custom date range, or always the current calendar month?~~ **Resolved:** Multi-month export supported. User picks a date range. Tab layout choice (`single_tab` / `separate_tabs`) controls whether months go on one sheet or separate sheets.
 2. Should multi-currency expenses show both the original amount/currency and the converted amount, or only the converted amount?
 3. Should the spreadsheet URL be opened in `CustomTabsIntent` / `SFSafariViewController` or always in the system browser?
 
@@ -64,16 +64,39 @@ google-signin-ios = "8.0.0"   # Declared for SPM — not in Gradle
 # androidx-credentials-play-services-auth are already in libs.versions.toml
 ```
 
+**`gradle/libs.versions.toml` — new entries needed:**
+```toml
+[versions]
+security-crypto = "1.1.0-alpha06"
+kotlinx-io = "0.6.0"
+
+[libraries]
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "security-crypto" }
+kotlinx-io-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
+```
+
+> `workmanager` and `work-runtime-ktx` are already declared in `libs.versions.toml` but not wired into any `build.gradle.kts`.
+> OAuth deps (`androidx-credentials`, `google-identity`, etc.) are already declared and wired via `libs.bundles.googleOauth`.
+
 Android Gradle (`composeApp/build.gradle.kts`) — add to `androidMain` dependencies:
 ```kotlin
-implementation(libs.androidx.credentials)
-implementation(libs.androidx.credentials.play.services)
-implementation(libs.google.identity)
-implementation(libs.androidx.credentials.play.services.auth)
+// OAuth deps already wired via libs.bundles.googleOauth — no change needed
+implementation(libs.androidx.security.crypto)
+implementation(libs.androidx.work.runtime.ktx)
+// Firebase Auth + Messaging (not yet in BOM imports)
+implementation("com.google.firebase:firebase-auth-ktx")
+implementation("com.google.firebase:firebase-messaging-ktx")
+```
+
+`commonMain` dependencies — add:
+```kotlin
+implementation(libs.kotlinx.io.core)
 ```
 
 iOS — add via SPM in `iosApp/iosApp.xcodeproj`:
 - `GoogleSignIn-iOS` SDK: `https://github.com/google/GoogleSignIn-iOS` tag `8.0.0`
+- `FirebaseAuth` SPM package (from existing Firebase SPM dependency)
+- `FirebaseMessaging` SPM package (from existing Firebase SPM dependency)
 - `AuthenticationServices` is a system framework — no SPM entry needed
 
 **iOS `Info.plist` additions (required):**
@@ -81,7 +104,34 @@ iOS — add via SPM in `iosApp/iosApp.xcodeproj`:
 - `GIDServerClientID` — Server (Web) client ID for backend verification
 - Add reversed client ID as a URL scheme (e.g., `com.googleusercontent.apps.123456`) — required for Google Sign-In redirect
 
-### Step 2 — Common Auth Models (`commonMain`) | Effort: Low
+### Step 2 — Common Auth Models & Google Auth Interfaces (`commonMain`) | Effort: Low
+
+> **Existing code:** Google auth interfaces already exist in `features/aauth/google/`. They use a **Composable-driven** pattern where sign-in is triggered from UI context (Activity available naturally). This is the correct approach — it eliminates the need for `ActivityProvider` hacks.
+
+**Required fixes to existing code:**
+
+1. **Rename `features/aauth/` → `features/auth/`** — the `aauth` package is a typo; Android impl is already in `features/auth/`
+2. **Fix `com.dog.care` imports** — these are copy-pasted from another project:
+   - `GoogleAuthUiProviderImpl.kt`: replace `com.dog.care.logger.logDebug` with project's logging utility (`com.please.stop.app.core.logger.logDebug` — already imported on a separate line)
+   - Delete `GetGooglePlayServicesAvailableUseCase.kt` and `IGetGooglePlayServiceAvailableUseCase.kt` — unused, don't follow project MVI/UseCase patterns. Rewrite from scratch if Google Play Services check is needed (see Step 3)
+3. **Create `GoogleAuthCredentials`** — referenced by Android impl but doesn't exist yet:
+
+`composeApp/src/commonMain/kotlin/com/please/stop/app/features/auth/google/GoogleAuthCredentials.kt`
+```kotlin
+data class GoogleAuthCredentials(val webClientId: String)
+```
+
+**Existing files (after rename to `features/auth/google/`):**
+
+| File | Status | Description |
+|------|--------|-------------|
+| `GoogleAuthProvider.kt` | EXISTS | Interface: `@Composable getUiProvider()`, `suspend signOut()` |
+| `GoogleAuthUiProvider.kt` | EXISTS | Interface: `suspend signIn(filterByAuthorizedAccounts, isAutoSelectEnabled, scopes): GoogleUser?` |
+| `GoogleUser.kt` | EXISTS | `data class GoogleUser(val idToken: String, val accessToken: String? = null)` |
+| `GoogleButtonUiContainer.kt` | EXISTS | Composable wrapper — triggers sign-in on click, delivers `GoogleUser` via callback |
+| `UiContainerScope.kt` | EXISTS | DSL interface for button container |
+
+> **Key insight:** `GoogleAuthUiProvider.signIn(scopes)` returns both `idToken` (for Firebase Auth) and `accessToken` (for Sheets API) in a single `GoogleUser`. The `scopes` parameter controls whether an access token is requested via Google Identity Services `AuthorizationRequest`.
 
 **New files:**
 
@@ -92,9 +142,6 @@ data class GoogleAccountLink(val email: String, val isConnected: Boolean)
 
 > Note: No access token stored. The app requests a fresh token from the platform SDK at export time.
 
-`composeApp/src/commonMain/kotlin/com/please/stop/app/core/models/data/AppleAuthCredential.kt`
-- `data class AppleAuthCredential(val identityToken: String, val authorizationCode: String, val email: String?, val fullName: String?)`
-
 `composeApp/src/commonMain/kotlin/com/please/stop/app/core/IGoogleAccountStorage.kt`
 ```kotlin
 interface IGoogleAccountStorage {
@@ -104,63 +151,48 @@ interface IGoogleAccountStorage {
 }
 ```
 
-`composeApp/src/commonMain/kotlin/com/please/stop/app/features/auth/domain/SocialAuthProvider.kt`
-```kotlin
-sealed interface SocialAuthResult {
-    data class GoogleSuccess(val idToken: String, val email: String) : SocialAuthResult
-    data class AppleSuccess(val credential: AppleAuthCredential) : SocialAuthResult
-    data class Failure(val cause: Throwable) : SocialAuthResult
-}
-
-interface SocialAuthProvider {
-    /** Authenticate with Google — returns ID token for Firebase Auth */
-    suspend fun signInWithGoogle(): SocialAuthResult
-
-    /** Authenticate with Apple — returns identity token for Firebase Auth */
-    suspend fun signInWithApple(): SocialAuthResult  // throws UnsupportedOperationException on Android
-
-    /**
-     * Request a fresh Google access token with the specified scopes.
-     * Uses silent re-auth (no UI) if the user previously signed in with Google.
-     * Called at export time — token is NOT persisted.
-     */
-    suspend fun getGoogleAccessToken(scopes: List<String>): String
-}
-```
+> **No `SocialAuthProvider` interface.** The plan originally proposed a pure-suspend `SocialAuthProvider` in the domain layer. The existing Composable-based `GoogleAuthProvider` replaces it for Google. Apple Sign-In uses a similar Composable pattern on iOS (see Step 3). Sign-in is triggered from the UI layer and the result (`GoogleUser`) flows through events to the StateHolder → UseCase → Repository.
 
 ### Step 3 — Platform Implementations | Effort: High
 
 **Android** (`composeApp/src/androidMain/`)
 
-`composeApp/src/androidMain/kotlin/com/please/stop/app/features/auth/data/AndroidSocialAuthProvider.kt`
-- Inject `ActivityProvider` (Android-only class, NOT `expect/actual`)
-- `signInWithGoogle()`:
-  - **Step 1 — Identity:** Use `CredentialManager.getCredential(GetGoogleIdOption(serverClientId = SERVER_CLIENT_ID))` → extract `GoogleIdTokenCredential` → return `GoogleSuccess(idToken, email)`
-  - This ID token is used for Firebase Auth sign-in
-- `signInWithApple()`: throws `UnsupportedOperationException`
-- `getGoogleAccessToken(scopes)`:
-  - **Step 2 — Authorization:** Use Google Identity Services `AuthorizationRequest.builder().setRequestedScopes(scopes).build()` via `Identity.getAuthorizationClient(activity).authorize(request)` → return `authorizationResult.accessToken`
-  - This is a **separate** API call from identity — Credential Manager cannot request OAuth scopes
+**Existing files (after fix):**
 
-> **Critical:** `GetGoogleIdOption` returns an ID token only. You CANNOT get a scoped access token from Credential Manager. The `AuthorizationRequest` from Google Identity Services is required as a second step for Sheets access.
+| File | Status | Description |
+|------|--------|-------------|
+| `GoogleAuthProviderImpl.kt` | EXISTS | Implements `GoogleAuthProvider`; uses `CredentialManager`, `rememberLauncherForActivityResult` for scope consent |
+| `GoogleAuthUiProviderImpl.kt` | EXISTS (needs fix) | Implements `GoogleAuthUiProvider`; handles Credential Manager + Google Identity Services `AuthorizationRequest` for scoped tokens |
+| `HashedNonce.kt` | EXISTS | SHA-256 nonce for Credential Manager requests |
 
-`composeApp/src/androidMain/kotlin/com/please/stop/app/features/auth/data/ActivityProvider.kt`
-- Plain Android-only class (NOT `expect/actual`) wrapping `ComponentActivity` reference
-- Updated from `MainActivity.onCreate`
-- Injected via `PlatformModule.android.kt`
+**Required fixes:**
+- `GoogleAuthUiProviderImpl.kt`: remove duplicate `import com.dog.care.logger.logDebug` (line 12) — the correct import `com.please.stop.app.core.logger.logDebug` is already present (line 20)
+- Delete `domain/GetGooglePlayServicesAvailableUseCase.kt` and `domain/IGetGooglePlayServiceAvailableUseCase.kt` — unused, don't follow project patterns
+
+**No `ActivityProvider` needed.** The Composable-based `GoogleAuthProviderImpl.getUiProvider()` uses `LocalContext.current` for Activity context and `rememberLauncherForActivityResult` for the authorization intent — Activity context is naturally available.
+
+> **Critical:** `GetGoogleIdOption` returns an ID token only. You CANNOT get a scoped access token from Credential Manager. The `GoogleAuthUiProviderImpl.fetchAccessTokenWithScopes()` uses Google Identity Services `AuthorizationRequest` as a second step — this is already implemented correctly.
 
 **iOS** (`composeApp/src/iosMain/`)
 
-`composeApp/src/iosMain/kotlin/com/please/stop/app/features/auth/data/IosSocialAuthBridge.kt`
+`composeApp/src/iosMain/kotlin/com/please/stop/app/features/auth/google/IosGoogleAuthProvider.kt`
+- Implements `GoogleAuthProvider` (same interface as Android)
+- `getUiProvider()`: returns `IosGoogleAuthUiProvider` that delegates to `IosSocialAuthBridge`
+- `signOut()`: delegates to bridge
+
+`composeApp/src/iosMain/kotlin/com/please/stop/app/features/auth/google/IosSocialAuthBridge.kt`
 ```kotlin
 @ObjCName("IosSocialAuthBridge", exact = true)
 interface IosSocialAuthBridge {
+    /** Google Sign-In via GIDSignIn SDK (webview) — returns idToken and optional accessToken */
     fun signInWithGoogle(
-        onSuccess: (idToken: String, email: String) -> Unit,
+        scopes: List<String>,
+        onSuccess: (idToken: String, accessToken: String?) -> Unit,
         onError: (String) -> Unit,
     )
+    /** Apple Sign-In via ASAuthorization — returns identityToken and optional email */
     fun signInWithApple(
-        onSuccess: (identityToken: String, authCode: String, email: String?, firstName: String?, lastName: String?) -> Unit,
+        onSuccess: (identityToken: String, nonce: String, email: String?) -> Unit,
         onError: (String) -> Unit,
     )
     fun getGoogleAccessToken(
@@ -168,20 +200,47 @@ interface IosSocialAuthBridge {
         onSuccess: (accessToken: String) -> Unit,
         onError: (String) -> Unit,
     )
+    fun signOut(onComplete: () -> Unit)
 }
 ```
 
-`composeApp/src/iosMain/kotlin/com/please/stop/app/features/auth/data/IosSocialAuthProvider.kt`
-- Inject `IosSocialAuthBridge`; delegate all methods via `suspendCancellableCoroutine`
+`composeApp/src/iosMain/kotlin/com/please/stop/app/features/auth/google/IosGoogleAuthUiProvider.kt`
+- Implements `GoogleAuthUiProvider`; delegates `signIn()` to `IosSocialAuthBridge.signInWithGoogle()` via `suspendCancellableCoroutine`
+- Returns `GoogleUser(idToken, accessToken)`
+
+**Apple Sign-In (iOS only):**
+
+`composeApp/src/commonMain/kotlin/com/please/stop/app/features/auth/apple/AppleAuthProvider.kt`
+```kotlin
+interface AppleAuthProvider {
+    /** Returns identity token + nonce for Firebase Auth. Null = user cancelled. */
+    suspend fun signIn(): AppleUser?
+    suspend fun signOut()
+}
+
+data class AppleUser(val identityToken: String, val nonce: String, val email: String?)
+```
+
+`composeApp/src/iosMain/kotlin/com/please/stop/app/features/auth/apple/IosAppleAuthProvider.kt`
+- Implements `AppleAuthProvider`; delegates to `IosSocialAuthBridge.signInWithApple()` via `suspendCancellableCoroutine`
+
+`composeApp/src/androidMain/kotlin/com/please/stop/app/features/auth/apple/NoOpAppleAuthProvider.kt`
+- Implements `AppleAuthProvider`; `signIn()` throws `UnsupportedOperationException`
 
 **Swift side** (`iosApp/`)
 
 `iosApp/IosSocialAuthBridgeImpl.swift`
-- `signInWithGoogle`: call `GIDSignIn.sharedInstance.signIn(withPresenting:)` → return `user.idToken?.tokenString` and `user.profile?.email`
-- `signInWithApple`: use `ASAuthorizationAppleIDProvider` via `ASAuthorizationController`
-  - **Presentation context:** Use `UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene` (NOT deprecated `UIApplication.keyWindow`)
+- `signInWithGoogle(scopes)`:
+  1. Call `GIDSignIn.sharedInstance.signIn(withPresenting:)` → get `GIDGoogleUser`
+  2. If scopes requested, call `currentUser.addScopes(scopes, presenting:)`
+  3. Return `(user.idToken.tokenString, user.accessToken.tokenString)` via `onSuccess`
+- `signInWithApple`:
+  1. Use `ASAuthorizationAppleIDProvider` via `ASAuthorizationController`
+  2. **Presentation context:** Use `UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene` (NOT deprecated `UIApplication.keyWindow`)
+  3. Return `(identityToken, nonce, email)` via `onSuccess`
 - `getGoogleAccessToken(scopes)`: call `GIDSignIn.sharedInstance.currentUser?.addScopes(scopes, presenting:)` then `currentUser?.refreshTokensIfNeeded()` → return `accessToken.tokenString`
   - If `currentUser` is nil (user signed in with Apple), this triggers a Google sign-in flow
+- `signOut`: calls `GIDSignIn.sharedInstance.signOut()`
 
 Register `IosSocialAuthBridgeImpl` when initialising Koin in `MainViewController.kt` / `IosKoinHelper.kt`.
 
@@ -199,21 +258,63 @@ Register `IosSocialAuthBridgeImpl` when initialising Koin in `MainViewController
 
 Directory: `composeApp/src/commonMain/kotlin/com/please/stop/app/features/auth/`
 
+> **Auth flow (Composable-driven):**
+> ```
+> UI (GoogleButtonUiContainer / AppleButtonUiContainer)
+>   → user taps → GoogleAuthUiProvider.signIn() / AppleAuthProvider.signIn()
+>   → GoogleUser(idToken, accessToken?) / AppleUser(identityToken, nonce, email?)
+>   → AuthEvent.GoogleSignInCompleted(googleUser) / AuthEvent.AppleSignInCompleted(appleUser)
+>   → StateHolder → UseCase → Repository
+>   → Firebase Auth signInWithCredential(idToken) → persist tokens
+> ```
+> The UI layer triggers sign-in (has Activity context). The result flows down through MVI events. Firebase Auth calls happen in the **repository**, which uses a platform `FirebaseAuthProvider` bridge (same pattern as `FirebaseCallableFunctions`).
+
 **Data layer**
 
+`features/auth/data/FirebaseAuthProvider.kt` (commonMain interface)
+```kotlin
+interface FirebaseAuthProvider {
+    /** Sign in with Google ID token → Firebase Auth. Returns Firebase UID. */
+    suspend fun signInWithGoogleCredential(idToken: String): kotlin.Result<String>
+    /** Sign in with Apple identity token → Firebase Auth. Returns Firebase UID. */
+    suspend fun signInWithAppleCredential(identityToken: String, nonce: String): kotlin.Result<String>
+    /** Delete the current Firebase Auth user. Returns [DeleteAccountResult]. */
+    suspend fun deleteAccount(): DeleteAccountResult
+    /** Re-authenticate with Google before sensitive operations (delete). */
+    suspend fun reauthenticateWithGoogle(idToken: String): kotlin.Result<Unit>
+    /** Re-authenticate with Apple before sensitive operations (delete). */
+    suspend fun reauthenticateWithApple(identityToken: String, nonce: String): kotlin.Result<Unit>
+    /** Sign out from Firebase Auth. */
+    suspend fun signOut()
+    /** Observe whether a Firebase user is currently signed in. */
+    fun observeIsAuthenticated(): Flow<Boolean>
+}
+
+sealed interface DeleteAccountResult {
+    data object Success : DeleteAccountResult
+    data object NeedsReauthentication : DeleteAccountResult
+    data class Failure(val error: Throwable) : DeleteAccountResult
+}
+```
+
+> Platform implementations catch `FirebaseAuthRecentLoginRequiredException` (Android) / equivalent (iOS) internally and return `NeedsReauthentication`. This keeps platform-specific exceptions out of `commonMain`.
+```
+
+Platform implementations:
+- **Android:** `AndroidFirebaseAuthProvider` — calls `FirebaseAuth.getInstance().signInWithCredential()` directly
+- **iOS:** `IosFirebaseAuthProvider` — delegates to Swift bridge via `suspendCancellableCoroutine`
+
+> Firebase Auth calls live in platform implementations of `FirebaseAuthProvider`, NOT in the repository. Common layer only sees the interface. This matches the `FirebaseCallableFunctions` pattern.
+
 `features/auth/data/repository/AuthRepositoryImpl.kt`
-- Inject `SocialAuthProvider`, `IGoogleAccountStorage`, `ITokensStorage`, `FirebaseAuth`
-- `suspend fun signInWithGoogle(): kotlin.Result<Unit>`:
-  1. Call `socialAuthProvider.signInWithGoogle()` → get ID token
-  2. Call `FirebaseAuth.signInWithCredential(GoogleAuthProvider.getCredential(idToken))` → Firebase user
-  3. Write `GoogleAccountLink(email, isConnected = true)` to `IGoogleAccountStorage`
-  4. Write `AuthToken` from Firebase user to `ITokensStorage`
-- `suspend fun signInWithApple(): kotlin.Result<Unit>`:
-  1. Call `socialAuthProvider.signInWithApple()` → get identity token + auth code
-  2. Call `FirebaseAuth.signInWithCredential(OAuthProvider.getCredential("apple.com", idToken, authCode))`
-  3. Write `AuthToken` from Firebase user to `ITokensStorage`
-  4. **Store email on backend on first sign-in** — Apple only returns email on first authorization
-- `fun observeIsAuthenticated(): Flow<Boolean>`
+- Inject `FirebaseAuthProvider`, `IGoogleAccountStorage`
+- `suspend fun signInWithGoogle(googleUser: GoogleUser): kotlin.Result<Unit>`:
+  1. Call `firebaseAuthProvider.signInWithGoogleCredential(googleUser.idToken)` → get Firebase UID
+  2. Write `GoogleAccountLink(email, isConnected = true)` to `IGoogleAccountStorage`
+- `suspend fun signInWithApple(appleUser: AppleUser): kotlin.Result<Unit>`:
+  1. Call `firebaseAuthProvider.signInWithAppleCredential(appleUser.identityToken, appleUser.nonce)` → get Firebase UID
+  2. **Store email on backend on first sign-in** — Apple only returns email on first authorization
+- `fun observeIsAuthenticated(): Flow<Boolean>` — delegates to `firebaseAuthProvider.observeIsAuthenticated()`
 
 `features/auth/domain/repository/AuthRepository.kt` — interface
 
@@ -229,8 +330,8 @@ class SignInWithGoogleUseCase(
         data object Success : Result
         data class Failure(override val errorType: ErrorType) : Result, ErrorResult
     }
-    suspend operator fun invoke(): Result = withContext(ioDispatcher) {
-        repository.signInWithGoogle().fold(
+    suspend operator fun invoke(googleUser: GoogleUser): Result = withContext(ioDispatcher) {
+        repository.signInWithGoogle(googleUser).fold(
             onSuccess = { Result.Success },
             onFailure = { Result.Failure(it.toErrorType()) },
         )
@@ -238,7 +339,7 @@ class SignInWithGoogleUseCase(
 }
 ```
 
-`features/auth/domain/usecase/SignInWithAppleUseCase.kt` — identical shape for Apple
+`features/auth/domain/usecase/SignInWithAppleUseCase.kt` — identical shape, takes `AppleUser`
 
 `features/auth/domain/usecase/ObserveAuthStateUseCase.kt`
 - Returns `Flow<Boolean>` from `repository.observeIsAuthenticated()`
@@ -258,20 +359,28 @@ sealed interface AuthState {
 `features/auth/presentation/AuthEvent.kt`
 ```kotlin
 sealed interface AuthEvent {
-    data object SignInWithGoogle : AuthEvent
-    data object SignInWithApple : AuthEvent
+    /** Delivered by GoogleButtonUiContainer callback after platform sign-in completes */
+    data class GoogleSignInCompleted(val googleUser: GoogleUser) : AuthEvent
+    data object GoogleSignInCancelled : AuthEvent
+    /** Delivered by AppleButtonUiContainer callback (iOS only) */
+    data class AppleSignInCompleted(val appleUser: AppleUser) : AuthEvent
+    data object AppleSignInCancelled : AuthEvent
     data object DismissError : AuthEvent
 }
 ```
 
 `features/auth/presentation/AuthStateHolder.kt`
 - Extends `StateHolder<AuthState, AuthEvent>`
-- `resolveEventResult`: maps events → use cases
+- `resolveEventResult`:
+  - `GoogleSignInCompleted(user)` → `signInWithGoogleUseCase(user)` → Result
+  - `AppleSignInCompleted(user)` → `signInWithAppleUseCase(user)` → Result
+  - `*Cancelled` → emit `Idle`
 - `getNavigationByResult`: Success → `router.replaceStack(MainBottomTabs.Home)`
 - `getStateByResult`: Loading → Idle/Error
 
 `features/auth/presentation/ui/AuthScreen.kt`
-- Two buttons: "Continue with Google" (both platforms) and "Continue with Apple" (iOS-only, hidden via `Platform.isIos` check)
+- Google: wraps "Continue with Google" button in `GoogleButtonUiContainer(onGoogleSignInResult = { user -> if (user != null) processEvent(GoogleSignInCompleted(user)) else processEvent(GoogleSignInCancelled) })`
+- Apple (iOS only, hidden via `platform == Platform.IOS` check): similar `AppleButtonUiContainer`
 - Wrap in `ScreenOverlayContainer` for error handling per MVI pattern
 
 ### Step 6 — Navigation Route | Effort: Low
@@ -292,22 +401,54 @@ val authModule = module {
     single<IGoogleAccountStorage> { GoogleAccountStorageImpl(/* platform-injected encrypted storage */) }
     single<AuthRepository> {
         AuthRepositoryImpl(
-            socialAuthProvider = get(),
+            firebaseAuthProvider = get(),
             googleAccountStorage = get(),
-            tokensStorage = get(),
-            firebaseAuth = get(),
         )
     }
-    factory { SignInWithGoogleUseCase(repository = get(), ioDispatcher = get(named(IO.name))) }
-    factory { SignInWithAppleUseCase(repository = get(), ioDispatcher = get(named(IO.name))) }
+    factory { SignInWithGoogleUseCase(repository = get(), ioDispatcher = get(named(DispatchersQualifiers.IO.name))) }
+    factory { SignInWithAppleUseCase(repository = get(), ioDispatcher = get(named(DispatchersQualifiers.IO.name))) }
     factory { ObserveAuthStateUseCase(repository = get()) }
+    factory {
+        ConnectGoogleAccountUseCase(
+            googleAccountStorage = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+    factory {
+        LogoutUseCase(
+            googleAccountStorage = get(),
+            bearerTokenClearer = get(),
+            firebaseAuthProvider = get(),
+            googleAuthProvider = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
+    factory {
+        DeleteAccountUseCase(
+            authRepository = get(),
+            firebaseAuthProvider = get(),
+            googleAccountStorage = get(),
+            bearerTokenClearer = get(),
+            googleAuthProvider = get(),
+            appDatabase = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
     viewModel { AuthStateHolder(signInWithGoogleUseCase = get(), signInWithAppleUseCase = get()) }
 }
 ```
 
 Platform modules:
-- `PlatformModule.android.kt`: `single<SocialAuthProvider> { AndroidSocialAuthProvider(activityProvider = get()) }`
-- `PlatformModule.ios.kt`: `single<SocialAuthProvider> { IosSocialAuthProvider(bridge = get()) }`
+- `PlatformModule.android.kt`:
+  - `single<GoogleAuthProvider> { GoogleAuthProviderImpl(credentials = get(), credentialManager = get()) }`
+  - `single { GoogleAuthCredentials(webClientId = "YOUR_WEB_CLIENT_ID") }`
+  - `single { CredentialManager.create(androidContext()) }`
+  - `single<FirebaseAuthProvider> { AndroidFirebaseAuthProvider() }`
+  - `single<AppleAuthProvider> { NoOpAppleAuthProvider() }`
+- `PlatformModule.ios.kt`:
+  - `single<GoogleAuthProvider> { IosGoogleAuthProvider(bridge = get()) }`
+  - `single<FirebaseAuthProvider> { IosFirebaseAuthProvider(bridge = get()) }`
+  - `single<AppleAuthProvider> { IosAppleAuthProvider(bridge = get()) }`
 
 Register `authModule` in `AppModule.kt`.
 
@@ -316,22 +457,75 @@ Register `authModule` in `AppModule.kt`.
 Apple Sign-In users need a Google account linked to create Sheets.
 
 `features/auth/domain/usecase/ConnectGoogleAccountUseCase.kt`
-- Calls `SocialAuthProvider.signInWithGoogle()` — triggers Google Sign-In UI
+- Takes `GoogleUser` (from `GoogleButtonUiContainer` callback in export bottom sheet)
 - Writes `GoogleAccountLink(email, isConnected = true)` to `IGoogleAccountStorage`
 - Does NOT re-authenticate with Firebase — the user remains signed in with Apple
 - Returns `Result.Success` or `Result.Failure`
 
-Surfaced inline in the export flow (see Phase 2, Step 2 — `NeedsGoogleAccount` state). After successful connection, export proceeds automatically.
+Surfaced inline in the export flow: `ExportBottomSheet` shows `NeedsGoogleAccount` state → renders `GoogleButtonUiContainer` → user taps → `GoogleUser` → `ConnectGoogleAccountUseCase` → export proceeds automatically.
 
 ### Step 9 — Logout Cleanup | Effort: Low
 
 `features/auth/domain/usecase/LogoutUseCase.kt`
 - Calls atomically:
-  1. `ITokensStorage.deleteAuthToken()`
-  2. `IGoogleAccountStorage.delete()`
-  3. `BearerTokenClearer.clear()`
-  4. `FirebaseAuth.signOut()`
+  1. `IGoogleAccountStorage.delete()`
+  2. `BearerTokenClearer.clear()`
+  3. `FirebaseAuthProvider.signOut()`
+  4. `GoogleAuthProvider.signOut()` — clears Credential Manager state (Android) / GIDSignIn state (iOS)
 - Prevents stale Google account data surviving across user sessions
+
+### Step 10 — Delete Account | Effort: Medium
+
+> **Required by App Store & Play Store.** Both stores require apps with account creation to provide account deletion.
+
+> `deleteAccount()`, `reauthenticateWithGoogle()`, and `reauthenticateWithApple()` are already declared in `FirebaseAuthProvider` (see Step 5). Platform implementations catch `FirebaseAuthRecentLoginRequiredException` (Android) / equivalent (iOS) internally and return the typed `DeleteAccountResult`.
+
+`features/auth/domain/usecase/DeleteAccountUseCase.kt`
+```kotlin
+class DeleteAccountUseCase(
+    private val authRepository: AuthRepository,
+    private val firebaseAuthProvider: FirebaseAuthProvider,
+    private val googleAccountStorage: IGoogleAccountStorage,
+    private val bearerTokenClearer: BearerTokenClearer,
+    private val googleAuthProvider: GoogleAuthProvider,
+    private val appDatabase: AppDatabase,
+    private val ioDispatcher: CoroutineDispatcher,
+) {
+    sealed interface Result : com.please.stop.app.core.models.domain.Result {
+        data object Success : Result
+        data object NeedsReauthentication : Result
+        data class Failure(override val errorType: ErrorType) : Result, ErrorResult
+    }
+
+    suspend operator fun invoke(): Result = withContext(ioDispatcher) {
+        when (val deleteResult = firebaseAuthProvider.deleteAccount()) {
+            is DeleteAccountResult.Success -> {
+                // Clean up all local data
+                googleAccountStorage.delete()
+                bearerTokenClearer.clear()
+                googleAuthProvider.signOut()
+                appDatabase.clearAllTables()
+                Result.Success
+            }
+            is DeleteAccountResult.NeedsReauthentication -> Result.NeedsReauthentication
+            is DeleteAccountResult.Failure -> Result.Failure(deleteResult.error.toErrorType())
+        }
+    }
+}
+```
+
+> **Re-authentication flow:** Firebase requires recent auth for account deletion. If `NeedsReauthentication` is returned, the UI shows the sign-in button again (Google or Apple depending on provider). After re-auth, retry delete.
+
+**Presentation:** Add to Settings screen:
+- "Delete Account" button (destructive style)
+- Confirmation dialog: "This will permanently delete your account and all data. This cannot be undone."
+- On confirm → `DeleteAccountUseCase()` → if `NeedsReauthentication` → show "Please sign in again to confirm" + `GoogleButtonUiContainer` / Apple button → re-auth → retry delete
+- On success → navigate to `AuthRoute`
+
+**Cloud Function (optional):** `functions/delete_user_data/main.py`
+- Triggered by Firebase Auth `onDelete` event (background trigger, not callable)
+- Deletes user's Firestore records, shared spreadsheets, etc.
+- Ensures server-side cleanup even if client-side cleanup fails
 
 ### Backend: Firebase Cloud Functions for Auth Verification | Effort: Medium
 
@@ -377,6 +571,7 @@ Small payload (< 100KB, typical monthly export):
   "googleAccessToken": "ya29...",
   "fcmToken": "device-fcm-token",
   "month": "2026-04",
+  "tabLayout": "single_tab",
   "currencySymbol": "€",
   "decimalPlaces": 2,
   "compressed": false,
@@ -401,6 +596,7 @@ Large payload (>= 100KB, multi-month/yearly export):
   "googleAccessToken": "ya29...",
   "fcmToken": "device-fcm-token",
   "month": "2026-01 to 2026-12",
+  "tabLayout": "separate_tabs",
   "currencySymbol": "€",
   "decimalPlaces": 2,
   "compressed": true,
@@ -410,7 +606,11 @@ Large payload (>= 100KB, multi-month/yearly export):
 
 > When `compressed: true`, `expenses` is a base64-encoded gzip string. When `compressed: false`, `expenses` is the raw JSON array.
 
-> **Security:** `userEmail` is NOT in the payload. The function extracts email from the validated Google access token via `https://oauth2.googleapis.com/tokeninfo?access_token=...`. This prevents a malicious client from sharing spreadsheets with arbitrary emails.
+**`tabLayout` options:**
+- `"single_tab"` — All expenses on one sheet, sorted by date. A **Category Summary** section at the bottom shows totals per category across the full range.
+- `"separate_tabs"` — One sheet per month (e.g., "April 2026", "May 2026"). Each sheet has that month's expenses + a Category Summary section. A union of ALL categories across all months is used for every summary — if a category has no expenses in that month, the amount cell is left empty. This ensures consistent row layout across tabs for easy comparison.
+
+> **Security:** `userEmail` is NOT in the payload. The function reads email from `context.auth.token["email"]` (Firebase Auth, server-verified). This prevents a malicious client from sharing spreadsheets with arbitrary emails — no tokeninfo call needed.
 
 **Python dependencies** (`functions/export_to_sheets/requirements.txt`):
 ```
@@ -419,7 +619,9 @@ google-auth==2.29.0
 firebase-admin==6.5.0
 ```
 
-**Spreadsheet structure (sheet name: "April 2026"):**
+**Spreadsheet structure:**
+
+**Expense rows (same for both layouts):**
 
 | Row | A | B | C | D | E | F |
 |-----|---|---|---|---|---|---|
@@ -427,11 +629,36 @@ firebase-admin==6.5.0
 | 2..N | expense rows (dates as Sheets date serial numbers) | | | | | |
 | N+1 | | | | | **Total** | `=SUM(E2:EN)` |
 
+**Category Summary section (appended after total row, separated by 1 empty row):**
+
+| Row | A | B |
+|-----|---|---|
+| N+3 | **Category Summary** | |
+| N+4 | Category | Amount (€) |
+| N+5 | Food | `=SUMIF(C2:CN,"Food",E2:EN)` |
+| N+6 | Transport | `=SUMIF(C2:CN,"Transport",E2:EN)` |
+| ... | ... | ... |
+| Last | Entertainment | _(empty — no expenses this month)_ |
+
+> **Category union for `separate_tabs`:** The Cloud Function first collects ALL unique categories across the entire export range. Each monthly tab's Category Summary uses this full union — categories with no expenses in that month have an empty amount cell. This ensures the same row = same category across all tabs, enabling side-by-side comparison.
+
+> **Category order for `single_tab`:** Same union, sorted alphabetically. Each category appears once with `SUMIF` over the full range.
+
+**Layout behavior:**
+
+| | `single_tab` | `separate_tabs` |
+|---|---|---|
+| **Sheet count** | 1 sheet (named by date range, e.g., "Jan–Dec 2026") | 1 sheet per month (e.g., "January 2026", "February 2026", ...) |
+| **Expense rows** | All expenses sorted by date, all months together | Only that month's expenses per sheet |
+| **Total formula** | Sum of all expenses in the range | Sum per month |
+| **Category Summary** | Union of all categories, totals across full range | Union of all categories, totals per month — empty cell if category absent that month |
+
 Styling:
 - Header row: bold, background `#4285F4`, white text
 - Amount column: number format matching `decimalPlaces`
 - Date column: number format `yyyy-mm-dd` (using Sheets date serial numbers for proper sorting)
 - Total row: bold
+- Category Summary header: bold, background `#E8EAF6`
 - Freeze first row (`freeze_rows=1`)
 - Column widths: A=100, B=200, C=150, D=150, E=120, F=250
 
@@ -449,12 +676,25 @@ Styling:
    else:
        expenses = data["expenses"]
    ```
-3. Validate `googleAccessToken` by calling Google's tokeninfo endpoint → extract `email`
-4. Build `gspread.Client` using `google.oauth2.credentials.Credentials(token=googleAccessToken)` — acting on behalf of the user, not a service account
-5. Create spreadsheet titled `"PlzStop Export – {month}"`
-6. **Batch write** headers + all expense rows + total formula in a single `worksheet.update(values, 'A1')` call
-7. **Batch format** all styling in a single `worksheet.batch_format(formats)` call
-8. Share spreadsheet with validated `email` as owner
+3. Extract `email` from `context.auth.token.get("email")` (Firebase Auth, server-verified — no tokeninfo call needed)
+4. Build `gspread.Client` using `google.oauth2.credentials.Credentials(token=googleAccessToken)` — acting on behalf of the user, not a service account. Token must have `spreadsheets` + `drive.file` scopes
+5. **Collect category union** — gather all unique category names across all expenses (sorted alphabetically). This is the canonical category list used for every Category Summary section.
+6. Create spreadsheet titled `"PlzStop Export – {month}"`
+7. **Branch on `tabLayout`:**
+
+   **`single_tab`:**
+   - One worksheet (named by date range)
+   - Batch write: headers → all expense rows sorted by date → total formula → empty row → Category Summary (full union, `SUMIF` formulas)
+   - Batch format all styling
+
+   **`separate_tabs`:**
+   - Group expenses by month (based on `date` field)
+   - For each month, create a worksheet named "{Month Year}" (e.g., "April 2026")
+   - Per worksheet: batch write headers → that month's expenses �� total formula → empty row → Category Summary (full category union — empty cell for categories absent that month, `SUMIF` formulas for present ones)
+   - Batch format each worksheet
+   - Delete the default "Sheet1" if it was auto-created
+
+8. Share spreadsheet with `email` as owner
 9. If `fcmToken` is provided (non-null), send FCM notification:
    ```python
    spreadsheet_url_encoded = urllib.parse.quote(spreadsheet_url, safe='')
@@ -476,19 +716,58 @@ Styling:
    )
    messaging.send(message)
    ```
-10. Return `{ "spreadsheetUrl": spreadsheet_url }`
+10. Return `{ "spreadsheetUrl": spreadsheet_url }` — the background worker receives this response and persists the result to local DB
 
 > **FCM notification is required** in this architecture. If `fcmToken` is null (notification permission denied), the function still creates the spreadsheet but the user has no way to receive the URL. The app must request notification permission **before** allowing export, and block export if denied with a message explaining why notifications are needed.
 
 **Error handling in the function:**
 - Gzip/base64 decompression failure → return error code `INVALID_PAYLOAD` with message
-- Google token invalid/expired → return error code `INVALID_TOKEN` with message
+- `gspread` 403 on create/write → return error code `INVALID_TOKEN` (access token invalid or missing required scopes: `spreadsheets`, `drive.file`)
 - Sheets API quota exceeded (60 req/min/user) → return error code `QUOTA_EXCEEDED` with retry-after hint
 - `gspread` 401 during write → return error code `TOKEN_EXPIRED` (access token expired mid-execution — unlikely with batch ops but possible)
 
 ### Step 2 — Background Worker (Platform) | Effort: High
 
-The export runs in the background — user taps Export, sees confirmation, and dismisses. Push notification delivers the result.
+The export runs in the background — user taps Export, sees confirmation, and dismisses. The worker calls the Cloud Function, waits for the result, and updates local DB. The Cloud Function also sends an FCM push as a parallel notification channel.
+
+**Export history entity** (`commonMain`):
+
+`composeApp/src/commonMain/kotlin/com/please/stop/app/core/db/entity/ExportHistoryEntity.kt`
+```kotlin
+@Entity(tableName = "export_history")
+data class ExportHistoryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val startDateEpochMillis: Long,
+    val endDateEpochMillis: Long,
+    val status: ExportStatus,
+    val spreadsheetUrl: String? = null,
+    val errorMessage: String? = null,
+    val createdAtEpochMillis: Long,
+    val completedAtEpochMillis: Long? = null,
+)
+
+enum class ExportStatus { PENDING, SUCCESS, FAILED }
+```
+
+`composeApp/src/commonMain/kotlin/com/please/stop/app/core/db/dao/ExportHistoryDao.kt`
+```kotlin
+@Dao
+interface ExportHistoryDao {
+    @Insert
+    suspend fun insert(entity: ExportHistoryEntity): Long
+
+    @Query("UPDATE export_history SET status = :status, spreadsheetUrl = :url, completedAtEpochMillis = :completedAt WHERE id = :id")
+    suspend fun updateResult(id: Long, status: ExportStatus, url: String?, completedAt: Long)
+
+    @Query("UPDATE export_history SET status = :status, errorMessage = :error, completedAtEpochMillis = :completedAt WHERE id = :id")
+    suspend fun updateError(id: Long, status: ExportStatus, error: String?, completedAt: Long)
+
+    @Query("SELECT * FROM export_history ORDER BY createdAtEpochMillis DESC LIMIT 1")
+    fun observeLatest(): Flow<ExportHistoryEntity?>
+}
+```
+
+> Add `ExportHistoryEntity` to `@Database(entities = [...])` in `AppDatabase.kt` and add `abstract fun exportHistoryDao(): ExportHistoryDao`.
 
 **Common interface** (`commonMain`):
 
@@ -496,41 +775,115 @@ The export runs in the background — user taps Export, sees confirmation, and d
 ```kotlin
 interface ExportWorkerScheduler {
     /**
-     * Enqueue export work. The worker will:
-     * 1. Get fresh Google access token
-     * 2. Query expenses for the date range
-     * 3. Build payload (conditionally compressed)
-     * 4. Call Cloud Function
-     * Push notification with result is sent by the Cloud Function.
+     * Enqueue export work. The Google access token is obtained BEFORE enqueuing
+     * (requires Activity context on Android) and passed as input data.
+     * The worker then:
+     * 1. Query expenses for the date range
+     * 2. Build payload (conditionally compressed)
+     * 3. Call Cloud Function with the pre-fetched token — WAIT for response
+     * 4. Update local DB (export_history) with result
+     * Cloud Function also sends FCM push notification as a parallel channel.
      */
-    fun enqueue(startDateMillis: Long, endDateMillis: Long)
+    fun enqueue(exportId: Long, googleAccessToken: String, tabLayout: String, startDateMillis: Long, endDateMillis: Long)
 }
 ```
 
-**Android** — WorkManager (already in dependencies):
+**Android** — WorkManager (declared in `libs.versions.toml`, wire into `build.gradle.kts`):
+
+> **DI in WorkManager:** `CoroutineWorker` doesn't support constructor injection. A custom `KoinWorkerFactory` must be registered in `PleaseStopApplication.onCreate()` via `WorkManager.Configuration.Builder().setWorkerFactory(factory).build()`. See below.
+
+`composeApp/src/androidMain/kotlin/com/please/stop/app/features/export/data/KoinWorkerFactory.kt`
+```kotlin
+class KoinWorkerFactory : WorkerFactory() {
+    override fun createWorker(
+        appContext: Context,
+        workerClassName: String,
+        workerParameters: WorkerParameters,
+    ): ListenableWorker? {
+        return when (workerClassName) {
+            ExportWorker::class.java.name -> ExportWorker(
+                context = appContext,
+                params = workerParameters,
+                expenseDao = KoinJavaComponent.get(AppDatabase::class.java).expenseDao(),
+                categoryDao = KoinJavaComponent.get(AppDatabase::class.java).categoryDao(),
+                subcategoryDao = KoinJavaComponent.get(AppDatabase::class.java).subcategoryDao(),
+                userProfileDao = KoinJavaComponent.get(AppDatabase::class.java).userProfileDao(),
+                callableFunctions = KoinJavaComponent.get(FirebaseCallableFunctions::class.java),
+                fcmTokenProvider = KoinJavaComponent.get(IFcmTokenProvider::class.java),
+                exportHistoryDao = KoinJavaComponent.get(AppDatabase::class.java).exportHistoryDao(),
+            )
+            else -> null
+        }
+    }
+}
+```
+
+> Register in `PleaseStopApplication.onCreate()`:
+> ```kotlin
+> WorkManager.initialize(this, Configuration.Builder().setWorkerFactory(KoinWorkerFactory()).build())
+> ```
+> Also add `android:name=".PleaseStopApplication"` with `tools:replace="android:name"` if not already set, and set `default_process_initializer` provider to `false` in manifest to disable default WorkManager initializer.
 
 `composeApp/src/androidMain/kotlin/com/please/stop/app/features/export/data/ExportWorker.kt`
 ```kotlin
 class ExportWorker(
     context: Context,
     params: WorkerParameters,
+    private val expenseDao: ExpenseDao,
+    private val categoryDao: CategoryDao,
+    private val subcategoryDao: SubcategoryDao,
+    private val userProfileDao: UserProfileDao,
+    private val callableFunctions: FirebaseCallableFunctions,
+    private val fcmTokenProvider: IFcmTokenProvider,
+    private val exportHistoryDao: ExportHistoryDao,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        val accessToken = inputData.getString("accessToken")
+            ?: return Result.failure()
         val startDate = inputData.getLong("startDate", 0)
         val endDate = inputData.getLong("endDate", 0)
+        val exportId = inputData.getLong("exportId", 0)
 
-        // 1. Get fresh Google access token (silent, no UI)
-        val accessToken = socialAuthProvider.getGoogleAccessToken(
-            scopes = listOf("https://www.googleapis.com/auth/spreadsheets")
-        )
+        // 1. Query expenses, categories, user profile from Room
+        // 2. Build payload, conditionally compress
+        // 3. Call Cloud Function via FirebaseCallableFunctions — WAIT for response
+        // 4. On success: update export_history with spreadsheetUrl + SUCCESS status
+        // 5. On failure: update export_history with error + FAILED status
+        // Cloud Function ALSO sends FCM push — independent of worker result
 
-        // 2. Query expenses, categories, user profile from Room
-        // 3. Build payload, conditionally compress
-        // 4. Call Cloud Function via FirebaseCallableFunctions
-        // Cloud Function sends push notification — worker is done
-
-        return Result.success()
+        return try {
+            val response = callableFunctions.call("exportToSheets", payload)
+            response.fold(
+                onSuccess = { data ->
+                    val url = data["spreadsheetUrl"] as? String
+                    exportHistoryDao.updateResult(
+                        id = exportId,
+                        status = ExportStatus.SUCCESS,
+                        url = url,
+                        completedAt = Clock.System.now().toEpochMilliseconds(),
+                    )
+                    Result.success()
+                },
+                onFailure = { error ->
+                    exportHistoryDao.updateError(
+                        id = exportId,
+                        status = ExportStatus.FAILED,
+                        error = error.message,
+                        completedAt = Clock.System.now().toEpochMilliseconds(),
+                    )
+                    Result.failure()
+                },
+            )
+        } catch (e: Exception) {
+            exportHistoryDao.updateError(
+                id = exportId,
+                status = ExportStatus.FAILED,
+                error = e.message,
+                completedAt = Clock.System.now().toEpochMilliseconds(),
+            )
+            Result.failure()
+        }
     }
 }
 ```
@@ -541,9 +894,12 @@ class AndroidExportWorkerScheduler(
     private val context: Context,
 ) : ExportWorkerScheduler {
 
-    override fun enqueue(startDateMillis: Long, endDateMillis: Long) {
+    override fun enqueue(exportId: Long, googleAccessToken: String, tabLayout: String, startDateMillis: Long, endDateMillis: Long) {
         val request = OneTimeWorkRequestBuilder<ExportWorker>()
             .setInputData(workDataOf(
+                "exportId" to exportId,
+                "accessToken" to googleAccessToken,
+                "tabLayout" to tabLayout,
                 "startDate" to startDateMillis,
                 "endDate" to endDateMillis,
             ))
@@ -576,18 +932,21 @@ class AndroidExportWorkerScheduler(
 **Data layer** (`commonMain`):
 
 `features/export/data/repository/ExportRepositoryImpl.kt`
-- Inject `IGoogleAccountStorage`, `ExpenseDao`, `CategoryDao`, `SubcategoryDao`, `UserProfileDao`, `ExportWorkerScheduler`, `INotificationPermission`, `IFcmTokenProvider`
+- Inject `IGoogleAccountStorage`, `ExpenseDao`, `CategoryDao`, `SubcategoryDao`, `UserProfileDao`, `ExportHistoryDao`, `ExportWorkerScheduler`, `INotificationPermission`, `IFcmTokenProvider`
+
+> **No `SocialAuthProvider` / `GoogleAuthProvider` injection.** The Google access token is obtained in the **UI layer** via `GoogleButtonUiContainer(scopes = listOf("https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"))` and passed down through the export event. This is required because `GoogleAuthUiProvider` needs Composable context (Activity) to request scoped tokens.
 
 Key implementation details:
 
 1. **Pre-flight checks (run synchronously before enqueuing worker):**
    ```kotlin
-   suspend fun validateAndEnqueueExport(startDate: Instant, endDate: Instant): ExportValidationResult {
-       // Check Google account is linked
-       val googleAccount = googleAccountStorage.read()
-           ?: return ExportValidationResult.GoogleAccountNotLinked
-
-       // Check notification permission (required for result delivery)
+   suspend fun validateAndEnqueueExport(
+       googleAccessToken: String,
+       tabLayout: TabLayout,
+       startDate: Instant,
+       endDate: Instant,
+   ): ExportValidationResult {
+       // Check notification permission (required for FCM result delivery)
        if (!notificationPermission.isGranted()) {
            val granted = notificationPermission.request()
            if (!granted) return ExportValidationResult.NotificationPermissionDenied
@@ -597,19 +956,31 @@ Key implementation details:
        val expenses = expenseDao.getExpensesInRange(startDate.toEpochMilliseconds(), endDate.toEpochMilliseconds())
        if (expenses.isEmpty()) return ExportValidationResult.NoExpenses
 
-       // All checks pass — enqueue background work
-       exportWorkerScheduler.enqueue(startDate.toEpochMilliseconds(), endDate.toEpochMilliseconds())
+       // Create PENDING record in local DB before enqueuing worker
+       val exportId = exportHistoryDao.insert(
+           ExportHistoryEntity(
+               startDateEpochMillis = startDate.toEpochMilliseconds(),
+               endDateEpochMillis = endDate.toEpochMilliseconds(),
+               status = ExportStatus.PENDING,
+               createdAtEpochMillis = Clock.System.now().toEpochMilliseconds(),
+           )
+       )
+
+       // Enqueue background work — worker will update this record on completion
+       exportWorkerScheduler.enqueue(exportId, googleAccessToken, tabLayout.name.lowercase(), startDate.toEpochMilliseconds(), endDate.toEpochMilliseconds())
        return ExportValidationResult.Enqueued(expenseCount = expenses.size)
    }
    ```
+   > **Token obtained in UI layer.** The `ExportBottomSheet` wraps the export confirm button in `GoogleButtonUiContainer(scopes = listOf("https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"))`. When the user taps, `GoogleAuthUiProvider` requests a scoped access token (Composable context has Activity). The `spreadsheets` scope covers data writes/formatting; `drive.file` covers spreadsheet creation and sharing (scoped to files created by this app only). The token is passed via `ExportEvent.ConfirmExport(accessToken)` → use case → repository → worker input data. Token is short-lived (~60min) but WorkManager with `NetworkType.CONNECTED` runs promptly.
 
 2. **Category/subcategory name mapping — avoid N+1 queries (inside worker):**
    ```kotlin
-   val allCategories = categoryDao.getAllIncludingArchived()  // single query
-   val allSubcategories = subcategoryDao.getAllIncludingArchived()  // single query
+   val allCategories = categoryDao.observeAllIncludingArchived().first()  // single query
+   val allSubcategories = subcategoryDao.observeAllIncludingArchived().first()  // single query
    val categoryMap = allCategories.associateBy { it.id }
    val subcategoryMap = allSubcategories.associateBy { it.id }
    ```
+   > Uses existing `observeAllIncludingArchived()` Flow DAO methods with `.first()` — same pattern as `AnalyticsRepositoryImpl`. No new DAO queries needed.
    > **Edge case:** Archived categories/subcategories must be included — expenses may reference them.
 
 3. **Amount conversion from minor units:**
@@ -666,8 +1037,13 @@ class ExportToSheetsUseCase(
         data class Failure(override val errorType: ErrorType) : Result, ErrorResult
     }
 
-    suspend operator fun invoke(): Result = withContext(ioDispatcher) {
-        // Delegates to repository.validateAndEnqueueExport()
+    suspend operator fun invoke(
+        googleAccessToken: String,
+        tabLayout: TabLayout,
+        startDate: Instant,
+        endDate: Instant,
+    ): Result = withContext(ioDispatcher) {
+        repository.validateAndEnqueueExport(googleAccessToken, tabLayout, startDate, endDate).toResult()
     }
 }
 ```
@@ -681,7 +1057,11 @@ class ExportToSheetsUseCase(
 @Stable
 sealed interface ExportState {
     data object Idle : ExportState
-    data class Confirm(val expenseCount: Int, val month: String) : ExportState
+    data class Confirm(
+        val expenseCount: Int,
+        val month: String,
+        val tabLayout: TabLayout = TabLayout.SINGLE_TAB,
+    ) : ExportState
     data object Enqueued : ExportState
     data object NeedsGoogleAccount : ExportState
     data object NeedsNotificationPermission : ExportState
@@ -696,31 +1076,35 @@ sealed interface ExportState {
 ```kotlin
 sealed interface ExportEvent {
     data object ExportTapped : ExportEvent
-    data object ConfirmExport : ExportEvent
-    data object ConnectGoogleAccountTapped : ExportEvent
+    data class TabLayoutSelected(val tabLayout: TabLayout) : ExportEvent
+    /** Carries the Google access token obtained from GoogleButtonUiContainer in the UI layer */
+    data class ConfirmExport(val googleAccessToken: String) : ExportEvent
+    data class GoogleAccountConnected(val googleUser: GoogleUser) : ExportEvent
     data object EnableNotificationsTapped : ExportEvent
     data object DismissError : ExportEvent
     data object Dismiss : ExportEvent
 }
+
+enum class TabLayout { SINGLE_TAB, SEPARATE_TABS }
 ```
 
 `features/export/presentation/ExportStateHolder.kt`
 - Extends `StateHolder<ExportState, ExportEvent>`
 - **Guard against double-tap:** `resolveEventResult(ExportTapped)` returns `emptyFlow()` when current state is `Enqueued`
-- `resolveEventResult(ExportTapped)` → count expenses + show `Confirm` state
-- `resolveEventResult(ConfirmExport)` → call `exportToSheetsUseCase()` → map to state
+- `resolveEventResult(ExportTapped)` → check `IGoogleAccountStorage` → if linked: count expenses + show `Confirm` state; if not linked: show `NeedsGoogleAccount`
+- `resolveEventResult(ConfirmExport(accessToken))` → call `exportToSheetsUseCase(accessToken)` → map to state
+- `resolveEventResult(GoogleAccountConnected(googleUser))` → call `connectGoogleAccountUseCase(googleUser)` → auto-retry export
 - `getStateByResult`:
   - `Enqueued(count)` → `ExportState.Enqueued` (auto-dismiss after 3s)
-  - `GoogleAccountNotLinked` → `NeedsGoogleAccount`
+  - `GoogleAccountNotLinked` → `NeedsGoogleAccount` (renders `GoogleButtonUiContainer`)
   - `NotificationPermissionDenied` → `NeedsNotificationPermission`
   - `NoExpenses` → `NoExpenses`
-- `getNavigationByResult`: `ConnectGoogleAccountTapped` → triggers `ConnectGoogleAccountUseCase` inline, then auto-retries export on success
 
 `features/export/presentation/ui/ExportBottomSheet.kt`
 - A `ModalBottomSheet` (Material3) composable
 - States:
   - `Idle` → export button + explanation text
-  - `Confirm` → "Export {count} expenses from {month}?" + Export/Cancel buttons
+  - `Confirm` → "Export {count} expenses from {month}?" + **Tab layout toggle** (segmented button: "Single sheet" / "Sheet per month") + Export button wrapped in `GoogleButtonUiContainer(scopes = listOf("https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"))` to obtain access token on tap / Cancel button. Tab layout toggle dispatches `TabLayoutSelected` event to update state. Default: `SINGLE_TAB`
   - `Enqueued` → checkmark + "Your export is being prepared. You'll receive a notification when it's ready." Auto-dismiss after 3s
   - `NeedsGoogleAccount` → "Connect Google Account" button + explanation
   - `NeedsNotificationPermission` → "Enable notifications to receive your export" + "Enable" button
@@ -801,9 +1185,14 @@ LaunchedEffect(navHostReady, pendingDeepLink) {
 
 **iOS `Info.plist`** — add `CFBundleURLSchemes` entry for `plzstop`; handle in `AppDelegate` / SwiftUI `onOpenURL`.
 
-**`UrlOpener.kt`** — `expect fun openUrl(url: String)`:
-- Android: `CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))`
-- iOS: `UIApplication.sharedApplication.openURL(NSURL(string = url)!!)`
+**`UrlOpener.kt`** — interface bound via Koin (NOT expect/actual, matching project's bridge pattern):
+```kotlin
+interface UrlOpener {
+    fun open(url: String)
+}
+```
+- Android: `CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))` — bound in `PlatformModule.android.kt`
+- iOS: `UIApplication.sharedApplication.openURL(NSURL(string = url)!!)` — bound in `PlatformModule.ios.kt`
 
 ### Step 6 — Export Button in Analytics Screen | Effort: Low
 
@@ -829,12 +1218,13 @@ val exportModule = module {
             categoryDao = get<AppDatabase>().categoryDao(),
             subcategoryDao = get<AppDatabase>().subcategoryDao(),
             userProfileDao = get<AppDatabase>().userProfileDao(),
+            exportHistoryDao = get<AppDatabase>().exportHistoryDao(),
             fcmTokenProvider = get(),
             notificationPermission = get(),
             exportWorkerScheduler = get(),
         )
     }
-    factory { ExportToSheetsUseCase(repository = get(), ioDispatcher = get(named(IO.name))) }
+    factory { ExportToSheetsUseCase(repository = get(), ioDispatcher = get(named(DispatchersQualifiers.IO.name))) }
     viewModel { ExportStateHolder(exportToSheetsUseCase = get(), connectGoogleAccountUseCase = get()) }
 }
 ```
@@ -844,10 +1234,12 @@ Platform modules:
   - `single<IFcmTokenProvider> { AndroidFcmTokenProvider() }`
   - `single<INotificationPermission> { AndroidNotificationPermission(context = get()) }`
   - `single<ExportWorkerScheduler> { AndroidExportWorkerScheduler(context = get()) }`
+  - `single<UrlOpener> { AndroidUrlOpener(context = get()) }`
 - `PlatformModule.ios.kt`:
   - `single<IFcmTokenProvider> { IosFcmTokenProvider(bridge = get()) }`
   - `single<INotificationPermission> { IosNotificationPermission() }`
   - `single<ExportWorkerScheduler> { IosExportWorkerScheduler(bridge = get()) }`
+  - `single<UrlOpener> { IosUrlOpener() }`
 
 Register `exportModule` in `AppModule.kt`.
 
@@ -859,7 +1251,7 @@ Register `exportModule` in `AppModule.kt`.
 |---|-----------|----------|
 | 1 | **Empty date range** — 0 expenses | Pre-flight check in `validateAndEnqueueExport()` returns `NoExpenses`; no worker enqueued |
 | 2 | **Double-tap export** | WorkManager `ExistingWorkPolicy.KEEP` ignores duplicate enqueue. StateHolder ignores event when `Enqueued` |
-| 3 | **Archived categories** | DAO queries for export use `getAllIncludingArchived()` |
+| 3 | **Archived categories** | Uses existing `observeAllIncludingArchived().first()` — no new DAO queries needed |
 | 4 | **Null subcategory** | Replaced with `""` before serialization (iOS `FirebaseCallableFunctions` safety) |
 | 5 | **Multi-currency expenses** | Include `originalAmount` + `originalCurrency` columns (if decided yes in Open Questions) |
 | 6 | **Deep link URL encoding** | Python: `urllib.parse.quote(url, safe='')`. App: decode before opening |
@@ -870,39 +1262,57 @@ Register `exportModule` in `AppModule.kt`.
 | 11 | **Apple first sign-in email** | Email stored on backend during first auth — subsequent logins use subject ID |
 | 12 | **Network failure mid-export** | WorkManager retries automatically (Android). Orphan spreadsheet may exist — title includes date range for discoverability |
 | 13 | **Sheets API quota** | Batch ops keep it to ~5 API calls. Function returns `QUOTA_EXCEEDED` → push notification with error |
-| 14 | **Stale Google session on logout** | `LogoutUseCase` clears `IGoogleAccountStorage` + `ITokensStorage` + Firebase Auth |
+| 14 | **Stale Google session on logout** | `LogoutUseCase` clears `IGoogleAccountStorage` + `BearerTokenClearer` + Firebase Auth + Google Sign-In |
 | 15 | **iOS FCM token nil before APNs registration** | Use callback variant of `Messaging.messaging().token(completion:)` |
 | 16 | **`amountMinorUnits` conversion** | `BigDecimal.movePointLeft(decimalPlaces)` — handles JPY (0 places), EUR (2), BHD (3) |
 | 17 | **Payload size** | < 100KB raw JSON (most months). >= 100KB → gzip+base64 (multi-month/yearly). `compressed` flag in payload |
 | 18 | **Auto-retry after Google connect** | Apple user connects Google → `ExportStateHolder` auto-triggers export, no second tap |
 | 19 | **Worker fails silently** | Cloud Function sends error notification via FCM if export fails (e.g., "Export failed — please try again") |
 | 20 | **App killed during background export** | Android: WorkManager survives process death. iOS: background URLSession continues independently |
-| 21 | **Google access token in worker** | Fresh token requested inside worker — but on Android, `getGoogleAccessToken()` requires Activity context. Use `AuthorizationClient` with application context or store a short-lived token before enqueuing |
+| 21 | **Google access token in worker** | **Resolved:** Token is obtained before enqueuing the worker (requires Activity context on Android). Passed as WorkManager input data. Token lasts ~60min; WorkManager with `NetworkType.CONNECTED` runs promptly |
+| 22 | **Delete account requires re-auth** | Firebase requires recent authentication for `user.delete()`. If stale session, show re-auth flow (Google/Apple button) then retry |
+| 23 | **Delete account server-side cleanup** | Firebase Auth `onDelete` trigger cleans Firestore records. Client clears local DB via `appDatabase.clearAllTables()` |
+| 24 | **Delete account during export** | If WorkManager export is in-flight when account is deleted, Cloud Function will fail (invalid auth) — orphan spreadsheet may exist but user won't be notified |
 
 ---
 
 ## File Index
 
+### Existing files — `commonMain` (rename `aauth/` → `auth/`)
+
+| Path | Status | Description |
+|------|--------|-------------|
+| `features/auth/google/GoogleAuthProvider.kt` | EXISTS (fix package) | Interface: `@Composable getUiProvider()`, `suspend signOut()` |
+| `features/auth/google/GoogleAuthUiProvider.kt` | EXISTS (fix package) | Interface: `suspend signIn(filterByAuthorizedAccounts, isAutoSelectEnabled, scopes): GoogleUser?` |
+| `features/auth/google/GoogleUser.kt` | EXISTS (fix package) | `data class GoogleUser(val idToken: String, val accessToken: String? = null)` |
+| `features/auth/google/GoogleButtonUiContainer.kt` | EXISTS (fix package) | Composable wrapper — triggers sign-in, delivers `GoogleUser` via callback |
+| `features/auth/google/UiContainerScope.kt` | EXISTS (fix package) | DSL interface for button container |
+
 ### New files — `commonMain`
 
 | Path | Description |
 |------|-------------|
+| `features/auth/google/GoogleAuthCredentials.kt` | `data class GoogleAuthCredentials(val webClientId: String)` |
+| `features/auth/apple/AppleAuthProvider.kt` | Interface: `suspend signIn(): AppleUser?`, `suspend signOut()` |
+| `features/auth/apple/AppleUser.kt` | `data class AppleUser(val identityToken: String, val nonce: String, val email: String?)` |
+| `features/auth/data/FirebaseAuthProvider.kt` | Interface for Firebase Auth calls (platform-implemented) |
 | `core/models/data/GoogleAccountLink.kt` | Google account connection model (email + linked flag) |
-| `core/models/data/AppleAuthCredential.kt` | Apple credential model |
 | `core/IGoogleAccountStorage.kt` | Interface for Google account link persistence |
+| `core/db/entity/ExportHistoryEntity.kt` | Export history Room entity + `ExportStatus` enum |
+| `core/db/dao/ExportHistoryDao.kt` | DAO for export history (insert, updateResult, updateError, observeLatest) |
 | `core/IFcmTokenProvider.kt` | FCM token interface |
 | `core/INotificationPermission.kt` | Notification permission check/request interface |
-| `features/auth/domain/SocialAuthProvider.kt` | Common auth interface + `getGoogleAccessToken()` |
 | `features/auth/domain/repository/AuthRepository.kt` | Auth repository interface |
-| `features/auth/domain/usecase/SignInWithGoogleUseCase.kt` | Google sign-in use case |
-| `features/auth/domain/usecase/SignInWithAppleUseCase.kt` | Apple sign-in use case |
+| `features/auth/domain/usecase/SignInWithGoogleUseCase.kt` | Google sign-in use case (takes `GoogleUser`) |
+| `features/auth/domain/usecase/SignInWithAppleUseCase.kt` | Apple sign-in use case (takes `AppleUser`) |
 | `features/auth/domain/usecase/ObserveAuthStateUseCase.kt` | Auth state observer |
 | `features/auth/domain/usecase/ConnectGoogleAccountUseCase.kt` | Link Google account for Apple users |
 | `features/auth/domain/usecase/LogoutUseCase.kt` | Clears all auth state atomically |
+| `features/auth/domain/usecase/DeleteAccountUseCase.kt` | Deletes Firebase Auth account + all local data |
 | `features/auth/data/repository/AuthRepositoryImpl.kt` | Auth repository implementation |
 | `features/auth/data/GoogleAccountStorageImpl.kt` | Encrypted storage for Google account link |
 | `features/auth/presentation/AuthState.kt` | Auth UI state |
-| `features/auth/presentation/AuthEvent.kt` | Auth events |
+| `features/auth/presentation/AuthEvent.kt` | Auth events (carries `GoogleUser`/`AppleUser` from UI) |
 | `features/auth/presentation/AuthStateHolder.kt` | Auth state holder |
 | `features/auth/presentation/ui/AuthScreen.kt` | Login screen composable |
 | `features/auth/di/AuthModule.kt` | Koin auth module |
@@ -911,43 +1321,58 @@ Register `exportModule` in `AppModule.kt`.
 | `features/export/data/repository/ExportRepositoryImpl.kt` | Export repository implementation |
 | `features/export/domain/ExportWorkerScheduler.kt` | Common interface for platform background worker |
 | `features/export/presentation/ExportState.kt` | Export UI state (Confirm, Enqueued, NeedsNotificationPermission) |
-| `features/export/presentation/ExportEvent.kt` | Export events (with ConfirmExport) |
+| `features/export/presentation/ExportEvent.kt` | Export events (`ConfirmExport` carries access token from UI) |
 | `features/export/presentation/ExportStateHolder.kt` | Export state holder (double-tap guard) |
 | `features/export/presentation/ui/ExportBottomSheet.kt` | Export bottom sheet composable |
 | `features/export/di/ExportModule.kt` | Koin export module |
 | `navigation/routes/AuthRoute.kt` | Auth navigation route |
 | `navigation/deeplink/DeepLinkResult.kt` | Add `OpenExternalUrl` variant |
 | `navigation/deeplink/DeepLinkResolver.kt` | Handle `open` deep link path |
-| `utils/UrlOpener.kt` | `expect fun openUrl(url: String)` |
+| `utils/UrlOpener.kt` | Interface for platform URL opening (Koin-bound, not expect/actual) |
+
+### Existing files — `androidMain` (fix imports)
+
+| Path | Status | Description |
+|------|--------|-------------|
+| `features/auth/GoogleAuthProviderImpl.kt` | EXISTS (fix imports) | Implements `GoogleAuthProvider` with `CredentialManager` |
+| `features/auth/GoogleAuthUiProviderImpl.kt` | EXISTS (fix `com.dog.care` imports) | Credential Manager + Google Identity Services authorization |
+| `features/auth/HashedNonce.kt` | EXISTS | SHA-256 nonce utility |
+
+> **Delete:** `features/auth/domain/GetGooglePlayServicesAvailableUseCase.kt` and `IGetGooglePlayServiceAvailableUseCase.kt` — unused, don't follow project patterns. Rewrite if needed.
 
 ### New files — `androidMain`
 
 | Path | Description |
 |------|-------------|
-| `features/auth/data/AndroidSocialAuthProvider.kt` | Credential Manager (identity) + Google Identity Services (authorization) |
-| `features/auth/data/ActivityProvider.kt` | Activity context — Android-only class, NOT expect/actual |
+| `features/auth/data/AndroidFirebaseAuthProvider.kt` | Firebase Auth `signInWithCredential()` + `signOut()` |
+| `features/auth/apple/NoOpAppleAuthProvider.kt` | Throws `UnsupportedOperationException` on Android |
 | `features/auth/data/AndroidFcmTokenProvider.kt` | Firebase Messaging token |
 | `features/auth/data/AndroidNotificationPermission.kt` | POST_NOTIFICATIONS permission |
 | `features/export/data/ExportWorker.kt` | WorkManager `CoroutineWorker` for background export |
 | `features/export/data/AndroidExportWorkerScheduler.kt` | WorkManager enqueue logic |
-| `utils/UrlOpener.android.kt` | Custom Tabs URL opener |
+| `features/export/data/KoinWorkerFactory.kt` | Custom WorkerFactory for DI in WorkManager workers |
+| `utils/AndroidUrlOpener.kt` | Custom Tabs URL opener |
 
 ### New files — `iosMain`
 
 | Path | Description |
 |------|-------------|
-| `features/auth/data/IosSocialAuthBridge.kt` | ObjC-visible bridge interface (includes `getGoogleAccessToken`) |
-| `features/auth/data/IosSocialAuthProvider.kt` | KMP side of social auth |
+| `features/auth/google/IosGoogleAuthProvider.kt` | Implements `GoogleAuthProvider` via bridge |
+| `features/auth/google/IosGoogleAuthUiProvider.kt` | Implements `GoogleAuthUiProvider` via bridge |
+| `features/auth/google/IosSocialAuthBridge.kt` | ObjC-visible bridge interface (Google sign-in + scoped tokens) |
+| `features/auth/apple/IosAppleAuthProvider.kt` | Implements `AppleAuthProvider` via bridge |
+| `features/auth/data/IosFirebaseAuthProvider.kt` | Firebase Auth via Swift bridge |
 | `features/auth/data/IosFcmTokenProvider.kt` | KMP side of FCM token retrieval |
 | `features/auth/data/IosNotificationPermission.kt` | UNUserNotificationCenter permission |
 | `features/export/data/IosExportWorkerScheduler.kt` | Bridge to Swift export worker |
-| `utils/UrlOpener.ios.kt` | UIApplication URL opener |
+| `utils/IosUrlOpener.kt` | UIApplication URL opener |
 
 ### New files — `iosApp` (Swift)
 
 | Path | Description |
 |------|-------------|
 | `iosApp/IosSocialAuthBridgeImpl.swift` | GIDSignIn + ASAuthorization + scoped token retrieval |
+| `iosApp/IosFirebaseAuthBridgeImpl.swift` | Firebase Auth `signIn(with:)` + `signOut()` |
 | `iosApp/IosFcmTokenBridgeImpl.swift` | Firebase Messaging token retrieval |
 | `iosApp/ExportWorkerImpl.swift` | Background export using URLSession background configuration |
 
@@ -964,36 +1389,39 @@ Register `exportModule` in `AppModule.kt`.
 
 | Path | Change |
 |------|--------|
-| `gradle/libs.versions.toml` | Add `kotlinx-io` for gzip (conditional compression in `commonMain`) |
-| `composeApp/build.gradle.kts` | Wire `androidMain` credentials + google-identity deps |
+| `features/aauth/` → `features/auth/` | **Rename package** (typo fix) — all 5 files |
+| `gradle/libs.versions.toml` | Add `kotlinx-io`, `security-crypto` |
+| `composeApp/build.gradle.kts` | Wire `androidMain` security-crypto + work-runtime + firebase-auth + firebase-messaging; `commonMain` kotlinx-io-core |
+| `core/db/AppDatabase.kt` | Add `ExportHistoryEntity` to `@Database(entities)`, add `exportHistoryDao()` |
 | `di/AppModule.kt` | Include `authModule`, `exportModule` |
-| `di/PlatformModule.android.kt` | Bind `SocialAuthProvider`, `IFcmTokenProvider`, `INotificationPermission`, `ExportWorkerScheduler` |
-| `di/PlatformModule.ios.kt` | Bind `SocialAuthProvider`, `IFcmTokenProvider`, `INotificationPermission`, `ExportWorkerScheduler` |
+| `di/PlatformModule.android.kt` | Bind `GoogleAuthProvider`, `FirebaseAuthProvider`, `AppleAuthProvider`, `IFcmTokenProvider`, `INotificationPermission`, `ExportWorkerScheduler`, `UrlOpener` |
+| `di/PlatformModule.ios.kt` | Bind `GoogleAuthProvider`, `FirebaseAuthProvider`, `AppleAuthProvider`, `IFcmTokenProvider`, `INotificationPermission`, `ExportWorkerScheduler`, `UrlOpener` |
 | `navigation/routes/RegisteredRoutes.kt` | Register `AuthRoute` |
 | `navigation/RootContent.kt` | Handle `OpenExternalUrl` deep link + cold start queuing |
 | `features/analytics/presentation/AnalyticsEvent.kt` | Add `ExportTapped`, `DismissExportSheet` |
 | `features/analytics/presentation/AnalyticsScreen.kt` | Add export button + `ExportBottomSheet` |
 | `androidApp/src/main/AndroidManifest.xml` | Add `plzstop://` intent filter + `POST_NOTIFICATIONS` permission |
 | `iosApp/Info.plist` | Add `CFBundleURLSchemes`, `GIDClientID`, `GIDServerClientID`, reversed client ID URL scheme |
-| `core/db/dao/CategoryDao.kt` | Add `getAllIncludingArchived()` query |
-| `core/db/dao/SubcategoryDao.kt` | Add `getAllIncludingArchived()` query |
+| `androidApp/src/main/kotlin/.../PleaseStopApplication.kt` | Register `KoinWorkerFactory` for WorkManager |
 
 ---
 
 ## Implementation Order
 
-1. Phase 1, Steps 1–4: deps + models + platform implementations + encrypted storage
-2. Phase 1, Step 5: auth feature module (data → domain → presentation)
-3. Phase 1, Steps 6–7: navigation route + DI wiring
-4. Phase 1, Step 8: connect-google-account flow
-5. Phase 1, Step 9: logout cleanup
-6. Phase 1, Backend: `verifyGoogleToken` + `verifyAppleToken` Cloud Functions
-7. Phase 2, Steps 3–4: notification permission + FCM token provider
-8. Phase 2, Step 1: `exportToSheets` Cloud Function
-9. Phase 2, Step 2: background worker (Android WorkManager + iOS bridge)
-10. Phase 2, Step 2 continued: export feature module (data → domain → presentation)
-11. Phase 2, Step 5: deep link handling (`plzstop://open`)
-12. Phase 2, Steps 6–7: export button in Analytics + DI wiring
+1. Phase 1, Steps 1–2: deps + fix existing code (`aauth` → `auth`, `com.dog.care` imports, add `GoogleAuthCredentials`)
+2. Phase 1, Step 3: platform implementations (Android fixes + iOS Google/Apple + `FirebaseAuthProvider`)
+3. Phase 1, Steps 4–5: encrypted storage + auth feature module (data → domain → presentation)
+4. Phase 1, Steps 6–7: navigation route + DI wiring
+5. Phase 1, Step 8: connect-google-account flow
+6. Phase 1, Step 9: logout cleanup
+7. Phase 1, Step 10: delete account
+8. Phase 1, Backend: `verifyGoogleToken` + `verifyAppleToken` + `deleteUserData` Cloud Functions
+9. Phase 2, Steps 3–4: notification permission + FCM token provider
+10. Phase 2, Step 1: `exportToSheets` Cloud Function
+11. Phase 2, Step 2: background worker (Android WorkManager + iOS bridge)
+12. Phase 2, Step 2 continued: export feature module (data → domain → presentation)
+13. Phase 2, Step 5: deep link handling (`plzstop://open`)
+14. Phase 2, Steps 6–7: export button in Analytics + DI wiring
 
 ---
 
@@ -1002,16 +1430,16 @@ Register `exportModule` in `AppModule.kt`.
 | Risk | Mitigation |
 |------|------------|
 | **Android two-step auth** — Credential Manager gives ID token only, not scoped access token | Explicit second step via `Identity.getAuthorizationClient().authorize()` with `spreadsheets` scope |
-| **Google token scope missing** | Request `https://www.googleapis.com/auth/spreadsheets` explicitly in both `AndroidSocialAuthProvider` and `IosSocialAuthBridgeImpl` |
+| **Google token scope missing** | Request `spreadsheets` + `drive.file` scopes explicitly in `GoogleButtonUiContainer(scopes=...)` and `IosSocialAuthBridgeImpl`. `drive.file` needed for create + share; scoped to app-created files only |
 | **Apple Sign-In email only on first auth** | Store email on backend during first sign-in; subsequent logins use subject identifier to look up stored email |
 | **FCM token null / notification denied** | Export blocked at pre-flight check. Notification permission is required since push is the only result delivery mechanism |
-| **Google access token in background worker (Android)** | `AuthorizationClient` may need Activity context. Options: (a) get token before enqueuing worker and pass as input data, (b) use application-context `AuthorizationClient` if supported. Token is short-lived (~60min) so option (a) is safe if worker runs promptly |
+| **Google access token in background worker (Android)** | **Resolved:** Token obtained before enqueuing, passed as WorkManager input data. `AuthorizationClient` requires Activity context — cannot run inside worker. Token is short-lived (~60min) but worker runs promptly with `NetworkType.CONNECTED` constraint |
 | **iOS `keyWindow` deprecated** | Use `UIApplication.shared.connectedScenes` to get active `UIWindowScene` |
 | **Custom URL scheme not verified** | Accept risk — spreadsheet URL is also returned inline. Deep link is convenience, not sole delivery path |
 | **Orphan spreadsheet on network failure** | Titled with date range for discoverability. WorkManager retries on Android. Cloud Function sends error push on failure |
 | **Worker process death (Android)** | WorkManager persists work across process death — export resumes automatically |
 | **iOS background time limit** | Use background `URLSession` for the Cloud Function call — continues even after app suspension. `Task {}` alone only gets ~30s |
-| **Stale Google token on logout** | `LogoutUseCase` atomically clears all auth storage |
+| **Stale Google token on logout** | `LogoutUseCase` atomically clears `IGoogleAccountStorage` + `BearerTokenClearer` + calls `FirebaseAuthProvider.signOut()` + `GoogleAuthProvider.signOut()` |
 | **iOS FCM token timing** | Use `Messaging.messaging().token(completion:)` callback variant, not synchronous property |
 | **Google account link stored insecurely** | Use `EncryptedSharedPreferences` (Android) / Keychain (iOS), not plain DataStore |
 | **`IosFirebaseCallableFunctions` null handling** | Replace null subcategory with `""` before serialization to avoid cast crash in iOS bridge |

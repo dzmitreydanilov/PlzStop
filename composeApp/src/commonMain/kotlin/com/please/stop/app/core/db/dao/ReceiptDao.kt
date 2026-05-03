@@ -28,4 +28,7 @@ abstract class ReceiptDao {
 
     @Query("SELECT * FROM receipt WHERE id IN (:ids)")
     abstract suspend fun getByIds(ids: List<Long>): List<ReceiptEntity>
+
+    @Query("DELETE FROM receipt")
+    abstract suspend fun deleteAll()
 }

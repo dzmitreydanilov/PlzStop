@@ -52,4 +52,7 @@ interface SubcategoryDao {
 
     @Query("SELECT COUNT(*) FROM subcategory")
     suspend fun count(): Int
+
+    @Query("DELETE FROM subcategory")
+    suspend fun deleteAll()
 }

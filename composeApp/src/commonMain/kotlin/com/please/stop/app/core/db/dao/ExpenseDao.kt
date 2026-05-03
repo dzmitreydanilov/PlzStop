@@ -106,6 +106,9 @@ interface ExpenseDao {
         fromEpochMillis: Long,
         toEpochMillis: Long,
     ): List<ExpenseEntity>
+
+    @Query("DELETE FROM expense")
+    suspend fun deleteAll()
 }
 
 data class CategorySpending(

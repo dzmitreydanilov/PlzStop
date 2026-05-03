@@ -79,3 +79,8 @@ captures/
 
 # 3. Explicitly allow the profile text files
 !**/src/**/generated/baselineProfiles/*.txt
+
+########################
+# KMP Swift PM cache
+########################
+.swiftpm-locks/

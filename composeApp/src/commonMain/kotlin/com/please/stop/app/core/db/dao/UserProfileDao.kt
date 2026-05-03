@@ -18,4 +18,7 @@ interface UserProfileDao {
 
     @Query("SELECT onboardingCompleted FROM user_profile WHERE id = 1")
     fun observeOnboardingCompleted(): Flow<Boolean?>
+
+    @Query("DELETE FROM user_profile")
+    suspend fun deleteAll()
 }

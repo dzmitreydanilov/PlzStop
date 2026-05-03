@@ -102,7 +102,9 @@
       "Read(//Users/dmitry.danilov/StudioProjects/PlzStop/**)",
       "Bash(done)",
       "WebFetch(domain:insert-koin.io)",
-      "Bash(/Users/dmitry.danilov/StudioProjects/PlzStop/.commit-msg:*)"
+      "Bash(/Users/dmitry.danilov/StudioProjects/PlzStop/.commit-msg:*)",
+      "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && head -50 {}')",
+      "Bash(xargs -n1 basename)"
     ]
   },
   "enabledMcpjsonServers": [

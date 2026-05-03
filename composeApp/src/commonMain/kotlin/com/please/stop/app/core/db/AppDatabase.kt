@@ -9,11 +9,13 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
 import com.please.stop.app.core.db.dao.CategoryDao
 import com.please.stop.app.core.db.dao.ExpenseDao
+import com.please.stop.app.core.db.dao.ExportHistoryDao
 import com.please.stop.app.core.db.dao.ReceiptDao
 import com.please.stop.app.core.db.dao.SubcategoryDao
 import com.please.stop.app.core.db.dao.UserProfileDao
 import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.db.entity.ExpenseEntity
+import com.please.stop.app.core.db.entity.ExportHistoryEntity
 import com.please.stop.app.core.db.entity.ReceiptEntity
 import com.please.stop.app.core.db.entity.SubcategoryEntity
 import com.please.stop.app.core.db.entity.UserProfileEntity
@@ -25,8 +27,9 @@ import com.please.stop.app.core.db.entity.UserProfileEntity
         ExpenseEntity::class,
         SubcategoryEntity::class,
         ReceiptEntity::class,
+        ExportHistoryEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -37,6 +40,16 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun subcategoryDao(): SubcategoryDao
     abstract fun receiptDao(): ReceiptDao
+    abstract fun exportHistoryDao(): ExportHistoryDao
+
+    suspend fun clearAllData() {
+        expenseDao().deleteAll()
+        subcategoryDao().deleteAll()
+        categoryDao().deleteAll()
+        receiptDao().deleteAll()
+        exportHistoryDao().deleteAll()
+        userProfileDao().deleteAll()
+    }
 
     companion object {
         const val NAME = "plzstop.db"
@@ -172,6 +185,22 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 connection.execSQL(
                     "ALTER TABLE `subcategory` ADD COLUMN `isArchived` INTEGER NOT NULL DEFAULT 0",
+                )
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `export_history` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`startDateEpochMillis` INTEGER NOT NULL, " +
+                        "`endDateEpochMillis` INTEGER NOT NULL, " +
+                        "`status` TEXT NOT NULL, " +
+                        "`spreadsheetUrl` TEXT, " +
+                        "`errorMessage` TEXT, " +
+                        "`createdAtEpochMillis` INTEGER NOT NULL, " +
+                        "`completedAtEpochMillis` INTEGER)",
                 )
             }
         }

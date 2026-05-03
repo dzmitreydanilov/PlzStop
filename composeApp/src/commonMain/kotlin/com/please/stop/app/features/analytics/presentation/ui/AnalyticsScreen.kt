@@ -1,6 +1,7 @@
 package com.please.stop.app.features.analytics.presentation.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,10 +11,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -29,16 +36,20 @@ import com.please.stop.app.uicomponents.animation.rememberShimmerOffset
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
+import kotlinx.datetime.plus
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.analytics_insights_subtitle
 import plzstop.composeapp.generated.resources.analytics_tab
+import plzstop.composeapp.generated.resources.ic_send
 
 @Composable
 fun AnalyticsScreen() {
     val stateHolder = koinViewModel<AnalyticsStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()
+    var showExportSheet by remember { mutableStateOf(false) }
 
     ScreenOverlayContainer(
         overlay = state.asOverlay,
@@ -46,10 +57,25 @@ fun AnalyticsScreen() {
         onAutoDismiss = { stateHolder.processEvent(AnalyticsEvent.DismissError) },
     ) {
         DisplayFullScreenProgress(showProgress = state is AnalyticsState.Loading)
-        AnalyticsScreenContent(
-            state = state,
-            onEvent = stateHolder::processEvent,
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            AnalyticsScreenContent(
+                state = state,
+                onEvent = stateHolder::processEvent,
+            )
+            if (state is AnalyticsState.Content) {
+                FloatingActionButton(
+                    onClick = { showExportSheet = true },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                ) {
+                    Icon(
+                        vectorResource(Res.drawable.ic_send),
+                        contentDescription = "Export to Sheets"
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -102,7 +128,10 @@ private fun AnalyticsScreenContent(
                 state = s,
                 onEvent = onEvent,
             )
-            else -> { /* Loading/Error handled by ScreenOverlayContainer + DisplayFullScreenProgress */ }
+
+            else -> {
+                /* Loading/Error handled by ScreenOverlayContainer + DisplayFullScreenProgress */
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))

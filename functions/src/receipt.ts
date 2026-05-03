@@ -81,8 +81,12 @@ export interface PreparedRequest {
 }
 
 export async function prepareRequest(
-  request: { rawRequest: { ip?: string }; data: Record<string, unknown> }
+  request: { auth?: { uid: string }; rawRequest: { ip?: string }; data: Record<string, unknown> }
 ): Promise<PreparedRequest> {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
   const clientIp = request.rawRequest.ip ?? "unknown";
   await checkRateLimit(clientIp);
 

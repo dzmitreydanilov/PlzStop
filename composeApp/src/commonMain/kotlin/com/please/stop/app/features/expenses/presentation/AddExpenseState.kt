@@ -1,6 +1,5 @@
 package com.please.stop.app.features.expenses.presentation
 
-import androidx.compose.runtime.Stable
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.serialization.ImmutableListSerializer
 import com.please.stop.app.features.expenses.domain.model.ReceiptError
@@ -9,7 +8,6 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Serializable
 
-@Stable
 @Serializable
 data class AddExpenseState(
     val editContext: EditContext,
@@ -31,14 +29,12 @@ data class AddExpenseState(
     val errorOverlay: ErrorOverlay? = null,
 )
 
-@Stable
 @Serializable
 data class ErrorOverlay(
     val errorType: ErrorType,
     val receiptError: ReceiptError? = null,
 )
 
-@Stable
 @Serializable
 data class EditContext(
     val isEditMode: Boolean,
@@ -46,7 +42,6 @@ data class EditContext(
     val initialForm: ExpenseFormInput? = null,
 )
 
-@Stable
 @Serializable
 data class CurrencyConfig(
     val code: String = "",
@@ -55,7 +50,6 @@ data class CurrencyConfig(
 )
 
 
-@Stable
 @Serializable
 data class ExpenseFormInput(
     val amountInput: String = "",
@@ -68,7 +62,6 @@ data class ExpenseFormInput(
     val notes: String = "",
 )
 
-@Stable
 @Serializable
 data class FormStatus(
     val isSaving: Boolean = false,
@@ -79,13 +72,11 @@ data class FormStatus(
     val hasUnsavedChanges: Boolean = false,
 )
 
-@Stable
 @Serializable
 data class ReceiptState(
     val isAnalyzing: Boolean = false,
 )
 
-@Stable
 @Serializable
 data class CategoryUiModel(
     val id: Long,
@@ -93,7 +84,6 @@ data class CategoryUiModel(
     val iconKey: String,
 )
 
-@Stable
 @Serializable
 data class SubcategoryUiModel(
     val id: Long,
@@ -102,7 +92,6 @@ data class SubcategoryUiModel(
     val iconKey: String,
 )
 
-@Stable
 @Serializable
 data class ConversionState(
     val isLoading: Boolean = false,
