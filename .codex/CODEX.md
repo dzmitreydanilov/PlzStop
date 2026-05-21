@@ -1,4 +1,4 @@
-# PlzStop Claude Code Instructions
+# PlzStop Codex Instructions
 
 Canonical source of truth:
 - [Agent rules](../docs/agent-rules.md)
