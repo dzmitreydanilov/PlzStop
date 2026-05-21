@@ -41,8 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.composables.core.SheetDetent
-import com.composables.core.rememberModalBottomSheetState
+import com.composeunstyled.SheetDetent
+import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.categories.presentation.CategoriesEvent
 import com.please.stop.app.features.categories.presentation.CategoriesState
 import com.please.stop.app.features.categories.presentation.CategoriesStateHolder

@@ -100,11 +100,6 @@ composeApp/src/commonMain/kotlin/com/please/stop/app/
 ./gradlew detekt
 ```
 
-## Developer Tooling
-
-- [Android CLI with Codex and Claude Code](docs/dev-tools/android-cli.md)
-- [Codex Status Line](docs/dev-tools/codex-status-line.md)
-
 ## Cloud Functions
 
 See [docs/cloudfunc/deploy-cloud-functions.md](docs/cloudfunc/deploy-cloud-functions.md) for deployment instructions.

@@ -14,18 +14,18 @@ class GetExpenseByIdUseCase(
     private val ioDispatcher: CoroutineDispatcher,
 ) {
 
-    suspend operator fun invoke(id: Long): DomainResult = withContext(ioDispatcher) {
+    suspend operator fun invoke(id: Long): GetExpenseByIdResult = withContext(ioDispatcher) {
         repository.getExpenseById(id).fold(
             onSuccess = { expense ->
-                if (expense != null) Result.Success(expense) else Result.NotFound
+                if (expense != null) GetExpenseByIdResult.Success(expense) else GetExpenseByIdResult.NotFound
             },
-            onFailure = { Result.Failure(it.toErrorType()) },
+            onFailure = { GetExpenseByIdResult.Failure(it.toErrorType()) },
         )
     }
+}
 
-    sealed interface Result : DomainResult {
-        data class Success(val expense: ExpenseDetail) : Result
-        data object NotFound : Result
-        data class Failure(override val errorType: ErrorType) : Result, ErrorResult
-    }
+sealed interface GetExpenseByIdResult : DomainResult {
+    data class Success(val expense: ExpenseDetail) : GetExpenseByIdResult
+    data object NotFound : GetExpenseByIdResult
+    data class Failure(override val errorType: ErrorType) : GetExpenseByIdResult, ErrorResult
 }

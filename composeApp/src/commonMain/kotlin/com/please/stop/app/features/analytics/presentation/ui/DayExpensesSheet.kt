@@ -19,8 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.composables.core.SheetDetent
-import com.composables.core.rememberModalBottomSheetState
+import com.composeunstyled.SheetDetent
+import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.analytics.presentation.DayExpenseUiItem
 import com.please.stop.app.features.analytics.presentation.DayExpensesSheetUi
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet

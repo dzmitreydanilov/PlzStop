@@ -40,8 +40,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.please.stop.app.features.analytics.monthly.presentation.DayGroupUiModel
 import com.please.stop.app.features.analytics.monthly.presentation.ExpenseEntryUiModel
 import com.please.stop.app.features.analytics.monthly.presentation.MonthPageState
-import com.please.stop.app.features.analytics.monthly.presentation.MonthlyExpensesEvent
-import com.please.stop.app.features.analytics.monthly.presentation.MonthlyExpensesNavigation
+import com.please.stop.app.features.analytics.monthly.presentation.OperationsEvent
+import com.please.stop.app.features.analytics.monthly.presentation.OperationsNavigation
 import com.please.stop.app.features.analytics.monthly.presentation.MonthlyExpensesStateHolder
 import com.please.stop.app.features.analytics.monthly.presentation.MonthlyWindowState
 import com.please.stop.app.navigation.CollectNavigationFlow
@@ -94,7 +94,7 @@ fun MonthlyExpensesScreen(
 
     LaunchedEffect(pagerState.currentPage) {
         val (year, month) = pageIndexToYearMonth(pagerState.currentPage)
-        stateHolder.processEvent(MonthlyExpensesEvent.MonthSelected(year, month))
+        stateHolder.processEvent(OperationsEvent.MonthSelected(year, month))
     }
 
     CollectNavigationFlow(
@@ -102,7 +102,7 @@ fun MonthlyExpensesScreen(
         key1 = stateHolder,
     ) { navigation ->
         when (navigation) {
-            is MonthlyExpensesNavigation.OpenEditExpense -> onNavigateToEditExpense(navigation.expenseId)
+            is OperationsNavigation.OpenEditExpense -> onNavigateToEditExpense(navigation.expenseId)
         }
     }
 
@@ -152,14 +152,14 @@ fun MonthlyExpensesScreen(
                 MonthBody(
                     state = pageState,
                     onExpenseClicked = { id ->
-                        stateHolder.processEvent(MonthlyExpensesEvent.ExpenseClicked(id))
+                        stateHolder.processEvent(OperationsEvent.ExpenseClicked(id))
                     },
                     onExpenseLongClicked = { id ->
-                        stateHolder.processEvent(MonthlyExpensesEvent.ExpenseLongClicked(id))
+                        stateHolder.processEvent(OperationsEvent.ExpenseLongClicked(id))
                     },
                     onReceiptGroupClicked = { id ->
                         stateHolder.processEvent(
-                            MonthlyExpensesEvent.ReceiptGroupClicked(id, year, month)
+                            OperationsEvent.ReceiptGroupClicked(id, year, month)
                         )
                     },
                 )
@@ -171,10 +171,10 @@ fun MonthlyExpensesScreen(
     if (deleteExpenseId != null) {
         DeleteExpenseDialog(
             onConfirm = {
-                stateHolder.processEvent(MonthlyExpensesEvent.ConfirmDeleteExpense(deleteExpenseId))
+                stateHolder.processEvent(OperationsEvent.ConfirmDeleteExpense(deleteExpenseId))
             },
             onDismiss = {
-                stateHolder.processEvent(MonthlyExpensesEvent.DismissDeleteDialog)
+                stateHolder.processEvent(OperationsEvent.DismissDeleteDialog)
             },
         )
     }

@@ -38,7 +38,7 @@ import com.please.stop.app.core.models.domain.Result as DomainResult
 class MonthlyExpensesStateHolder(
     private val observeMonthlyExpensesUseCase: ObserveMonthlyExpensesUseCase,
     private val deleteExpenseUseCase: DeleteExpenseUseCase,
-) : StateHolder<MonthlyWindowState, MonthlyExpensesEvent>() {
+) : StateHolder<MonthlyWindowState, OperationsEvent>() {
 
     override val tag = "MonthlyExpensesStateHolder"
     override val bootstrapTiming = BootstrapTiming.IMMEDIATE
@@ -59,7 +59,7 @@ class MonthlyExpensesStateHolder(
         setOf(MonthlyResult.NavigateToEdit::class)
 
     override fun getNavigationByResult(result: DomainResult): Navigation? = when (result) {
-        is MonthlyResult.NavigateToEdit -> MonthlyExpensesNavigation.OpenEditExpense(result.expenseId)
+        is MonthlyResult.NavigateToEdit -> OperationsNavigation.OpenEditExpense(result.expenseId)
         else -> null
     }
 
@@ -121,9 +121,9 @@ class MonthlyExpensesStateHolder(
         errorType: ErrorType,
     ): MonthlyWindowState = state.value
 
-    override fun resolveEventResult(event: MonthlyExpensesEvent): Flow<DomainResult> =
+    override fun resolveEventResult(event: OperationsEvent): Flow<DomainResult> =
         when (event) {
-            is MonthlyExpensesEvent.MonthSelected -> {
+            is OperationsEvent.MonthSelected -> {
                 flow {
                     val newWindow = buildWindow(event.year, event.month)
                     val currentState = state.value
@@ -136,24 +136,24 @@ class MonthlyExpensesStateHolder(
                 }
             }
 
-            is MonthlyExpensesEvent.ExpenseClicked -> {
+            is OperationsEvent.ExpenseClicked -> {
                 flowOf(MonthlyResult.NavigateToEdit(event.expenseId))
             }
 
-            is MonthlyExpensesEvent.ExpenseLongClicked -> {
+            is OperationsEvent.ExpenseLongClicked -> {
                 flowOf(MonthlyResult.ShowDeleteDialog(event.expenseId))
             }
 
-            is MonthlyExpensesEvent.ConfirmDeleteExpense -> flow {
+            is OperationsEvent.ConfirmDeleteExpense -> flow {
                 emit(MonthlyResult.HideDeleteDialog)
                 emit(deleteExpenseUseCase(event.expenseId))
             }
 
-            MonthlyExpensesEvent.DismissDeleteDialog -> {
+            OperationsEvent.DismissDeleteDialog -> {
                 flowOf(MonthlyResult.HideDeleteDialog)
             }
 
-            is MonthlyExpensesEvent.ReceiptGroupClicked -> flowOf(
+            is OperationsEvent.ReceiptGroupClicked -> flowOf(
                 MonthlyResult.ToggleReceipt(event.receiptId, event.year, event.month)
             )
         }

@@ -5,7 +5,8 @@ Kotlin Multiplatform Mobile using Compose Multiplatform. All shared code lives i
 This file is the canonical source of truth for repo-specific agent behavior.
 Skill content lives in `docs/skills/`.
 Generated wrappers mirror this file to `AGENTS.md`, `.claude/CLAUDE.md`, and `.codex/CODEX.md`.
-Generated Claude Code skill access points use a symlink from `.claude/skills/` to `docs/skills/`.
+Generated Claude Code and Codex skill access points use symlinks from `.claude/skills/` and `.codex/skills/`
+to `docs/skills/`.
 
 ## Agent Behavior Requirements
 
@@ -50,7 +51,8 @@ MANDATORY: Before responding to ANY prompt, you MUST:
 - Avoid unnecessarily re-reading files already in context.
 - Prefer targeted file reads (specific line ranges) over reading entire large files.
 - Batch related edits into fewer tool calls where possible.
-- Build artifacts, iOS SPM checkouts, node_modules, IDE files, and binaries are excluded via `.claudeignore` — do not read or reference those paths.
+- Build artifacts, iOS SPM checkouts, node_modules, IDE files, and binaries are excluded via `.claudeignore`
+  and `.codexignore` — do not read or reference those paths.
 - **Always limit command output** — pipe through `tail -20`, `grep`, or use `--quiet`/`-q` flags. Never let raw Gradle or build output flood the context.
 
 ## Quick Reference

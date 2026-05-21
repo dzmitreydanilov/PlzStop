@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.composables.core.SheetDetent
-import com.composables.core.rememberModalBottomSheetState
+import com.composeunstyled.SheetDetent
+import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.uicomponents.buttons.ApplicationButton
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
 import kotlinx.coroutines.delay

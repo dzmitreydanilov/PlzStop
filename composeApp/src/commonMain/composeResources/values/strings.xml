@@ -69,6 +69,7 @@
     <string name="add_expense_cancel">Cancel</string>
     <string name="add_expense_done">Done</string>
     <string name="add_expense_scan_receipt">Scan Receipt</string>
+    <string name="add_expense_add_receipt_manually">Add receipt manually</string>
     <string name="add_expense_analyzing_receipt">Analyzing receipt…</string>
     <string name="add_expense_receipt_not_receipt">This doesn\'t look like a receipt. Try a different photo.</string>
     <string name="add_expense_receipt_unreadable">Couldn\'t read this receipt. Try a clearer photo or enter manually.</string>
@@ -278,5 +279,4 @@
     <string name="subscription_promo_body">Never lose track of your subscriptions. Set up recurring expenses to automatically track Netflix, gym, rent, and more.</string>
     <string name="subscription_promo_cta">Get Started</string>
 </resources>
-
 

@@ -3,11 +3,15 @@ set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 DOC_SKILLS="$ROOT/docs/skills"
+CLAUDE_IGNORE="$ROOT/.claudeignore"
+CODEX_IGNORE="$ROOT/.codexignore"
 AGENTS_FILE="$ROOT/AGENTS.md"
 CLAUDE_FILE="$ROOT/.claude/CLAUDE.md"
 CODEX_FILE="$ROOT/.codex/CODEX.md"
 CLAUDE_SKILLS="$ROOT/.claude/skills"
+CODEX_SKILLS="$ROOT/.codex/skills"
 CLAUDE_SKILLS_TARGET="../docs/skills"
+CODEX_SKILLS_TARGET="../docs/skills"
 
 write_wrapper() {
   local file="$1"
@@ -35,8 +39,17 @@ sync_skill_link() {
   ln -s "$link_target" "$target_root"
 }
 
+sync_ignore_file() {
+  local source_file="$1"
+  local target_file="$2"
+
+  cp "$source_file" "$target_file"
+}
+
 write_wrapper "$AGENTS_FILE" "PlzStop Shared Agent Instructions" "./docs/agent-rules.md" "./docs/skills/"
 write_wrapper "$CLAUDE_FILE" "PlzStop Claude Code Instructions" "../docs/agent-rules.md" "../docs/skills/"
 write_wrapper "$CODEX_FILE" "PlzStop Codex Instructions" "../docs/agent-rules.md" "../docs/skills/"
 
 sync_skill_link "$CLAUDE_SKILLS" "$CLAUDE_SKILLS_TARGET"
+sync_skill_link "$CODEX_SKILLS" "$CODEX_SKILLS_TARGET"
+sync_ignore_file "$CLAUDE_IGNORE" "$CODEX_IGNORE"

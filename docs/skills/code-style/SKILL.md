@@ -1,6 +1,6 @@
-    q---
+---
 name: code-style
-description: Code style and layer rules — null safety, DI conventions, repository/use-case/StateHolder patterns, collections, documentation. Use when writing or reviewing any Kotlin code in this project.
+description: "Code style and layer rules - null safety, DI conventions, repository/use-case/StateHolder patterns, collections, documentation. Use when writing or reviewing any Kotlin code in this project."
 ---
 
 # Code Style
