@@ -195,12 +195,14 @@ abstract class BaseExpenseStateHolder(
         val currency = AddExpenseStateMapper.toCurrencyConfig(data)
         val hasUserSelectedCurrency = previous.currency.code != previous.conversion.defaultCurrencyCode &&
             previous.currency.code.isNotEmpty()
+
         if (!hasUserSelectedCurrency) {
             keyboardCalculator = KeyboardCalculator(
                 decimalPlaces = currency.decimalPlaces,
                 currencySymbol = data.currencySymbol,
             )
         }
+
         val categories = AddExpenseStateMapper.toCategoryUiModels(data)
         val subcategories = AddExpenseStateMapper.toSubcategoryUiModels(data)
         return previous.copy(

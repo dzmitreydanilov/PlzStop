@@ -37,7 +37,14 @@ kotlin {
         swiftPackage(
             url = "https://github.com/firebase/firebase-ios-sdk.git",
             version = "11.12.0",
-            products = listOf("FirebaseCore", "FirebaseRemoteConfig", "FirebaseFunctions", "FirebaseAppCheck"),
+            products = listOf(
+                "FirebaseCore",
+                "FirebaseRemoteConfig",
+                "FirebaseFunctions",
+                "FirebaseAppCheck",
+                "FirebaseAuth",
+                "FirebaseMessaging",
+            ),
         )
     }
 
@@ -83,6 +90,8 @@ kotlin {
             implementation(libs.bundles.jb.nav3)
             implementation(libs.bundles.jb.compose)
 
+            implementation(libs.kotlinx.io.core)
+
             implementation(libs.room.runtime)
             implementation(libs.room.common)
             implementation(libs.androidx.sqlite)
@@ -101,6 +110,7 @@ kotlin {
 
             implementation(libs.bundles.googleOauth)
             implementation(libs.androidx.core.splashscreen)
+            implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.lifecycle.process)
             implementation(libs.androidx.lifecycle.service)
             implementation(libs.androidx.browser)
@@ -110,6 +120,8 @@ kotlin {
 
             implementation(libs.room.ktx)
             implementation(libs.android.sqlcipher)
+            implementation(libs.androidx.security.crypto)
+            implementation(libs.androidx.work.runtime.ktx)
 
             implementation(project.dependencies.platform("com.google.firebase:firebase-bom:33.16.0"))
             implementation("com.google.firebase:firebase-common-ktx")
@@ -117,6 +129,8 @@ kotlin {
             implementation("com.google.firebase:firebase-functions-ktx")
             implementation("com.google.firebase:firebase-appcheck-ktx")
             implementation("com.google.firebase:firebase-appcheck-playintegrity")
+            implementation("com.google.firebase:firebase-auth-ktx")
+            implementation("com.google.firebase:firebase-messaging-ktx")
             implementation(libs.mlkit.document.scanner)
         }
 

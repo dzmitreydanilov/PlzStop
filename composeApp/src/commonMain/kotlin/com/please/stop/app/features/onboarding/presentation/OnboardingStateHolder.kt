@@ -73,17 +73,15 @@ class OnboardingStateHolder(
 
     private fun handleNext(): Flow<Result> = flow {
         val state = currentContent() ?: return@flow
-        when {
-            state.currentStep == OnboardingStep.BUDGET -> {
+        when (state.currentStep) {
+            OnboardingStep.BUDGET -> {
                 emitSaveAndComplete(state)
             }
-
-            state.currentStep == OnboardingStep.WELCOME && !state.hasAttemptedCurrencyDetection -> {
+            OnboardingStep.WELCOME if !state.hasAttemptedCurrencyDetection -> {
                 emit(OnboardingResult.StepAdvanced)
                 emit(OnboardingResult.CurrencyDetectionStarted)
                 emit(detectDeviceCurrencyUseCase())
             }
-
             else -> emit(OnboardingResult.StepAdvanced)
         }
     }

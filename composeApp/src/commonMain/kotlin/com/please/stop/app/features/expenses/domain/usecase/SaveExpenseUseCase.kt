@@ -4,12 +4,15 @@ import com.please.stop.app.core.models.domain.ErrorResult
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.domain.toErrorType
 import com.please.stop.app.features.expenses.domain.repository.AddExpenseRepository
+import com.please.stop.app.features.subscriptions.data.service.SubscriptionPromoEmitter
+import com.please.stop.app.features.subscriptions.domain.model.SubscriptionPromoTrigger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import com.please.stop.app.core.models.domain.Result as DomainResult
 
 class SaveExpenseUseCase(
     private val repository: AddExpenseRepository,
+    private val promoEmitter: SubscriptionPromoEmitter,
     private val ioDispatcher: CoroutineDispatcher,
 ) {
 
@@ -52,7 +55,14 @@ class SaveExpenseUseCase(
             ).map { }
         }
         result.fold(
-            onSuccess = { Result.Success },
+            onSuccess = {
+                if (existingId == null) {
+                    promoEmitter.emit(
+                        SubscriptionPromoTrigger.ExpenseCreatedInSubscriptionCategory,
+                    )
+                }
+                Result.Success
+            },
             onFailure = { Result.Failure(it.toErrorType()) },
         )
     }

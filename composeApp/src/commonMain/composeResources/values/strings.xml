@@ -69,6 +69,7 @@
     <string name="add_expense_cancel">Cancel</string>
     <string name="add_expense_done">Done</string>
     <string name="add_expense_scan_receipt">Scan Receipt</string>
+    <string name="add_expense_add_receipt_manually">Add receipt manually</string>
     <string name="add_expense_analyzing_receipt">Analyzing receipt…</string>
     <string name="add_expense_receipt_not_receipt">This doesn\'t look like a receipt. Try a different photo.</string>
     <string name="add_expense_receipt_unreadable">Couldn\'t read this receipt. Try a clearer photo or enter manually.</string>
@@ -222,6 +223,63 @@
     <string name="analytics_day_expenses_title">Expenses on %1$s</string>
     <string name="analytics_day_no_expenses">No expenses on this day</string>
     <string name="analytics_day_total">Total: %1$s</string>
+
+    <string name="export_preparing">Preparing export…</string>
+    <string name="export_title">Export data</string>
+    <string name="export_destination_label">Destination</string>
+    <string name="export_destination_google_sheets">Google Sheets</string>
+    <string name="export_destination_csv">CSV</string>
+    <string name="export_spread_sheet_title">Spreadsheet Title</string>
+    <string name="export_tab_layout_label">Tab layout</string>
+    <string name="export_tab_single_sheet">Single sheet</string>
+    <string name="export_tab_sheet_per_month">Sheet per month</string>
+    <string name="export_date_range_label">Date range</string>
+    <string name="export_date_range_placeholder">Select date range</string>
+    <string name="export_date_range_picker_title">Select date range</string>
+    <string name="export_date_picker_mode_single">Single date</string>
+    <string name="export_date_picker_mode_range">Range</string>
+    <string name="export_organization_method_label">Organization method</string>
+    <string name="export_organization_same_tab">Same tab</string>
+    <string name="export_organization_separate_tabs">Separate tabs</string>
+    <string name="export_button">Export</string>
+    <string name="export_enqueued_message">Your export is being prepared.\nYou\'ll receive a notification when it\'s ready, if notifications are enabled.</string>
+    <string name="export_csv_share_launched">Share sheet opened.</string>
+    <string name="export_connect_google_title">Connect Google Account</string>
+    <string name="export_connect_google_body">A Google account is needed to create the spreadsheet.</string>
+    <string name="export_connect_google_button">Connect Google Account</string>
+    <string name="export_enable_notifications_title">Enable Notifications</string>
+    <string name="export_enable_notifications_body">Notifications are required to receive your export result. Please enable them in Settings.</string>
+    <string name="export_no_expenses_title">Nothing to Export</string>
+    <string name="export_no_expenses_body">There are no expenses for the selected period.</string>
+    <string name="export_failed_title">Export Failed</string>
+    <string name="export_failed_body">Something went wrong. Please try again.</string>
+
+    <string name="settings_section_general">General</string>
+    <string name="settings_section_preferences">Preferences</string>
+    <string name="settings_section_about">About</string>
+
+    <string name="settings_currency_title">Currency</string>
+    <string name="settings_currency_subtitle">Change your default currency</string>
+    <string name="settings_categories_title">Categories</string>
+    <string name="settings_categories_subtitle">Manage expense categories</string>
+    <string name="settings_budget_title">Budget</string>
+    <string name="settings_budget_subtitle">Set monthly budget limits</string>
+    <string name="settings_subscriptions_title">Subscriptions</string>
+    <string name="settings_subscriptions_subtitle">Manage recurring expenses</string>
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notifications_subtitle">Budget alerts and reminders</string>
+    <string name="settings_appearance_title">Appearance</string>
+    <string name="settings_appearance_subtitle">Dark mode and display settings</string>
+    <string name="settings_export_title">Export Data</string>
+    <string name="settings_export_subtitle">Download your financial reports</string>
+    <string name="settings_help_title">Help &amp; Support</string>
+    <string name="settings_help_subtitle">Get help with the app</string>
+    <string name="settings_privacy_title">Privacy Policy</string>
+    <string name="settings_privacy_subtitle">Read our privacy terms</string>
+    <string name="settings_app_version_title">App Version</string>
+    <string name="settings_app_version_subtitle">1.0.0</string>
+    <string name="subscriptions_list_title">Subscriptions</string>
+    <string name="subscription_promo_title">Track Recurring Expenses</string>
+    <string name="subscription_promo_body">Never lose track of your subscriptions. Set up recurring expenses to automatically track Netflix, gym, rent, and more.</string>
+    <string name="subscription_promo_cta">Get Started</string>
 </resources>
-
-

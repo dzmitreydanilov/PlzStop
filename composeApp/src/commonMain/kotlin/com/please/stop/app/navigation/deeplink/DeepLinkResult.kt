@@ -26,4 +26,9 @@ sealed interface DeepLinkResult {
         val tab: MainBottomTabs,
         val nestedRoute: NavKey? = null
     ) : DeepLinkResult
+
+    /**
+     * Open an external URL (e.g., a Google Sheets spreadsheet).
+     */
+    data class OpenExternalUrl(val url: String) : DeepLinkResult
 }

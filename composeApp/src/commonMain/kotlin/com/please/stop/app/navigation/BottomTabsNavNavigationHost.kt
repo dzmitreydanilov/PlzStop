@@ -53,8 +53,10 @@ fun BottomTabsNavNavigationHost(
     onNavigateToAddExpense: (preselectedCategoryId: Long) -> Unit,
     onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToExportData: () -> Unit,
     onNavigateToEditExpense: (expenseId: Long) -> Unit = {},
     onNavigateToCategories: () -> Unit,
+    onNavigateToSubscriptions: () -> Unit,
 ) {
     val bottomNavIntentHolder = LocalBottomNavIntentHolder.current
 
@@ -94,6 +96,8 @@ fun BottomTabsNavNavigationHost(
                         onNavigateToSettings = onNavigateToSettings,
                         onNavigateToEditExpense = onNavigateToEditExpense,
                         onNavigateToCategories = onNavigateToCategories,
+                        onNavigateToSubscriptions = onNavigateToSubscriptions,
+                        onNavigateToExportData = onNavigateToExportData
                     )
                 },
             )
@@ -144,6 +148,8 @@ private fun EntryProviderScope<NavKey>.bottomNavigationEntries(
     onNavigateToSettings: () -> Unit,
     onNavigateToEditExpense: (expenseId: Long) -> Unit,
     onNavigateToCategories: () -> Unit,
+    onNavigateToSubscriptions: () -> Unit,
+    onNavigateToExportData: () -> Unit,
 ) {
     homeTabEntries(
         onNavigateToAddExpense = onNavigateToAddExpense,
@@ -154,5 +160,9 @@ private fun EntryProviderScope<NavKey>.bottomNavigationEntries(
         onNavigateToCreateExpense = onNavigateToCreateExpense,
     )
     analyticsTabEntries(onNavigateToEditExpense = onNavigateToEditExpense)
-    settingsTabEntries(onNavigateToCategories = onNavigateToCategories)
+    settingsTabEntries(
+        onNavigateToCategories = onNavigateToCategories,
+        onNavigateToSubscriptions = onNavigateToSubscriptions,
+        onNavigateToExportData = onNavigateToExportData
+    )
 }

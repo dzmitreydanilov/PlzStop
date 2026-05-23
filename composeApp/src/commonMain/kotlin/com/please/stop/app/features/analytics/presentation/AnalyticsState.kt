@@ -1,11 +1,9 @@
 package com.please.stop.app.features.analytics.presentation
 
-import androidx.compose.runtime.Stable
 import com.please.stop.app.core.models.domain.ErrorType
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
-@Stable
 sealed interface AnalyticsState {
 
     val totalSpentFormatted: String?
@@ -48,7 +46,6 @@ sealed interface AnalyticsState {
     ) : AnalyticsState
 }
 
-@Stable
 data class BudgetBurnUi(
     val spentFormatted: String,
     val budgetFormatted: String,
@@ -56,14 +53,12 @@ data class BudgetBurnUi(
     val dailyAllowanceFormatted: String,
 )
 
-@Stable
 data class ProjectedTotalUi(
     val projectedFormatted: String,
     val overUnderFormatted: String,
     val isOverBudget: Boolean,
 )
 
-@Stable
 data class SpendingSlice(
     val name: String,
     val formattedAmount: String,
@@ -71,14 +66,12 @@ data class SpendingSlice(
     val amount: Float,
 )
 
-@Stable
 data class DailySpendingUiPoint(
     val dayOfMonth: Int,
     val amount: Float,
     val formattedAmount: String,
 )
 
-@Stable
 data class MonthlyBarUiItem(
     val label: String,
     val amount: Float,
@@ -86,7 +79,6 @@ data class MonthlyBarUiItem(
     val isCurrent: Boolean,
 )
 
-@Stable
 data class HeatmapDayUi(
     val dayOfMonth: Int,
     val dayOfWeek: Int,
@@ -95,7 +87,6 @@ data class HeatmapDayUi(
     val formattedAmount: String,
 )
 
-@Stable
 data class CategoryProgressUi(
     val name: String,
     val iconKey: String,
@@ -104,14 +95,12 @@ data class CategoryProgressUi(
     val subcategories: ImmutableList<SubcategoryProgressUi> = persistentListOf(),
 )
 
-@Stable
 data class SubcategoryProgressUi(
     val name: String,
     val percentage: Float,
     val formattedAmount: String,
 )
 
-@Stable
 data class DayExpenseUiItem(
     val title: String,
     val categoryEmoji: String,
@@ -119,7 +108,6 @@ data class DayExpenseUiItem(
     val formattedAmount: String,
 )
 
-@Stable
 data class DayExpensesSheetUi(
     val dayLabel: String,
     val totalFormatted: String,

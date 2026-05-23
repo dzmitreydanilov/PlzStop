@@ -49,8 +49,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.composables.core.SheetDetent
-import com.composables.core.rememberModalBottomSheetState
+import com.composeunstyled.SheetDetent
+import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
 import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
 import com.please.stop.app.features.expenses.receiptitems.presentation.ReceiptItemUiModel

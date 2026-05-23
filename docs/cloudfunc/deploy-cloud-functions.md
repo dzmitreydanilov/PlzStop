@@ -3,15 +3,16 @@
 ## Prerequisites
 
 1. **Node.js 22** — matches the runtime in `functions/package.json`
-2. **Firebase CLI** — install globally:
+2. **Python 3.12+** — for Python functions in `functions-py/`
+3. **Firebase CLI** — install globally:
    ```bash
    npm install -g firebase-tools
    ```
-3. **Authenticated session**:
+4. **Authenticated session**:
    ```bash
    firebase login
    ```
-4. **Correct project selected** (project ID: `pleasest-e3424`):
+5. **Correct project selected** (project ID: `pleasest-e3424`):
    ```bash
    firebase use pleasest-e3424
    ```
@@ -24,54 +25,81 @@
 
 ```
 PlzStop/
-├── firebase.json          # Firebase config — declares functions source
-├── functions/
-│   ├── package.json       # Dependencies, Node 22 engine, build/deploy scripts
-│   ├── tsconfig.json      # TypeScript config, outputs to lib/
+├── firebase.json            # Declares both codebases (ts + py)
+├── functions/               # TypeScript codebase ("ts")
+│   ├── package.json         # Dependencies, Node 22 engine, build/deploy scripts
+│   ├── tsconfig.json        # TypeScript config, outputs to lib/
 │   ├── src/
-│   │   ├── index.ts       # Cloud functions (analyzeReceipt, analyzeReceiptGemini, rateLimitCleanup)
-│   │   ├── receipt.ts     # Shared logic (prompt, types, request prep, response parsing)
-│   │   ├── rateLimit.ts   # Firestore-backed rate limiting + global daily cap
-│   │   └── validation.ts  # Input validation and sanitization
-│   └── lib/               # Compiled JS output (gitignored)
+│   │   ├── index.ts         # analyzeReceipt, analyzeReceiptGemini, rateLimitCleanup
+│   │   ├── receipt.ts       # Shared logic (prompt, types, request prep, response parsing)
+│   │   ├── rateLimit.ts     # Firestore-backed rate limiting + global daily cap
+│   │   └── validation.ts    # Input validation and sanitization
+│   └── lib/                 # Compiled JS output (gitignored)
+├── functions-py/            # Python codebase ("py")
+│   ├── main.py              # exportToSheets
+│   └── requirements.txt     # Python dependencies
 ```
 
 ## Deploy Steps
 
-### 1. Install dependencies (first time or after changing deps)
-
-```bash
-cd functions
-npm install
-```
-
-### 2. Build TypeScript
-
-```bash
-npm run build
-```
-
-This runs `tsc` and outputs compiled JS to `functions/lib/`.
-
-### 3. Deploy
+### Deploy all functions (both codebases)
 
 ```bash
 # From project root
 firebase deploy --only functions
 ```
 
-Or using the npm script from `functions/`:
+### Deploy only TypeScript functions
 
 ```bash
-cd functions
-npm run deploy
+cd functions && npm install && npm run build && cd .. && firebase deploy --only functions:ts
 ```
 
-### All-in-one
+### Deploy only Python functions
 
 ```bash
-cd functions && npm install && npm run build && cd .. && firebase deploy --only functions
+firebase deploy --only functions:py
 ```
+
+### Deploy a single function by name
+
+```bash
+firebase deploy --only functions:ts:analyzeReceipt
+firebase deploy --only functions:py:exportToSheets
+```
+
+## Adding a New Function
+
+### TypeScript
+
+1. Export a new function from `functions/src/index.ts`:
+   ```typescript
+   export const myNewFunction = onCall(
+     { region: "europe-west1" },
+     async (req) => { /* ... */ }
+   );
+   ```
+2. Build and deploy:
+   ```bash
+   cd functions && npm run build && cd .. && firebase deploy --only functions:ts:myNewFunction
+   ```
+
+### Python
+
+1. Add a new decorated function in `functions-py/main.py`:
+   ```python
+   @https_fn.on_call(region="europe-west1")
+   def myNewFunction(req: https_fn.CallableRequest):
+       # ...
+   ```
+   Firebase auto-discovers all decorated functions in `main.py`.
+
+2. Add any new dependencies to `functions-py/requirements.txt`.
+
+3. Deploy:
+   ```bash
+   firebase deploy --only functions:py:myNewFunction
+   ```
 
 ## Architecture
 
@@ -303,6 +331,21 @@ Get the key from [Google AI Studio](https://aistudio.google.com/apikey).
 - `items` can be empty if no individual items are readable
 - `data` is `null` for `not_receipt`, `unreadable`, and `error` statuses
 
+### `exportToSheets` (Python)
+
+Creates a Google Spreadsheet from expense data and notifies the user via FCM.
+
+| Property | Value |
+|---|---|
+| Type | Callable (`onCall`) |
+| Region | `europe-west1` |
+| Runtime | Python 3.12 |
+| Memory | 256 MiB |
+| Timeout | 300 seconds |
+| Codebase | `py` (`functions-py/main.py`) |
+
+Uses the client-provided Google access token to create and share a spreadsheet via the Google Sheets API.
+
 ### `rateLimitCleanup`
 
 Scheduled function that removes expired rate limit documents from Firestore.
@@ -412,7 +455,7 @@ firebase functions:log --only analyzeReceipt --follow
 
 Delete all deployed functions:
 ```bash
-firebase functions:delete analyzeReceipt analyzeReceiptGemini rateLimitCleanup --region europe-west1
+firebase functions:delete analyzeReceipt analyzeReceiptGemini rateLimitCleanup exportToSheets --region europe-west1
 ```
 
 Or delete one at a time:

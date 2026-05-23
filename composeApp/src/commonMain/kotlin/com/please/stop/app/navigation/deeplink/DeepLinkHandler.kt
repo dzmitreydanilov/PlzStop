@@ -1,6 +1,7 @@
 package com.please.stop.app.navigation.deeplink
 
 import com.please.stop.app.core.logger.logDebugWithTag
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -37,6 +38,7 @@ class DeepLinkHandler(
         _deepLinkEvents.tryEmit(result)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun consumeEvent() {
         _deepLinkEvents.resetReplayCache()
     }

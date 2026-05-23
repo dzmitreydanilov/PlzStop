@@ -20,6 +20,10 @@ class DeepLinkResolver {
             "home" -> DeepLinkResult.TabRoute(tab = MainBottomTabs.Home)
             "analytics" -> DeepLinkResult.TabRoute(tab = MainBottomTabs.Analytics)
             "settings" -> DeepLinkResult.TabRoute(tab = MainBottomTabs.Settings)
+            "open" -> {
+                val url = data.queryParams["url"] ?: return null
+                DeepLinkResult.OpenExternalUrl(url)
+            }
             else -> null
         }
     }

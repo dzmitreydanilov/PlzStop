@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.please.stop.app.navigation.RootContent
+import com.please.stop.app.navigation.deeplink.DeepLinkHandler
+import com.please.stop.app.navigation.deeplink.DeepLinkResolver
 import com.please.stop.app.presentation.RootState
 import com.please.stop.app.presentation.RootStateHolder
 import com.please.stop.app.theme.AppTheme
@@ -45,14 +48,21 @@ import plzstop.composeapp.generated.resources.onboarding_app_name
 import plzstop.composeapp.generated.resources.onboarding_tagline
 
 @Composable
-fun App() {
+fun App(
+    deepLinkUri: String? = null,
+) {
     AppTheme {
         val rootStateHolder = koinViewModel<RootStateHolder>()
         val state by rootStateHolder.state.collectAsStateWithLifecycle()
+        val deepLinkHandler = retain<DeepLinkHandler> { DeepLinkHandler(DeepLinkResolver()) }
 
         when (val s = state) {
             is RootState.Loading -> SplashScreen()
-            is RootState.Ready -> RootContent(initialRoute = s.initialRoute)
+            is RootState.Ready -> RootContent(
+                initialRoute = s.initialRoute,
+                deepLinkUri = deepLinkUri,
+                deepLinkHandler = deepLinkHandler,
+            )
         }
     }
 }
@@ -90,7 +100,10 @@ private fun SplashScreen() {
     LaunchedEffect(Unit) {
         logoScale.animateTo(
             1f,
-            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            ),
         )
         delay(TEXT_VISIBLE_DELAY_MS)
         textVisible = true

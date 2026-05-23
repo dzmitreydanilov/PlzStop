@@ -1,13 +1,11 @@
 package com.please.stop.app.features.categories.presentation
 
-import androidx.compose.runtime.Stable
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.serialization.ImmutableListSerializer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.Serializable
 
-@Stable
 @Serializable
 sealed interface CategoriesState {
 
@@ -60,7 +58,6 @@ data class CategoryArchiveDialog(val categoryId: Long, val categoryName: String)
  * @param subcategories `null` when subcategories feature is disabled,
  *   empty list when enabled but none exist yet.
  */
-@Stable
 @Serializable
 data class CategoryRowUiModel(
     val id: Long,
@@ -71,7 +68,6 @@ data class CategoryRowUiModel(
     val subcategories: ImmutableList<SubcategoryChipUiModel>?,
 )
 
-@Stable
 @Serializable
 data class SubcategoryChipUiModel(
     val id: Long,

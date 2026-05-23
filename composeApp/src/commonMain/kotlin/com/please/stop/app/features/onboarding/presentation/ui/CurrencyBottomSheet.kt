@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import com.please.stop.app.features.onboarding.domain.model.Currency
 import com.please.stop.app.features.onboarding.presentation.OnboardingEvent
 import com.please.stop.app.features.onboarding.presentation.OnboardingState
-import com.please.stop.app.uicomponents.sheets.CurrencyPickerSheet
+import com.please.stop.app.uicomponents.sheets.currency.CurrencyPickerSheet
 
 @Composable
 fun CurrencyBottomSheet(

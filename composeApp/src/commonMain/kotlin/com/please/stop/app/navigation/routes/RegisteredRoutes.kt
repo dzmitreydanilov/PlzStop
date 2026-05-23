@@ -10,14 +10,20 @@ fun PolymorphicModuleBuilder<NavKey>.registerGlobalRotes() {
 }
 
 private fun PolymorphicModuleBuilder<NavKey>.registerGlobalRoutes() {
+    subclass(AuthRoute::class)
     subclass(OnboardingRoute::class)
     subclass(CreateExpenseRoute::class)
     subclass(EditExpenseRoute::class)
     subclass(ReceiptItemsRoute::class)
     subclass(CategoriesRoute::class)
     subclass(ArchivedCategoriesRoute::class)
+    subclass(ExportRoute::class)
+    subclass(SubscriptionsListRoute::class)
 }
 
 fun PolymorphicModuleBuilder<NavKey>.registerBottomNavBarStartRoute() {
     subclass(MainBottomTabs.Home::class)
+    subclass(MainBottomTabs.Operations::class)
+    subclass(MainBottomTabs.Analytics::class)
+    subclass(MainBottomTabs.Settings::class)
 }

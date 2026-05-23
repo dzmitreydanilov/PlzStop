@@ -1,0 +1,55 @@
+# Build artifacts — large generated directories, no source value
+build/
+**/build/
+.gradle/
+**/.gradle/
+.kotlin/
+**/.kotlin/
+
+# iOS / Swift Package Manager — third-party checkouts and Xcode caches
+Pods/
+pod/
+xcuserdata/
+**/xcuserdata/
+*.xcworkspace/
+composeApp/build/kotlin/swiftPMCheckout/
+iosApp/.build/
+
+# Node / Firebase Functions — dependencies and compiled output
+functions/node_modules/
+functions/lib/
+functions/package-lock.json
+
+# Gradle wrapper binary
+gradle/wrapper/gradle-wrapper.jar
+
+# IDE files
+.idea/
+**/*.iml
+
+# Binary / release artifacts
+**/*.apk
+**/*.aab
+**/*.jks
+**/*.keystore
+composeApp/qa/
+composeApp/release/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Generated code (keep baseline profiles)
+**/generated/
+!**/src/**/generated/baselineProfiles/
+!**/src/**/generated/baselineProfiles/*.txt
+
+# Captures and profiling output
+captures/
+
+# Sensitive files
+local.properties
+keystore.properties
+release-keystore.properties
+google-services.json
+GoogleService-Info.plist

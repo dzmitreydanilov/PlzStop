@@ -1,6 +1,5 @@
 package com.please.stop.app.features.expenses.receiptitems.presentation
 
-import androidx.compose.runtime.Stable
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.serialization.ImmutableListSerializer
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
@@ -11,7 +10,6 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.Serializable
 
-@Stable
 @Serializable
 sealed interface ReceiptItemsState {
     val merchantName: String?
@@ -115,7 +113,6 @@ sealed interface ReceiptItemsState {
 }
 
 @Serializable
-@Stable
 data class ReceiptItemUiModel(
     val id: String,
     val name: String,
@@ -128,7 +125,6 @@ data class ReceiptItemUiModel(
 )
 
 @Serializable
-@Stable
 data class ConversionSummary(
     val rate: Double,
     val originalCurrencyCode: String,

@@ -108,6 +108,7 @@ val addExpenseModule = module {
     factory {
         SaveExpenseUseCase(
             repository = get(),
+            promoEmitter = get(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
         )
     }

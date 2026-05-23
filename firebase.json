@@ -2,7 +2,7 @@
   "functions": [
     {
       "source": "functions",
-      "codebase": "default",
+      "codebase": "ts",
       "ignore": [
         "node_modules",
         ".git",
@@ -10,6 +10,16 @@
         "firebase-debug.*.log",
         "*.local",
         "**/*.map"
+      ]
+    },
+    {
+      "source": "functions-py",
+      "codebase": "py",
+      "ignore": [
+        ".git",
+        "__pycache__",
+        "venv",
+        "*.pyc"
       ]
     }
   ]

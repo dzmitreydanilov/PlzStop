@@ -15,11 +15,11 @@ let package = Package(
   dependencies: [
     .package(
       url: "https://github.com/sqlcipher/SQLCipher.swift.git",
-      from: "4.14.0",
+      from: "4.14.0"
     ),
     .package(
       url: "https://github.com/firebase/firebase-ios-sdk.git",
-      from: "11.12.0",
+      from: "11.12.0"
     )
   ],
   targets: [
@@ -28,23 +28,31 @@ let package = Package(
       dependencies: [
         .product(
           name: "SQLCipher",
-          package: "SQLCipher.swift",
+          package: "SQLCipher.swift"
         ),
         .product(
           name: "FirebaseCore",
-          package: "firebase-ios-sdk",
+          package: "firebase-ios-sdk"
         ),
         .product(
           name: "FirebaseRemoteConfig",
-          package: "firebase-ios-sdk",
+          package: "firebase-ios-sdk"
         ),
         .product(
           name: "FirebaseFunctions",
-          package: "firebase-ios-sdk",
+          package: "firebase-ios-sdk"
         ),
         .product(
           name: "FirebaseAppCheck",
-          package: "firebase-ios-sdk",
+          package: "firebase-ios-sdk"
+        ),
+        .product(
+          name: "FirebaseAuth",
+          package: "firebase-ios-sdk"
+        ),
+        .product(
+          name: "FirebaseMessaging",
+          package: "firebase-ios-sdk"
         )
       ]
     )
