@@ -5,6 +5,7 @@ import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.features.auth.domain.usecase.ConnectGoogleAccountUseCase
 import com.please.stop.app.features.export.domain.model.ExportDestination
 import com.please.stop.app.features.export.domain.model.SpreadSheetFormat
+import com.please.stop.app.features.export.domain.usecase.ExportCsvUseCase
 import com.please.stop.app.features.export.domain.usecase.ExportExpensesAvailabilityResult
 import com.please.stop.app.features.export.domain.usecase.ExportResult
 import com.please.stop.app.features.export.domain.usecase.GoogleSpreadSheetExportResult
@@ -17,7 +18,7 @@ import com.please.stop.app.core.models.domain.Result as DomainResult
 
 class ExportStateHolder(
     private val exportToGoogleSheetsUseCase: GoogleSpreadSheetExportUseCase,
-    private val exportCSVUseCase: GoogleSpreadSheetExportUseCase,
+    private val exportCSVUseCase: ExportCsvUseCase,
     private val connectGoogleAccountUseCase: ConnectGoogleAccountUseCase,
     private val hasExpensesToExportUseCase: HasExpensesToExportUseCase,
 ) : StateHolder<ExportState, ExportEvent>() {

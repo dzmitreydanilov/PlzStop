@@ -1,6 +1,12 @@
 package com.please.stop.app.features.export.presentation.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -116,8 +122,6 @@ private fun ExportRouteContent(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dimens = LocalAppDimens.current
-
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -139,10 +143,12 @@ private fun ExportRouteContent(
             modifier = modifier
                 .fillMaxWidth()
                 .padding(paddingValues),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            ) {
                 DocumentTitleInputField(state = state, onTitleChanged = onEvent)
+
                 DateRangeField(
                     startDateMillis = state.currentStartDateMillis,
                     endDateMillis = state.currentEndDateMillis,
@@ -157,25 +163,22 @@ private fun ExportRouteContent(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
                 DestinationSelector(
                     selected = state.currentDestination,
                     onSelect = { onEvent(ExportEvent.DestinationSelected(it)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
-
                 AnimatedVisibility(
                     visible = state.currentDestination == ExportDestination.GOOGLE_SHEETS
                 ) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
                     OrganizationMethodSelector(
                         selected = state.currentSpreadSheetFormat,
                         onSelect = { onEvent(ExportEvent.TabLayoutSelected(it)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
                 ExportActionContent(
                     state = state,
                     onEvent = onEvent,
@@ -191,7 +194,11 @@ private fun DocumentTitleInputField(
     state: ExportState,
     onTitleChanged: (ExportEvent) -> Unit
 ) {
-    AnimatedVisibility(visible = state.currentDestination == ExportDestination.GOOGLE_SHEETS) {
+    AnimatedVisibility(
+        visible = state.currentDestination == ExportDestination.GOOGLE_SHEETS,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut(),
+    ) {
         OutlinedTextField(
             value = state.fileName.orEmpty(),
             onValueChange = { onTitleChanged(ExportEvent.FileNameEntered(it)) },
@@ -282,32 +289,35 @@ private fun DateRangeField(
     var showPicker by remember { mutableStateOf(false) }
     val rangeText = formatDateRange(startDateMillis, endDateMillis)
     val openLabel = stringResource(Res.string.content_desc_open_date_range_picker)
-
-    OutlinedInvertedTextField(
-        value = rangeText,
-        onValueChange = {},
-        modifier = modifier
-            .noRippleClickable(onClick = { showPicker = true }, role = Role.Button)
-            .semantics { contentDescription = openLabel },
-        readOnly = true,
-        enabled = false,
-        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant),
-        label = { Text(stringResource(Res.string.export_date_range_label)) },
-        placeholder = { Text(stringResource(Res.string.export_date_range_placeholder)) },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-            unfocusedBorderColor = MaterialTheme.colorScheme.primary,
-            disabledBorderColor = MaterialTheme.colorScheme.primary,
-            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledPrefixColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            disabledSuffixColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    Column {
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedInvertedTextField(
+            value = rangeText,
+            onValueChange = {},
+            modifier = modifier
+                .noRippleClickable(onClick = { showPicker = true }, role = Role.Button)
+                .semantics { contentDescription = openLabel },
+            readOnly = true,
+            enabled = false,
+            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant),
+            label = { Text(stringResource(Res.string.export_date_range_label)) },
+            placeholder = { Text(stringResource(Res.string.export_date_range_placeholder)) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                unfocusedBorderColor = MaterialTheme.colorScheme.primary,
+                disabledBorderColor = MaterialTheme.colorScheme.primary,
+                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledSupportingTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledPrefixColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                disabledSuffixColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         )
-    )
+    }
+
 
     if (showPicker) {
         DateSelectionDialog(

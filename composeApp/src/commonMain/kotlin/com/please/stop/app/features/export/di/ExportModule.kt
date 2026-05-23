@@ -20,11 +20,12 @@ import org.koin.dsl.module
 val exportModule = module {
 
     factory {
+        val db = get<AppDatabase>()
         CSVExportRepository(
-            expenseDao = get(),
-            categoryDao = get(),
-            subcategoryDao = get(),
-            userProfileDao = get(),
+            expenseDao = db.expenseDao(),
+            categoryDao = db.categoryDao(),
+            subcategoryDao = db.subcategoryDao(),
+            userProfileDao = db.userProfileDao(),
             documentSharer = get(),
             csvExportBuilder = get(),
         )

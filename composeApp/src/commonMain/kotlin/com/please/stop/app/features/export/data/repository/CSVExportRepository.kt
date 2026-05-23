@@ -32,11 +32,11 @@ class CSVExportRepository(
             val expenses = expenseDao.getExpensesInRange(startDateMillis, endDateMillis)
             val rows = buildExportRows(expenses)
             val csv = csvExportBuilder.build(rows)
-            documentSharer.shareCsv(
+            val result = documentSharer.shareCsv(
                 fileName = buildCsvFileName(startDateMillis, endDateMillis),
                 content = csv,
             )
-            emit(Result.success(Unit))
+            emit(result)
         }
     }
 
@@ -62,7 +62,6 @@ class CSVExportRepository(
     private fun buildCsvFileName(startDateMillis: Long, endDateMillis: Long): String {
         return "plzstop-export-${formatIsoDate(startDateMillis)}-to-${formatIsoDate(endDateMillis)}.csv"
     }
-
 
     private fun formatIsoDate(epochMillis: Long): String =
         localDateTimeFromMillis(epochMillis).date.toString()
