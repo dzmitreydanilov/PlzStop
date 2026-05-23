@@ -19,11 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.composeunstyled.SheetDetent
-import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.analytics.presentation.DayExpenseUiItem
 import com.please.stop.app.features.analytics.presentation.DayExpensesSheetUi
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
+import com.please.stop.app.uicomponents.sheets.rememberFullyExpandedAppModalBottomSheetState
 import org.jetbrains.compose.resources.stringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.analytics_day_no_expenses
@@ -34,10 +33,7 @@ internal fun DayExpensesSheet(
     isLoading: Boolean,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(
-        initialDetent = SheetDetent.FullyExpanded,
-        detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-    )
+    val sheetState = rememberFullyExpandedAppModalBottomSheetState()
 
     AppModalBottomSheet(
         state = sheetState,

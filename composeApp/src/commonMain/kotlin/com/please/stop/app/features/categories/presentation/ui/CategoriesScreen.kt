@@ -41,8 +41,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.composeunstyled.SheetDetent
-import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.categories.presentation.CategoriesEvent
 import com.please.stop.app.features.categories.presentation.CategoriesState
 import com.please.stop.app.features.categories.presentation.CategoriesStateHolder
@@ -55,6 +53,7 @@ import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
+import com.please.stop.app.uicomponents.sheets.rememberFullyExpandedAppModalBottomSheetState
 import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -229,10 +228,7 @@ private fun AddCategorySheet(
     var comment by remember { mutableStateOf("") }
     var selectedIconKey by remember { mutableStateOf<String?>(null) }
 
-    val sheetState = rememberModalBottomSheetState(
-        initialDetent = SheetDetent.FullyExpanded,
-        detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-    )
+    val sheetState = rememberFullyExpandedAppModalBottomSheetState()
 
     AppModalBottomSheet(
         state = sheetState,
@@ -296,10 +292,7 @@ private fun EditCategorySheet(
     var comment by remember { mutableStateOf(category.comment.orEmpty()) }
     var selectedIconKey by remember { mutableStateOf(category.iconKey) }
 
-    val sheetState = rememberModalBottomSheetState(
-        initialDetent = SheetDetent.FullyExpanded,
-        detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-    )
+    val sheetState = rememberFullyExpandedAppModalBottomSheetState()
 
     AppModalBottomSheet(
         state = sheetState,
@@ -361,10 +354,7 @@ private fun AddSubcategorySheet(
     var name by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
 
-    val sheetState = rememberModalBottomSheetState(
-        initialDetent = SheetDetent.FullyExpanded,
-        detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-    )
+    val sheetState = rememberFullyExpandedAppModalBottomSheetState()
 
     AppModalBottomSheet(
         state = sheetState,

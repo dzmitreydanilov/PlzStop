@@ -7,11 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,9 +41,7 @@ import com.please.stop.app.navigation.bottomnavbar.BottomNavIntent
 import com.please.stop.app.navigation.bottomnavbar.IBottomNavIntentHolder
 import com.please.stop.app.navigation.bottomnavbar.LocalBottomNavIntentHolder
 import com.please.stop.app.navigation.deeplink.DeepLinkHandler
-import com.please.stop.app.navigation.deeplink.DeepLinkResolver
 import com.please.stop.app.navigation.deeplink.DeepLinkResult
-import com.please.stop.app.navigation.deeplink.parseDeepLinkUri
 import com.please.stop.app.navigation.nav3.Nav3Host
 import com.please.stop.app.navigation.nav3.Router
 import com.please.stop.app.navigation.routes.ArchivedCategoriesRoute

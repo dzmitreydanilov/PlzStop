@@ -42,7 +42,6 @@ import com.please.stop.app.theme.AppTheme
 import com.please.stop.app.theme.LocalAppColors
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.onboarding_app_name

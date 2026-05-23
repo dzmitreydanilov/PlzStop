@@ -41,8 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.composeunstyled.SheetDetent
-import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.expenses.presentation.AddExpenseEvent
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
@@ -51,6 +49,7 @@ import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
 import com.please.stop.app.features.expenses.scanner.rememberDocumentScanner
 import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
+import com.please.stop.app.uicomponents.sheets.rememberFullyExpandedAppModalBottomSheetState
 import com.please.stop.app.uicomponents.sheets.currency.CurrencyPickerSheet
 import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.format
@@ -170,10 +169,7 @@ internal fun AddExpenseContent(
     }
 
     if (showCategorySheet) {
-        val sheetState = rememberModalBottomSheetState(
-            initialDetent = SheetDetent.FullyExpanded,
-            detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-        )
+        val sheetState = rememberFullyExpandedAppModalBottomSheetState()
         AppModalBottomSheet(
             state = sheetState,
             onDismiss = { showCategorySheet = false },
@@ -189,10 +185,7 @@ internal fun AddExpenseContent(
         }
     }
     if (showNotesSheet) {
-        val sheetState = rememberModalBottomSheetState(
-            initialDetent = SheetDetent.FullyExpanded,
-            detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-        )
+        val sheetState = rememberFullyExpandedAppModalBottomSheetState()
         AppModalBottomSheet(
             state = sheetState,
             onDismiss = { showNotesSheet = false },

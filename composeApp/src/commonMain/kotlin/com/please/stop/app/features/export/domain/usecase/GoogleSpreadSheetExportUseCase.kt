@@ -93,6 +93,7 @@ sealed interface GoogleSpreadSheetExportResult : Result {
 
     object GoogleAccountNotLinked : GoogleSpreadSheetExportResult
     data object NoNotificationPermission : GoogleSpreadSheetExportResult
-    data class Failure(override val errorType: ErrorType) : GoogleSpreadSheetExportResult,
+    data class Failure(override val errorType: ErrorType) :
+        GoogleSpreadSheetExportResult,
         ErrorResult
 }

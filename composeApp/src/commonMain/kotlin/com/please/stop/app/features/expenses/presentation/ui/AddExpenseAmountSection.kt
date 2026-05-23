@@ -29,12 +29,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.composeunstyled.SheetDetent
-import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.ConversionState
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
+import com.please.stop.app.uicomponents.sheets.rememberFullyExpandedAppModalBottomSheetState
 import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.minorUnitsMultiplier
 import org.jetbrains.compose.resources.stringResource
@@ -292,10 +291,7 @@ internal fun RateOverrideSheet(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(
-        initialDetent = SheetDetent.FullyExpanded,
-        detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-    )
+    val sheetState = rememberFullyExpandedAppModalBottomSheetState()
     AppModalBottomSheet(
         state = sheetState,
         onDismiss = onDismiss,

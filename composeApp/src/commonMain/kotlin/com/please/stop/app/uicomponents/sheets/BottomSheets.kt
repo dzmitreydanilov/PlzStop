@@ -16,6 +16,8 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,7 +32,34 @@ import com.composeunstyled.ModalBottomSheetProperties
 import com.composeunstyled.ModalBottomSheetState
 import com.composeunstyled.Scrim
 import com.composeunstyled.Sheet
+import com.composeunstyled.SheetDetent
 import com.composeunstyled.UnstyledModalBottomSheet
+import com.composeunstyled.rememberModalBottomSheetState
+
+/**
+ * Remembers the default app modal sheet state for sheets that should stay fully expanded while composed.
+ */
+@Composable
+fun rememberFullyExpandedAppModalBottomSheetState(): ModalBottomSheetState {
+    val sheetState = rememberModalBottomSheetState(
+        initialDetent = SheetDetent.FullyExpanded,
+        detents = remember { listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded) },
+    )
+
+    LaunchedEffect(
+        sheetState.isIdle,
+        sheetState.currentDetent,
+    ) {
+        if (
+            sheetState.isIdle &&
+            sheetState.currentDetent == SheetDetent.Hidden
+        ) {
+            sheetState.animateTo(SheetDetent.FullyExpanded)
+        }
+    }
+
+    return sheetState
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

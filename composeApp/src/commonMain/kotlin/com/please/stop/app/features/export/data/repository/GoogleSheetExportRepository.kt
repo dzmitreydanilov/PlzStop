@@ -1,6 +1,5 @@
 package com.please.stop.app.features.export.data.repository
 
-import com.please.stop.app.core.db.dao.ExpenseDao
 import com.please.stop.app.core.db.dao.ExportHistoryDao
 import com.please.stop.app.core.db.entity.ExportHistoryEntity
 import com.please.stop.app.core.db.entity.ExportStatus
