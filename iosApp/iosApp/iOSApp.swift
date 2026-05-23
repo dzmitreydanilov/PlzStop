@@ -18,12 +18,14 @@ struct iOSApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     private let lifecycleHandler: IosAppLifecycleHandler
+    private let deepLinkHandler = DeepLinkHandler(resolver: DeepLinkResolver())
 
     init() {
         KermitInitializeUtilsKt.doInitLogger(minSeverity: .verbose)
 
         let platformOverrides = IosKoinHelperKt.createIosPlatformOverrides(
-            firebaseFunctionsCaller: AppFirebaseFunctionsCaller()
+            firebaseFunctionsCaller: AppFirebaseFunctionsCaller(),
+            fcmTokenBridge: AppFcmTokenBridge()
         )
         KoinApplication.start(platformOverrides: platformOverrides)
         lifecycleHandler = KoinApplication.inject()
@@ -31,7 +33,7 @@ struct iOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(deepLinkHandler: deepLinkHandler)
         }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {

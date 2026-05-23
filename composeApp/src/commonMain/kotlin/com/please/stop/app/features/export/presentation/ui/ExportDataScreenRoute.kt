@@ -1,6 +1,7 @@
 package com.please.stop.app.features.export.presentation.ui
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,17 +32,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewWrapper
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dog.care.utils.uicomponents.modifiers.noRippleClickable
 import com.please.stop.app.features.auth.google.GoogleButtonUiContainer
+import com.please.stop.app.features.export.domain.model.ExportDestination
 import com.please.stop.app.features.export.domain.model.SpreadSheetFormat
 import com.please.stop.app.features.export.presentation.ExportEvent
 import com.please.stop.app.features.export.presentation.ExportState
@@ -49,7 +51,6 @@ import com.please.stop.app.features.export.presentation.ExportStateHolder
 import com.please.stop.app.theme.AppTheme
 import com.please.stop.app.theme.LocalAppDimens
 import com.please.stop.app.uicomponents.fields.OutlinedInvertedTextField
-import com.please.stop.app.uicomponents.icons.ArrowBackIconButton
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.datetime.number
@@ -66,10 +67,14 @@ import plzstop.composeapp.generated.resources.export_button
 import plzstop.composeapp.generated.resources.export_connect_google_body
 import plzstop.composeapp.generated.resources.export_connect_google_button
 import plzstop.composeapp.generated.resources.export_connect_google_title
+import plzstop.composeapp.generated.resources.export_csv_share_launched
 import plzstop.composeapp.generated.resources.export_date_picker_mode_range
 import plzstop.composeapp.generated.resources.export_date_picker_mode_single
 import plzstop.composeapp.generated.resources.export_date_range_label
 import plzstop.composeapp.generated.resources.export_date_range_placeholder
+import plzstop.composeapp.generated.resources.export_destination_csv
+import plzstop.composeapp.generated.resources.export_destination_google_sheets
+import plzstop.composeapp.generated.resources.export_destination_label
 import plzstop.composeapp.generated.resources.export_enable_notifications_body
 import plzstop.composeapp.generated.resources.export_enable_notifications_title
 import plzstop.composeapp.generated.resources.export_enqueued_message
@@ -109,50 +114,158 @@ private fun ExportRouteContent(
     state: ExportState,
     onEvent: (ExportEvent) -> Unit,
     onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val dimens = LocalAppDimens.current
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(Res.string.export_title)) },
-                navigationIcon = {
-                    ArrowBackIconButton(onNavigateBack)
+                title = {
+                    Text(
+                        text = stringResource(Res.string.export_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
+                actions = {
+                    TextButton(onClick = onNavigateBack) {
+                        Text(stringResource(Res.string.close))
+                    }
                 }
             )
         }
     ) { paddingValues ->
-        val dimens = LocalAppDimens.current
-        Box(modifier = Modifier.padding(paddingValues)) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(Res.string.export_spread_sheet_title)) },
-                )
-
-                Spacer(Modifier.height(dimens.small2))
-
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                DocumentTitleInputField(state = state, onTitleChanged = onEvent)
                 DateRangeField(
                     startDateMillis = state.currentStartDateMillis,
                     endDateMillis = state.currentEndDateMillis,
                     onRangeChange = { start, end ->
-                        onEvent(ExportEvent.DateRangeSelected(start, end))
+                        onEvent(
+                            ExportEvent.DateRangeSelected(
+                                start,
+                                end
+                            )
+                        )
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                Spacer(Modifier.height(dimens.small2))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                OrganizationMethodSelector(
-                    selected = state.currentSpreadSheetFormat,
-                    onSelect = { onEvent(ExportEvent.TabLayoutSelected(it)) },
+                DestinationSelector(
+                    selected = state.currentDestination,
+                    onSelect = { onEvent(ExportEvent.DestinationSelected(it)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
+
+                AnimatedVisibility(
+                    visible = state.currentDestination == ExportDestination.GOOGLE_SHEETS
+                ) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OrganizationMethodSelector(
+                        selected = state.currentSpreadSheetFormat,
+                        onSelect = { onEvent(ExportEvent.TabLayoutSelected(it)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                ExportActionContent(
+                    state = state,
+                    onEvent = onEvent,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DocumentTitleInputField(
+    state: ExportState,
+    onTitleChanged: (ExportEvent) -> Unit
+) {
+    AnimatedVisibility(visible = state.currentDestination == ExportDestination.GOOGLE_SHEETS) {
+        OutlinedTextField(
+            value = state.fileName.orEmpty(),
+            onValueChange = { onTitleChanged(ExportEvent.FileNameEntered(it)) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(Res.string.export_spread_sheet_title)) },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DestinationSelector(
+    selected: ExportDestination,
+    onSelect: (ExportDestination) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val dimens = LocalAppDimens.current
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(Res.string.export_destination_label).uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(dimens.extraSmall))
+        val options = ExportDestination.entries
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, destination ->
+                SegmentedButton(
+                    selected = destination == selected,
+                    onClick = { onSelect(destination) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    label = { Text(stringResource(destination.labelRes())) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExportActionContent(
+    state: ExportState,
+    onEvent: (ExportEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (state) {
+        is ExportState.Enqueued -> EnqueuedContent()
+        is ExportState.CsvShareLaunched -> CsvShareLaunchedContent()
+        is ExportState.NeedsGoogleAccount -> NeedsGoogleContent(onEvent)
+        is ExportState.Idle if !state.hasExpensesToExport -> NoExpensesContent(onDismiss = {
+            onEvent(
+                ExportEvent.Dismiss
+            )
+        })
+
+        is ExportState.Error -> ErrorContent(onEvent)
+        is ExportState.Confirm -> ConfirmContent(
+            state = state,
+            onEvent = onEvent,
+            modifier = modifier
+        )
+
+        is ExportState.Idle -> {
+            Button(
+                onClick = {
+                    onEvent(
+                        ExportEvent.StartExport(
+                            startDateMillis = state.currentStartDateMillis,
+                            endDateMillis = state.currentEndDateMillis,
+                        )
+                    )
+                },
+                modifier = modifier,
+            ) {
+                Text(stringResource(Res.string.export_button))
             }
         }
     }
@@ -234,7 +347,7 @@ private fun DateSelectionDialog(
         DateSelectionMode.SINGLE -> singleState.selectedDateMillis != null
         DateSelectionMode.RANGE ->
             rangeState.selectedStartDateMillis != null &&
-                rangeState.selectedEndDateMillis != null
+                    rangeState.selectedEndDateMillis != null
     }
     DatePickerDialog(
         onDismissRequest = onDismiss,
@@ -247,6 +360,7 @@ private fun DateSelectionDialog(
                             val day = singleState.selectedDateMillis ?: return@TextButton
                             onConfirm(day, day)
                         }
+
                         DateSelectionMode.RANGE -> {
                             val start = rangeState.selectedStartDateMillis ?: return@TextButton
                             val end = rangeState.selectedEndDateMillis ?: return@TextButton
@@ -276,6 +390,7 @@ private fun DateSelectionDialog(
                 state = singleState,
                 title = toggleSlot,
             )
+
             DateSelectionMode.RANGE -> DateRangePicker(
                 state = rangeState,
                 title = toggleSlot,
@@ -358,6 +473,11 @@ private fun SpreadSheetFormat.labelRes() = when (this) {
     SpreadSheetFormat.SEPARATE_TABS -> Res.string.export_organization_separate_tabs
 }
 
+private fun ExportDestination.labelRes() = when (this) {
+    ExportDestination.GOOGLE_SHEETS -> Res.string.export_destination_google_sheets
+    ExportDestination.CSV -> Res.string.export_destination_csv
+}
+
 @Composable
 private fun EnqueuedContent() {
     Icon(
@@ -369,6 +489,21 @@ private fun EnqueuedContent() {
     Spacer(Modifier.height(16.dp))
     Text(
         text = stringResource(Res.string.export_enqueued_message),
+        style = MaterialTheme.typography.bodyMedium,
+    )
+}
+
+@Composable
+private fun CsvShareLaunchedContent() {
+    Icon(
+        imageVector = vectorResource(Res.drawable.ic_check),
+        contentDescription = null,
+        modifier = Modifier.size(48.dp),
+        tint = MaterialTheme.colorScheme.primary,
+    )
+    Spacer(Modifier.height(16.dp))
+    Text(
+        text = stringResource(Res.string.export_csv_share_launched),
         style = MaterialTheme.typography.bodyMedium,
     )
 }
@@ -457,16 +592,29 @@ private fun ErrorContent(onEvent: (ExportEvent) -> Unit) {
 
 @Suppress("UnusedPrivateMember")
 @Composable
-private fun ConfirmContent(state: ExportState, onEvent: (ExportEvent) -> Unit) {
+private fun ConfirmContent(
+    state: ExportState,
+    onEvent: (ExportEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Text(stringResource(Res.string.export_title), style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(16.dp))
+    if (state.currentDestination == ExportDestination.CSV) {
+        Button(
+            onClick = { onEvent(ExportEvent.ShareCsvOptionSelected) },
+            modifier = modifier,
+        ) {
+            Text(stringResource(Res.string.export_button))
+        }
+        return
+    }
     GoogleButtonUiContainer(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         filterByAuthorizedAccounts = false,
         scopes = listOf(SHEETS_SCOPE, DRIVE_FILE_SCOPE),
         onGoogleSignInResult = { user ->
             if (user?.accessToken != null) {
-                onEvent(ExportEvent.ConfirmExport(user.accessToken))
+//                onEvent(ExportEvent.ConfirmExport(user.accessToken))
             }
         },
     ) {
@@ -483,8 +631,11 @@ private fun ExportRouteContentPreview() {
         ExportRouteContent(
             state = ExportState.Confirm(
                 currentSpreadSheetFormat = SpreadSheetFormat.SINGLE_TAB,
+                currentDestination = ExportDestination.GOOGLE_SHEETS,
                 currentStartDateMillis = nowMillis(),
                 currentEndDateMillis = nowMillis(),
+                fileName = "My Expenses",
+                hasExpensesToExport = true
             ),
             onEvent = {},
             onNavigateBack = {},

@@ -29,6 +29,9 @@ interface ExpenseDao {
     @Query("SELECT COUNT(*) FROM expense WHERE categoryId = :categoryId")
     suspend fun countAllByCategory(categoryId: Long): Int
 
+    @Query("SELECT EXISTS(SELECT 1 FROM expense WHERE isDeleted = 0 LIMIT 1)")
+    suspend fun hasActiveExpenses(): Boolean
+
     @Query("UPDATE expense SET categoryId = :targetCategoryId WHERE categoryId = :sourceCategoryId")
     suspend fun reassignCategory(sourceCategoryId: Long, targetCategoryId: Long)
 

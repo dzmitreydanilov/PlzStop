@@ -225,7 +225,10 @@
     <string name="analytics_day_total">Total: %1$s</string>
 
     <string name="export_preparing">Preparing export…</string>
-    <string name="export_title">Export to Google Sheets</string>
+    <string name="export_title">Export data</string>
+    <string name="export_destination_label">Destination</string>
+    <string name="export_destination_google_sheets">Google Sheets</string>
+    <string name="export_destination_csv">CSV</string>
     <string name="export_spread_sheet_title">Spreadsheet Title</string>
     <string name="export_tab_layout_label">Tab layout</string>
     <string name="export_tab_single_sheet">Single sheet</string>
@@ -239,7 +242,8 @@
     <string name="export_organization_same_tab">Same tab</string>
     <string name="export_organization_separate_tabs">Separate tabs</string>
     <string name="export_button">Export</string>
-    <string name="export_enqueued_message">Your export is being prepared.\nYou\'ll receive a notification when it\'s ready.</string>
+    <string name="export_enqueued_message">Your export is being prepared.\nYou\'ll receive a notification when it\'s ready, if notifications are enabled.</string>
+    <string name="export_csv_share_launched">Share sheet opened.</string>
     <string name="export_connect_google_title">Connect Google Account</string>
     <string name="export_connect_google_body">A Google account is needed to create the spreadsheet.</string>
     <string name="export_connect_google_button">Connect Google Account</string>
@@ -279,4 +283,3 @@
     <string name="subscription_promo_body">Never lose track of your subscriptions. Set up recurring expenses to automatically track Netflix, gym, rent, and more.</string>
     <string name="subscription_promo_cta">Get Started</string>
 </resources>
-

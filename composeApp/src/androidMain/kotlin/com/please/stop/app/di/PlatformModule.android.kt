@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.DefaultLifecycleObserver
+import com.please.stop.app.core.AndroidDocumentSharer
+import com.please.stop.app.core.DocumentSharer
 import com.please.stop.app.core.IFcmTokenProvider
 import com.please.stop.app.core.IGoogleAccountStorage
 import com.please.stop.app.core.INotificationPermission
@@ -63,6 +65,7 @@ actual val platformModule: Module = module {
     single<INotificationPermission> { AndroidNotificationPermission(context = get()) }
 
     single<com.please.stop.app.core.UrlOpener> { com.please.stop.app.core.AndroidUrlOpener(context = get()) }
+    single<DocumentSharer> { AndroidDocumentSharer(context = get()) }
 
     // Export
     single<com.please.stop.app.features.export.domain.ExportWorkerScheduler> {

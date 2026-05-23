@@ -110,6 +110,7 @@ kotlin {
 
             implementation(libs.bundles.googleOauth)
             implementation(libs.androidx.core.splashscreen)
+            implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.lifecycle.process)
             implementation(libs.androidx.lifecycle.service)
             implementation(libs.androidx.browser)

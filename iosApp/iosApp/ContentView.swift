@@ -3,19 +3,26 @@ import SwiftUI
 import ComposeApp
 
 struct ComposeView: UIViewControllerRepresentable {
+    let deepLinkHandler: DeepLinkHandler
+
     func makeUIViewController(context: Context) -> UIViewController {
-        MainViewControllerKt.MainViewController()
+        MainViewControllerKt.MainViewController(
+            deepLinkUri: nil,
+            deepLinkHandler: deepLinkHandler
+        )
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 
 struct ContentView: View {
+    let deepLinkHandler: DeepLinkHandler
+
     @State private var isComposeReady = false
 
     var body: some View {
         ZStack {
-            ComposeView()
+            ComposeView(deepLinkHandler: deepLinkHandler)
                 .ignoresSafeArea()
                 .onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -29,6 +36,9 @@ struct ContentView: View {
                 SplashScreenView()
                     .transition(.opacity)
             }
+        }
+        .onOpenURL { url in
+            deepLinkHandler.handleDeepLink(uriString: url.absoluteString)
         }
     }
 }

@@ -55,8 +55,14 @@ def exportToSheets(req: https_fn.CallableRequest):  # noqa: N802
         )
 
     data = req.data
-    export_id = data.get("exportId")
     access_token = data.get("googleAccessToken")
+    if not access_token:
+        raise https_fn.HttpsError(
+            code=https_fn.FunctionsErrorCode.UNAUTHENTICATED,
+            message="INVALID_TOKEN",
+        )
+
+    export_id = data.get("exportId")
     fcm_token = data.get("fcmToken")
     tab_layout = data.get("tabLayout", "single_tab")
     currency_symbol = data.get("currencySymbol", "")
@@ -65,21 +71,14 @@ def exportToSheets(req: https_fn.CallableRequest):  # noqa: N802
 
     expenses = _parse_expenses(data, compressed)
 
-    email = req.auth.token.get("email")
-    if not email:
-        raise https_fn.HttpsError(
-            code=https_fn.FunctionsErrorCode.INTERNAL,
-            message="Could not determine user email.",
-        )
-
     gc = gspread.authorize(Credentials(token=access_token))
     all_categories = sorted({e.get("category", "") for e in expenses} - {""})
     amount_header = f"Amount ({currency_symbol})" if currency_symbol else "Amount"
     headers = ["Date", "Title", "Category", "Subcategory", amount_header, "Notes"]
     num_fmt = f"0.{'0' * decimal_places}" if decimal_places > 0 else "0"
 
-    month_label = data.get("month", "Export")
-    title = data.get("title") or f"PlzStop Export – {month_label}"
+    date_range_label = data.get("dateRangeLabel") or data.get("month") or "Export"
+    title = data.get("title") or f"PlzStop Export - {date_range_label}"
 
     try:
         spreadsheet = gc.create(title)
@@ -93,14 +92,13 @@ def exportToSheets(req: https_fn.CallableRequest):  # noqa: N802
         if tab_layout == "separate_tabs":
             _build_separate_tabs(spreadsheet, expenses, headers, all_categories, num_fmt)
         else:
-            _build_single_tab(spreadsheet, expenses, headers, all_categories, num_fmt, month_label)
+            _build_single_tab(spreadsheet, expenses, headers, all_categories, num_fmt, date_range_label)
     except Exception:
         raise https_fn.HttpsError(
             code=https_fn.FunctionsErrorCode.INTERNAL,
             message="Failed to write spreadsheet data.",
         )
 
-    spreadsheet.share(email, perm_type="user", role="owner")
     spreadsheet_url = spreadsheet.url
 
     _save_export_result(req.auth.uid, export_id, spreadsheet_url)
@@ -238,7 +236,28 @@ def _detect_months(expenses: list) -> list[tuple[str, int, int]]:
 
 def _write_sheet(ws, expenses: list, headers: list, categories: list, num_fmt: str,
                  pivot: bool = False):
-    """Write expense rows + category summary to a worksheet.
+    """Write expense rows + category summary to a worksheet."""
+    rows, expense_count, summary_row_count = _build_sheet_rows(
+        expenses=expenses,
+        headers=headers,
+        categories=categories,
+        pivot=pivot,
+    )
+    requests = []
+    _append_sheet_requests(
+        requests=requests,
+        sheet_id=ws.id,
+        rows=rows,
+        expense_count=expense_count,
+        num_fmt=num_fmt,
+        summary_row_count=summary_row_count,
+    )
+    ws.spreadsheet.batch_update({"requests": requests})
+
+
+def _build_sheet_rows(expenses: list, headers: list, categories: list,
+                      pivot: bool = False) -> tuple[list, int, int]:
+    """Build expense rows + category summary for a worksheet.
 
     When pivot=True, the summary uses months as columns (for single-tab multi-month exports).
     """
@@ -257,10 +276,8 @@ def _write_sheet(ws, expenses: list, headers: list, categories: list, num_fmt: s
     else:
         _build_simple_summary(rows, n, categories, cat_subs, headers[4])
 
-    ws.update(range_name="A1", values=rows)
-
     summary_row_count = sum(1 + len(cat_subs.get(c, [])) for c in categories)
-    _apply_formatting(ws, n, num_fmt, summary_row_count)
+    return rows, n, summary_row_count
 
 
 def _build_simple_summary(rows: list, n: int, categories: list,
@@ -321,9 +338,25 @@ def _build_pivot_summary(rows: list, n: int, categories: list,
 
 
 def _build_single_tab(spreadsheet, expenses, headers, all_categories, num_fmt, label):
-    ws = spreadsheet.sheet1
-    ws.update_title(label)
-    _write_sheet(ws, expenses, headers, all_categories, num_fmt, pivot=True)
+    sheet_id = spreadsheet.sheet1.id
+    rows, expense_count, summary_row_count = _build_sheet_rows(
+        expenses=expenses,
+        headers=headers,
+        categories=all_categories,
+        pivot=True,
+    )
+    requests = [
+        _update_sheet_title_request(sheet_id, label),
+    ]
+    _append_sheet_requests(
+        requests=requests,
+        sheet_id=sheet_id,
+        rows=rows,
+        expense_count=expense_count,
+        num_fmt=num_fmt,
+        summary_row_count=summary_row_count,
+    )
+    spreadsheet.batch_update({"requests": requests})
 
 
 def _build_separate_tabs(spreadsheet, expenses, headers, all_categories, num_fmt):
@@ -332,35 +365,108 @@ def _build_separate_tabs(spreadsheet, expenses, headers, all_categories, num_fmt
         d = e.get("date", "")
         by_month[d[:7] if len(d) >= 7 else "Unknown"].append(e)
 
-    for month_key in sorted(by_month):
+    requests = []
+    default_sheet_id = spreadsheet.sheet1.id
+
+    for index, month_key in enumerate(sorted(by_month)):
         try:
             sheet_name = date.fromisoformat(month_key + "-01").strftime("%B %Y")
         except ValueError:
             sheet_name = month_key
 
-        ws = spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=10)
-        month_cats = sorted({e.get("category", "") for e in by_month[month_key]} - {""})
-        _write_sheet(ws, by_month[month_key], headers, month_cats, num_fmt)
+        if index == 0:
+            sheet_id = default_sheet_id
+            requests.append(_update_sheet_title_request(sheet_id, sheet_name))
+        else:
+            sheet_id = GENERATED_SHEET_ID_START + index
+            requests.append(
+                {
+                    "addSheet": {
+                        "properties": {
+                            "sheetId": sheet_id,
+                            "title": sheet_name,
+                            "gridProperties": {"rowCount": 1000, "columnCount": 10},
+                        }
+                    }
+                }
+            )
 
-    try:
-        default = spreadsheet.sheet1
-        if default.title == "Sheet1":
-            spreadsheet.del_worksheet(default)
-    except Exception:
-        pass
+        rows, expense_count, summary_row_count = _build_sheet_rows(
+            expenses=by_month[month_key],
+            headers=headers,
+            categories=all_categories,
+        )
+        _append_sheet_requests(
+            requests=requests,
+            sheet_id=sheet_id,
+            rows=rows,
+            expense_count=expense_count,
+            num_fmt=num_fmt,
+            summary_row_count=summary_row_count,
+        )
+
+    spreadsheet.batch_update({"requests": requests})
 
 
-def _apply_formatting(ws, expense_count: int, num_fmt: str, category_count: int):
+def _update_sheet_title_request(sheet_id: int, title: str) -> dict:
+    return {
+        "updateSheetProperties": {
+            "properties": {"sheetId": sheet_id, "title": title},
+            "fields": "title",
+        }
+    }
+
+
+def _append_sheet_requests(requests: list, sheet_id: int, rows: list, expense_count: int,
+                           num_fmt: str, summary_row_count: int):
+    requests.append(_update_cells_request(sheet_id, rows))
+    requests.extend(_formatting_requests(sheet_id, expense_count, num_fmt, summary_row_count))
+
+
+def _update_cells_request(sheet_id: int, rows: list) -> dict:
+    return {
+        "updateCells": {
+            "start": {"sheetId": sheet_id, "rowIndex": 0, "columnIndex": 0},
+            "rows": [_row_data(row) for row in rows],
+            "fields": "userEnteredValue",
+        }
+    }
+
+
+def _row_data(row: list) -> dict:
+    return {
+        "values": [
+            _cell_data(value=value, column_index=index)
+            for index, value in enumerate(row)
+        ]
+    }
+
+
+def _cell_data(value, column_index: int) -> dict:
+    if value in (None, ""):
+        return {}
+    if isinstance(value, str) and value.startswith("="):
+        return {"userEnteredValue": {"formulaValue": value}}
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return {"userEnteredValue": {"numberValue": value}}
+    if column_index == AMOUNT_COLUMN_INDEX:
+        try:
+            return {"userEnteredValue": {"numberValue": float(value)}}
+        except (TypeError, ValueError):
+            pass
+    return {"userEnteredValue": {"stringValue": str(value)}}
+
+
+def _formatting_requests(sheet_id: int, expense_count: int, num_fmt: str, category_count: int) -> list:
     n = expense_count
     total_row = n + 2
     summary_header_row = n + 4
-    sid = ws.id
 
-    reqs = [
+    return [
         # Header row: bold, blue bg, white text
         {
             "repeatCell": {
-                "range": {"sheetId": sid, "startRowIndex": 0, "endRowIndex": 1},
+                "range": {"sheetId": sheet_id, "startRowIndex": 0, "endRowIndex": 1},
                 "cell": {
                     "userEnteredFormat": {
                         "backgroundColor": {"red": 0.259, "green": 0.522, "blue": 0.957},
@@ -373,7 +479,7 @@ def _apply_formatting(ws, expense_count: int, num_fmt: str, category_count: int)
         # Total row: bold
         {
             "repeatCell": {
-                "range": {"sheetId": sid, "startRowIndex": total_row - 1, "endRowIndex": total_row},
+                "range": {"sheetId": sheet_id, "startRowIndex": total_row - 1, "endRowIndex": total_row},
                 "cell": {"userEnteredFormat": {"textFormat": {"bold": True}}},
                 "fields": "userEnteredFormat(textFormat)",
             }
@@ -381,7 +487,7 @@ def _apply_formatting(ws, expense_count: int, num_fmt: str, category_count: int)
         # Category summary header: bold, light blue bg
         {
             "repeatCell": {
-                "range": {"sheetId": sid, "startRowIndex": summary_header_row - 1, "endRowIndex": summary_header_row},
+                "range": {"sheetId": sheet_id, "startRowIndex": summary_header_row - 1, "endRowIndex": summary_header_row},
                 "cell": {
                     "userEnteredFormat": {
                         "backgroundColor": {"red": 0.91, "green": 0.918, "blue": 0.965},
@@ -394,7 +500,13 @@ def _apply_formatting(ws, expense_count: int, num_fmt: str, category_count: int)
         # Date column: date format
         {
             "repeatCell": {
-                "range": {"sheetId": sid, "startRowIndex": 1, "endRowIndex": n + 1, "startColumnIndex": 0, "endColumnIndex": 1},
+                "range": {
+                    "sheetId": sheet_id,
+                    "startRowIndex": 1,
+                    "endRowIndex": n + 1,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": 1,
+                },
                 "cell": {"userEnteredFormat": {"numberFormat": {"type": "DATE", "pattern": "yyyy-mm-dd"}}},
                 "fields": "userEnteredFormat(numberFormat)",
             }
@@ -402,7 +514,13 @@ def _apply_formatting(ws, expense_count: int, num_fmt: str, category_count: int)
         # Amount column: number format
         {
             "repeatCell": {
-                "range": {"sheetId": sid, "startRowIndex": 1, "endRowIndex": n + 2, "startColumnIndex": 4, "endColumnIndex": 5},
+                "range": {
+                    "sheetId": sheet_id,
+                    "startRowIndex": 1,
+                    "endRowIndex": n + 2,
+                    "startColumnIndex": 4,
+                    "endColumnIndex": 5,
+                },
                 "cell": {"userEnteredFormat": {"numberFormat": {"type": "NUMBER", "pattern": num_fmt}}},
                 "fields": "userEnteredFormat(numberFormat)",
             }
@@ -410,7 +528,7 @@ def _apply_formatting(ws, expense_count: int, num_fmt: str, category_count: int)
         # Freeze header
         {
             "updateSheetProperties": {
-                "properties": {"sheetId": sid, "gridProperties": {"frozenRowCount": 1}},
+                "properties": {"sheetId": sheet_id, "gridProperties": {"frozenRowCount": 1}},
                 "fields": "gridProperties.frozenRowCount",
             }
         },
@@ -418,7 +536,7 @@ def _apply_formatting(ws, expense_count: int, num_fmt: str, category_count: int)
         *[
             {
                 "updateDimensionProperties": {
-                    "range": {"sheetId": sid, "dimension": "COLUMNS", "startIndex": i, "endIndex": i + 1},
+                    "range": {"sheetId": sheet_id, "dimension": "COLUMNS", "startIndex": i, "endIndex": i + 1},
                     "properties": {"pixelSize": w},
                     "fields": "pixelSize",
                 }
@@ -427,4 +545,6 @@ def _apply_formatting(ws, expense_count: int, num_fmt: str, category_count: int)
         ],
     ]
 
-    ws.spreadsheet.batch_update({"requests": reqs})
+
+GENERATED_SHEET_ID_START = 10_000
+AMOUNT_COLUMN_INDEX = 4

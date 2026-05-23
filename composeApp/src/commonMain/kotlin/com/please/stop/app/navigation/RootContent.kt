@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -22,6 +24,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
+import com.please.stop.app.core.UrlOpener
 import com.please.stop.app.features.auth.presentation.ui.AuthScreen
 import com.please.stop.app.features.categories.presentation.archived.ArchivedCategoriesScreen
 import com.please.stop.app.features.categories.presentation.ui.CategoriesScreen
@@ -73,39 +76,16 @@ import org.koin.compose.koinInject
 fun RootContent(
     initialRoute: NavKey,
     deepLinkUri: String? = null,
-    deepLinkHandler: DeepLinkHandler? = null,
+    deepLinkHandler: DeepLinkHandler,
 ) {
     val bottomNavIntentHolder = LocalBottomNavIntentHolder.current
-    val deepLinkResolver = remember { DeepLinkResolver() }
+    val urlOpener = koinInject<UrlOpener>()
     val promoCoordinator = koinInject<SubscriptionPromoCoordinator>()
     val promoState by promoCoordinator.state.collectAsStateWithLifecycle()
 
     DisposableEffect(promoCoordinator) {
         promoCoordinator.start()
         onDispose { promoCoordinator.stop() }
-    }
-
-    var coldStartResult by remember {
-        mutableStateOf(
-            deepLinkUri?.let { uri ->
-                parseDeepLinkUri(uri)?.let { deepLinkResolver.resolve(it) }
-            }
-        )
-    }
-
-    val urlOpener = koinInject<com.please.stop.app.core.UrlOpener>()
-
-    val startElements: Array<NavKey> = remember(coldStartResult, initialRoute) {
-        when (val result = coldStartResult) {
-            is DeepLinkResult.GlobalRoute -> result.backstack.toTypedArray()
-            is DeepLinkResult.TabRoute -> arrayOf(MainBottomTabs.Home)
-            is DeepLinkResult.OpenExternalUrl -> {
-                urlOpener.open(result.url)
-                arrayOf(initialRoute)
-            }
-
-            null -> arrayOf(initialRoute)
-        }
     }
 
     val backStack = rememberNavBackStack(
@@ -116,7 +96,7 @@ fun RootContent(
                 }
             }
         },
-        elements = startElements,
+        elements = arrayOf(initialRoute)
     )
 
     @OptIn(ExperimentalSharedTransitionApi::class)
@@ -162,23 +142,11 @@ fun RootContent(
             }
         }
 
-        // Handle cold-start tab deep links once, then consume
-        if (coldStartResult is DeepLinkResult.TabRoute) {
-            val result = coldStartResult as DeepLinkResult.TabRoute
-            bottomNavIntentHolder?.setIntent(
-                BottomNavIntent(
-                    targetTab = result.tab,
-                    nestedRoute = result.nestedRoute,
-                )
-            )
-            coldStartResult = null
-        }
-
         // Handle runtime deep links (onNewIntent, notification taps while app is running)
         if (deepLinkHandler != null) {
             CollectNavigationFlow(
                 flow = deepLinkHandler.deepLinkEvents,
-                key1 = deepLinkHandler,
+                key1 = deepLinkHandler
             ) { result ->
                 applyDeepLinkResult(result, router, bottomNavIntentHolder, urlOpener)
                 deepLinkHandler.consumeEvent()
@@ -192,7 +160,7 @@ private fun applyDeepLinkResult(
     result: DeepLinkResult,
     router: Router<NavKey>,
     bottomNavIntentHolder: IBottomNavIntentHolder?,
-    urlOpener: com.please.stop.app.core.UrlOpener? = null,
+    urlOpener: UrlOpener? = null,
 ) {
     when (result) {
         is DeepLinkResult.GlobalRoute -> {

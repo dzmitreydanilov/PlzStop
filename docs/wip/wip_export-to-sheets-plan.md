@@ -1,6 +1,6 @@
-# Export to Google Sheets — Implementation Plan
+# Export to Spreadsheet or CSV — Implementation Plan
 
-This plan delivers two sequential phases: platform authentication (Google + Apple Sign-In) followed by a Cloud Function that builds and shares a Google Spreadsheet, notifying the user via FCM deep link. Phase 2 depends on Phase 1 being complete for authenticated users.
+This plan delivers two sequential phases: platform authentication (Google + Apple Sign-In) followed by export options for either a Google Spreadsheet or a local CSV file shared with any app. Google Sheets export depends on Phase 1 being complete for authenticated users; CSV sharing only depends on local expense data.
 
 ---
 
@@ -13,7 +13,7 @@ This plan delivers two sequential phases: platform authentication (Google + Appl
 - Google OAuth Client ID must be provisioned in Google Cloud Console for **both** Android (SHA-1 fingerprint registered) **and** iOS (bundle ID registered) — two separate client IDs
 - A **Server (Web) Client ID** is also required for backend token verification — this is a third client ID, distinct from the platform-specific ones
 - Apple Developer account with Sign in with Apple capability enabled
-- Python 3.11+ runtime available in Firebase Functions (Gen 2)
+- Existing TypeScript Firebase Functions project available for Gen 2 exports
 - **iOS: APNs auth key must be uploaded to Firebase Console** — required for FCM push notifications on iOS
 - **Android 13+**: `POST_NOTIFICATIONS` permission must be declared in manifest
 - **iOS**: `UNUserNotificationCenter.requestAuthorization` must be called before FCM can deliver visible notifications
@@ -24,25 +24,28 @@ This plan delivers two sequential phases: platform authentication (Google + Appl
 
 1. **No refresh token stored.** The app requests a fresh Google access token from the platform SDK at export time (silent re-auth, no UI). Only the connection status (email + linked flag) is persisted — not the token itself.
 2. **Two-step Google flow on Android.** Step 1: Credential Manager (`GetGoogleIdOption`) for identity (ID token). Step 2: Google Identity Services `AuthorizationRequest` for scoped access token (`spreadsheets` scope). These are separate API calls.
-3. **Export bottom sheet confirms enqueue only.** The bottom sheet shows "Export started" and auto-dismisses. The FCM push notification is how the user receives the spreadsheet URL.
+3. **Export bottom sheet confirms enqueue only.** The bottom sheet shows "Export started" and auto-dismisses. The worker persists the spreadsheet URL locally when the callable returns; FCM is a best-effort notification path.
 4. **Apple Sign-In users see the export button** — tapping it triggers inline "Connect Google Account" flow. After connecting, export proceeds automatically (no second tap).
-5. **`userEmail` is never sent from the client** in the export payload. The Cloud Function reads email from `context.auth.token.email` (Firebase Auth server-verified) — no tokeninfo call needed.
-6. **Firebase Auth is used for user identity** — `signInWithCredential` with Google/Apple credentials. This ensures `context.auth` is populated in Cloud Functions automatically. Firebase Auth calls live **inside platform `SocialAuthProvider` implementations** (Android/iOS), not in `commonMain` — the common layer only sees `SocialAuthResult`. This follows the existing bridge pattern used by `FirebaseCallableFunctions`.
+5. **`userEmail` is never sent from the client** in the export payload. The callable verifies `request.auth` from Firebase Auth. Email is not needed for the current export flow because the spreadsheet is created with the user's Google access token.
+6. **Firebase Auth is used for user identity** — `signInWithCredential` with Google/Apple credentials. This ensures callable `request.auth` is populated in Cloud Functions automatically. Firebase Auth calls live behind platform `FirebaseAuthProvider` implementations (Android/iOS), not in `commonMain`. This follows the existing bridge pattern used by `FirebaseCallableFunctions`.
 7. **Conditional gzip compression.** Payload < 100KB → send raw JSON (typical monthly export). Payload >= 100KB → gzip + base64 (multi-month, yearly). A `compressed: true/false` flag in the payload tells the Cloud Function which format to expect. Uses `kotlinx-io` `GzipSink`/`GzipSource` in `commonMain` — no `expect/actual` needed.
 8. **Auth strategy per platform:**
    - **Android:** Credential Manager for Google Sign-In → Firebase Auth
    - **iOS:** Apple Sign-In (native `AuthenticationServices`) + Google Sign-In SDK (webview-based OAuth) → Firebase Auth
    - **Export:** Separate call to platform Google SDK for a fresh scoped access token (not stored, requested each time)
-9. **Background export with dual result delivery.** User taps Export → app enqueues background work → bottom sheet shows "Export started" → dismisses. The background worker calls the Cloud Function, **waits for the response**, and **updates local DB** with the export result (spreadsheet URL, status, timestamp). Android uses WorkManager, iOS uses `BGProcessingTask`/`Task {}`.
-10. **FCM push as notification channel.** The Cloud Function **also** sends an FCM push notification with the spreadsheet URL. This ensures the user is notified even if the worker is killed mid-flight. The worker updating local DB ensures the app has the result even if the push is missed (e.g., notifications dismissed). Two independent delivery paths — neither depends on the other.
+9. **Background export with dual result delivery.** User taps Export → app enqueues background work → bottom sheet shows "Export started" → dismisses. The background worker calls the Cloud Function, **waits for the response**, and **updates local DB** with the export result (spreadsheet URL, status, timestamp). Android uses WorkManager; iOS uses the existing bridge to Swift and should use background `URLSession` for resilience.
+10. **FCM push as optional notification channel.** The Cloud Function sends an FCM push notification with the spreadsheet URL when a token is available. The worker response remains the source of truth and updates local DB with the URL, so export is not blocked if notifications are denied or FCM token retrieval fails.
+11. **Multi-currency expenses export converted values only.** The spreadsheet shows the normalized converted amount/currency used by the app for totals and analysis, not both original and converted values.
+12. **Open spreadsheet in in-app browser surfaces.** Android uses `CustomTabsIntent`; iOS uses `SFSafariViewController` instead of forcing the system browser.
+13. **CSV sharing is local and app-agnostic.** CSV export generates a local `.csv` file from the same converted expense rows and opens the platform share sheet so the user can send it to any compatible app. It does not require Google auth, FCM, Cloud Functions, or `export_history`.
 
 ---
 
 ## Open Questions
 
 1. ~~Should the app support exporting a custom date range, or always the current calendar month?~~ **Resolved:** Multi-month export supported. User picks a date range. Tab layout choice (`single_tab` / `separate_tabs`) controls whether months go on one sheet or separate sheets.
-2. Should multi-currency expenses show both the original amount/currency and the converted amount, or only the converted amount?
-3. Should the spreadsheet URL be opened in `CustomTabsIntent` / `SFSafariViewController` or always in the system browser?
+2. ~~Should multi-currency expenses show both the original amount/currency and the converted amount, or only the converted amount?~~ **Resolved:** Keep converted values only.
+3. ~~Should the spreadsheet URL be opened in `CustomTabsIntent` / `SFSafariViewController` or always in the system browser?~~ **Resolved:** Use `CustomTabsIntent` on Android and `SFSafariViewController` on iOS.
 
 ---
 
@@ -522,44 +525,53 @@ class DeleteAccountUseCase(
 - On confirm → `DeleteAccountUseCase()` → if `NeedsReauthentication` → show "Please sign in again to confirm" + `GoogleButtonUiContainer` / Apple button → re-auth → retry delete
 - On success → navigate to `AuthRoute`
 
-**Cloud Function (optional):** `functions/delete_user_data/main.py`
+**Cloud Function (optional):** `functions/src/deleteUserData.ts`
 - Triggered by Firebase Auth `onDelete` event (background trigger, not callable)
 - Deletes user's Firestore records, shared spreadsheets, etc.
 - Ensures server-side cleanup even if client-side cleanup fails
 
-### Backend: Firebase Cloud Functions for Auth Verification | Effort: Medium
+### Backend: Optional User-Profile Cloud Functions | Effort: Medium
 
-> **Decision:** Use Firebase Authentication SDK (`signInWithCredential`) on the client side. This means `context.auth` is automatically populated in Cloud Functions — no custom JWT verification needed. The backend functions below are only needed if you want additional server-side user record management.
+> **Decision:** Use Firebase Authentication SDK (`signInWithCredential`) on the client side. This means callable `request.auth` is automatically populated in Cloud Functions — no custom JWT verification needed. The backend functions below are only needed if you want additional server-side user record management.
 
-Two Gen 2 HTTPS callable functions in `europe-west1`:
+Optional Gen 2 helpers in the existing TypeScript Functions project:
 
-`functions/verify_google_token/main.py`
-- Receive `{ idToken: string }` from app
-- Verify with `google-auth` library (`id_token.verify_oauth2_token`)
-- Look up / create user record in Firestore; return user profile data
-
-`functions/verify_apple_token/main.py`
-- Receive `{ identityToken: string, authorizationCode: string, email: string?, fullName: string? }`
-- Verify Apple identity token (JWT RS256, Apple's public keys)
-- **Store email and fullName on first sign-in** — Apple only provides these once
-- Return user profile data
+`functions/src/userProfile.ts`
+- Callable can receive `{ provider: "apple" | "google", email: string?, fullName: string? }` from an already authenticated Firebase user
+- Stores email/fullName on first Apple sign-in when provided — Apple only provides these once
+- Does not verify Google/Apple identity tokens itself; Firebase Auth is the identity authority
 
 ---
 
-## Phase 2 — Export to Google Sheets via Cloud Function + FCM
+## Phase 2 — Export to Spreadsheet or CSV
 
-**Goal:** User taps "Export to Sheets" in the Analytics screen. The app requests a fresh Google access token, collects expenses for the current month, and sends them to a Firebase Cloud Function. The function creates a Google Spreadsheet and sends an FCM notification with the spreadsheet URL.
+**Goal:** User taps "Export" in the Analytics screen, picks an export destination, and exports the selected date range:
+- **Google Sheets:** App requests a fresh Google access token, sends expenses to a Firebase Cloud Function, receives a spreadsheet URL, persists it locally, and sends an FCM notification when possible.
+- **CSV:** App generates a local CSV file and opens the platform share sheet so the user can share it with any compatible app.
 
-**Depends on:** Phase 1 complete — user is authenticated, and Google account is connected (for Apple users).
+**Depends on:** Phase 1 complete only for Google Sheets export. CSV export can run without Google auth because it uses local data and the platform share sheet.
+
+### Step 0 — Export Destination Choice | Effort: Low
+
+Add a destination selector to the export UI:
+```kotlin
+enum class ExportDestination { GOOGLE_SHEETS, CSV }
+```
+
+Behavior:
+- `GOOGLE_SHEETS` keeps the existing Google access token + background worker + Cloud Function path.
+- `CSV` skips Google account checks, scoped-token consent, FCM token retrieval, and Cloud Function calls.
+- Both destinations use the same date range, category/subcategory mapping, converted-only amount values, and tab layout where applicable.
+- For CSV, `SINGLE_TAB` produces one CSV file. `SEPARATE_TABS` is not representable in one CSV, so either hide the tab-layout control for CSV or force `SINGLE_TAB`.
 
 ### Step 1 — Cloud Function: `exportToSheets` | Effort: High
 
-Location: `functions/export_to_sheets/main.py` (Firebase Gen 2, `europe-west1`)
+Location: `functions/src/exportToSheets.ts` (Firebase Gen 2, `europe-west1`), exported from the existing TypeScript `functions/src/index.ts`
 
 **Configuration:**
 - Timeout: **300 seconds** (default 60s is too tight for Sheets API calls)
 - Memory: 256MB (default is sufficient)
-- Authentication: Firebase Auth required (`context.auth` must be non-null)
+- Authentication: Firebase Auth required (`request.auth` must be non-null)
 
 **Trigger:** HTTPS Callable (authenticated)
 
@@ -570,7 +582,7 @@ Small payload (< 100KB, typical monthly export):
 {
   "googleAccessToken": "ya29...",
   "fcmToken": "device-fcm-token",
-  "month": "2026-04",
+  "dateRangeLabel": "April 2026",
   "tabLayout": "single_tab",
   "currencySymbol": "€",
   "decimalPlaces": 2,
@@ -582,9 +594,7 @@ Small payload (< 100KB, typical monthly export):
       "category": "Food",
       "subcategory": "Cafe",
       "amount": "3.50",
-      "notes": "With colleagues",
-      "originalAmount": "4.00",
-      "originalCurrency": "USD"
+      "notes": "With colleagues"
     }
   ]
 }
@@ -595,7 +605,7 @@ Large payload (>= 100KB, multi-month/yearly export):
 {
   "googleAccessToken": "ya29...",
   "fcmToken": "device-fcm-token",
-  "month": "2026-01 to 2026-12",
+  "dateRangeLabel": "2026-01 to 2026-12",
   "tabLayout": "separate_tabs",
   "currencySymbol": "€",
   "decimalPlaces": 2,
@@ -610,14 +620,18 @@ Large payload (>= 100KB, multi-month/yearly export):
 - `"single_tab"` — All expenses on one sheet, sorted by date. A **Category Summary** section at the bottom shows totals per category across the full range.
 - `"separate_tabs"` — One sheet per month (e.g., "April 2026", "May 2026"). Each sheet has that month's expenses + a Category Summary section. A union of ALL categories across all months is used for every summary — if a category has no expenses in that month, the amount cell is left empty. This ensures consistent row layout across tabs for easy comparison.
 
-> **Security:** `userEmail` is NOT in the payload. The function reads email from `context.auth.token["email"]` (Firebase Auth, server-verified). This prevents a malicious client from sharing spreadsheets with arbitrary emails — no tokeninfo call needed.
+> **Security:** `userEmail` is NOT in the payload. The function reads email from `request.auth.token.email` (Firebase Auth, server-verified) only if a future sharing/email feature needs it. The export itself creates the spreadsheet with the user's Google access token, so the file is already owned by the Google account that granted Sheets/Drive access.
 
-**Python dependencies** (`functions/export_to_sheets/requirements.txt`):
+**Node dependencies** (`functions/package.json`):
+```json
+{
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}
 ```
-gspread==6.1.2
-google-auth==2.29.0
-firebase-admin==6.5.0
-```
+
+> `firebase-admin` already exists in the Functions project. Use Node's built-in `zlib` for gzip decompression.
 
 **Spreadsheet structure:**
 
@@ -665,22 +679,17 @@ Styling:
 > **Data formatting:** Dates must be written as Sheets date serial numbers (not ISO strings) to enable proper sorting/filtering. Use `(date - epoch).days + 25569` to convert.
 
 **Steps inside the function:**
-1. Validate `context.auth` is non-null (Firebase Auth)
+1. Validate `request.auth` is non-null (Firebase Auth)
 2. **Parse expenses (conditional decompression):**
-   ```python
-   import gzip, base64, json
-
-   if data.get("compressed", False):
-       raw = gzip.decompress(base64.b64decode(data["expenses"]))
-       expenses = json.loads(raw)
-   else:
-       expenses = data["expenses"]
+   ```ts
+   const expenses = data.compressed
+     ? JSON.parse(gunzipSync(Buffer.from(data.expenses, "base64")).toString("utf8"))
+     : data.expenses;
    ```
-3. Extract `email` from `context.auth.token.get("email")` (Firebase Auth, server-verified — no tokeninfo call needed)
-4. Build `gspread.Client` using `google.oauth2.credentials.Credentials(token=googleAccessToken)` — acting on behalf of the user, not a service account. Token must have `spreadsheets` + `drive.file` scopes
-5. **Collect category union** — gather all unique category names across all expenses (sorted alphabetically). This is the canonical category list used for every Category Summary section.
-6. Create spreadsheet titled `"PlzStop Export – {month}"`
-7. **Branch on `tabLayout`:**
+3. Build a `google.auth.OAuth2` client and set `{ access_token: googleAccessToken }` — acting on behalf of the user, not a service account. Token must have `spreadsheets` + `drive.file` scopes
+4. **Collect category union** — gather all unique category names across all expenses (sorted alphabetically). This is the canonical category list used for every Category Summary section.
+5. Create spreadsheet titled `"PlzStop Export - {dateRangeLabel}"` using `google.sheets({ version: "v4", auth })`
+6. **Branch on `tabLayout`:**
 
    **`single_tab`:**
    - One worksheet (named by date range)
@@ -690,45 +699,88 @@ Styling:
    **`separate_tabs`:**
    - Group expenses by month (based on `date` field)
    - For each month, create a worksheet named "{Month Year}" (e.g., "April 2026")
-   - Per worksheet: batch write headers → that month's expenses �� total formula → empty row → Category Summary (full category union — empty cell for categories absent that month, `SUMIF` formulas for present ones)
+   - Per worksheet: batch write headers → that month's expenses → total formula → empty row → Category Summary (full category union — empty cell for categories absent that month, `SUMIF` formulas for present ones)
    - Batch format each worksheet
    - Delete the default "Sheet1" if it was auto-created
 
-8. Share spreadsheet with `email` as owner
-9. If `fcmToken` is provided (non-null), send FCM notification:
-   ```python
-   spreadsheet_url_encoded = urllib.parse.quote(spreadsheet_url, safe='')
-   message = messaging.Message(
-       token=fcm_token,
-       notification=messaging.Notification(
-           title="Your export is ready",
-           body="Tap to open your Google Spreadsheet",
-       ),
-       data={
-           "deepLink": f"plzstop://open?url={spreadsheet_url_encoded}",
-           "spreadsheetUrl": spreadsheet_url,
+7. Build `spreadsheetUrl` from the created spreadsheet ID. Do not transfer ownership; the spreadsheet is created with the user's Google access token and belongs to that Google account.
+8. If `fcmToken` is provided (non-null), send FCM notification:
+   ```ts
+   const spreadsheetUrlEncoded = encodeURIComponent(spreadsheetUrl);
+   await messaging().send({
+     token: fcmToken,
+     notification: {
+       title: "Your export is ready",
+       body: "Tap to open your Google Spreadsheet",
+     },
+     data: {
+       deepLink: `plzstop://open?url=${spreadsheetUrlEncoded}`,
+       spreadsheetUrl,
+     },
+     apns: {
+       payload: {
+         aps: { sound: "default" },
        },
-       apns=messaging.APNSConfig(
-           payload=messaging.APNSPayload(
-               aps=messaging.Aps(sound="default"),
-           ),
-       ),
-   )
-   messaging.send(message)
+     },
+   });
    ```
-10. Return `{ "spreadsheetUrl": spreadsheet_url }` — the background worker receives this response and persists the result to local DB
+9. Return `{ "spreadsheetUrl": spreadsheetUrl }` — the background worker receives this response and persists the result to local DB
 
-> **FCM notification is required** in this architecture. If `fcmToken` is null (notification permission denied), the function still creates the spreadsheet but the user has no way to receive the URL. The app must request notification permission **before** allowing export, and block export if denied with a message explaining why notifications are needed.
+> FCM is optional in this architecture. If `fcmToken` is null or notification permission is denied, the function still creates the spreadsheet and returns the URL to the worker, which persists it in `export_history`.
 
 **Error handling in the function:**
 - Gzip/base64 decompression failure → return error code `INVALID_PAYLOAD` with message
-- `gspread` 403 on create/write → return error code `INVALID_TOKEN` (access token invalid or missing required scopes: `spreadsheets`, `drive.file`)
+- Google API 403 on create/write → return error code `INVALID_TOKEN` (access token invalid or missing required scopes: `spreadsheets`, `drive.file`)
 - Sheets API quota exceeded (60 req/min/user) → return error code `QUOTA_EXCEEDED` with retry-after hint
-- `gspread` 401 during write → return error code `TOKEN_EXPIRED` (access token expired mid-execution — unlikely with batch ops but possible)
+- Google API 401 during write → return error code `TOKEN_EXPIRED` (access token expired mid-execution — unlikely with batch ops but possible)
+
+### Step 1a — CSV Generation + Share Sheet | Effort: Medium
+
+CSV export is local-only and does not enqueue background work.
+
+**CSV structure:**
+
+| Column | Value |
+|--------|-------|
+| Date | Local date in `yyyy-mm-dd` |
+| Title | Expense title |
+| Category | Category name, including archived categories |
+| Subcategory | Subcategory name or empty string |
+| Amount | Converted amount as a decimal string using the user's `decimalPlaces` |
+| Notes | Expense notes or empty string |
+
+Rules:
+- Encode as UTF-8.
+- Use RFC 4180 escaping: wrap fields containing comma, quote, CR, or LF in quotes; double embedded quotes.
+- Use `\r\n` line endings for maximum spreadsheet compatibility.
+- File name: `plzstop-export-{startDate}-to-{endDate}.csv`.
+- Export converted amount only; do not include original amount/currency or conversion-rate columns.
+
+**Common CSV builder** (`commonMain`):
+```kotlin
+class CsvExportBuilder {
+    fun build(rows: List<ExportExpenseRow>): String
+}
+```
+
+`ExportExpenseRow` should be shared by Google Sheets and CSV payload builders so both paths stay aligned.
+
+**Platform share boundary** (`commonMain`):
+```kotlin
+interface DocumentSharer {
+    suspend fun shareCsv(fileName: String, content: String): kotlin.Result<Unit>
+}
+```
+
+Platform implementations:
+- Android: write the CSV to `cacheDir/exports/`, expose it through `FileProvider`, and launch `Intent.ACTION_SEND` with MIME type `text/csv` and `FLAG_GRANT_READ_URI_PERMISSION`.
+- iOS: write the CSV to `NSTemporaryDirectory()` and present `UIActivityViewController` with the file URL.
+
+> The share-sheet result should be treated as "launched", not "delivered". Platforms do not reliably report whether the receiving app actually saved or sent the file.
 
 ### Step 2 — Background Worker (Platform) | Effort: High
 
-The export runs in the background — user taps Export, sees confirmation, and dismisses. The worker calls the Cloud Function, waits for the result, and updates local DB. The Cloud Function also sends an FCM push as a parallel notification channel.
+The Google Sheets export runs in the background — user taps Export, sees confirmation, and dismisses. The worker calls the Cloud Function, waits for the result, and updates local DB. The Cloud Function also sends an FCM push as an optional notification channel when a token is available. CSV export does not use this worker.
 
 **Export history entity** (`commonMain`):
 
@@ -932,7 +984,7 @@ class AndroidExportWorkerScheduler(
 **Data layer** (`commonMain`):
 
 `features/export/data/repository/ExportRepositoryImpl.kt`
-- Inject `IGoogleAccountStorage`, `ExpenseDao`, `CategoryDao`, `SubcategoryDao`, `UserProfileDao`, `ExportHistoryDao`, `ExportWorkerScheduler`, `INotificationPermission`, `IFcmTokenProvider`
+- Inject `IGoogleAccountStorage`, `ExpenseDao`, `CategoryDao`, `SubcategoryDao`, `UserProfileDao`, `ExportHistoryDao`, `ExportWorkerScheduler`, `INotificationPermission`, `IFcmTokenProvider`, `DocumentSharer`, `CsvExportBuilder`
 
 > **No `SocialAuthProvider` / `GoogleAuthProvider` injection.** The Google access token is obtained in the **UI layer** via `GoogleButtonUiContainer(scopes = listOf("https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"))` and passed down through the export event. This is required because `GoogleAuthUiProvider` needs Composable context (Activity) to request scoped tokens.
 
@@ -941,20 +993,32 @@ Key implementation details:
 1. **Pre-flight checks (run synchronously before enqueuing worker):**
    ```kotlin
    suspend fun validateAndEnqueueExport(
-       googleAccessToken: String,
+       destination: ExportDestination,
+       googleAccessToken: String?,
        tabLayout: TabLayout,
        startDate: Instant,
        endDate: Instant,
    ): ExportValidationResult {
-       // Check notification permission (required for FCM result delivery)
-       if (!notificationPermission.isGranted()) {
-           val granted = notificationPermission.request()
-           if (!granted) return ExportValidationResult.NotificationPermissionDenied
-       }
+      // Notification permission is optional. Request it from the UI layer before export
+      // when possible, but do not block export if permission is denied.
 
        // Check expenses exist in range
        val expenses = expenseDao.getExpensesInRange(startDate.toEpochMilliseconds(), endDate.toEpochMilliseconds())
        if (expenses.isEmpty()) return ExportValidationResult.NoExpenses
+
+       if (destination == ExportDestination.CSV) {
+           val rows = buildExportRows(expenses)
+           val csv = csvExportBuilder.build(rows)
+           return documentSharer.shareCsv(
+               fileName = buildCsvFileName(startDate, endDate),
+               content = csv,
+           ).fold(
+               onSuccess = { ExportValidationResult.CsvShareLaunched(expenseCount = expenses.size) },
+               onFailure = { ExportValidationResult.Failure(it) },
+           )
+       }
+
+       val accessToken = googleAccessToken ?: return ExportValidationResult.GoogleAccountNotLinked
 
        // Create PENDING record in local DB before enqueuing worker
        val exportId = exportHistoryDao.insert(
@@ -967,7 +1031,7 @@ Key implementation details:
        )
 
        // Enqueue background work — worker will update this record on completion
-       exportWorkerScheduler.enqueue(exportId, googleAccessToken, tabLayout.name.lowercase(), startDate.toEpochMilliseconds(), endDate.toEpochMilliseconds())
+       exportWorkerScheduler.enqueue(exportId, accessToken, tabLayout.name.lowercase(), startDate.toEpochMilliseconds(), endDate.toEpochMilliseconds())
        return ExportValidationResult.Enqueued(expenseCount = expenses.size)
    }
    ```
@@ -989,12 +1053,13 @@ Key implementation details:
        .movePointLeft(userProfile.decimalPlaces)
        .toPlainString()
    ```
+   > Export converted values only. Do not include `originalAmount`, `originalCurrency`, or conversion-rate columns in the Sheets payload.
 
 4. **Date range uses device timezone:**
    ```kotlin
    val tz = TimeZone.currentSystemDefault()
-   val startOfMonth = LocalDate(year, month, 1).atStartOfDayIn(tz)
-   val endOfMonth = LocalDate(year, month, 1).plus(1, DateTimeUnit.MONTH).atStartOfDayIn(tz)
+   val startInstant = selectedStartDate.atStartOfDayIn(tz)
+   val endInstant = selectedEndDate.plus(1, DateTimeUnit.DAY).atStartOfDayIn(tz)
    ```
 
 5. **Conditional compression (inside worker):**
@@ -1023,32 +1088,33 @@ Key implementation details:
 
 **Domain layer**
 
-`features/export/domain/usecase/ExportToSheetsUseCase.kt`
+`features/export/domain/usecase/ExportDataUseCase.kt`
 ```kotlin
-class ExportToSheetsUseCase(
+class ExportDataUseCase(
     private val repository: ExportRepository,
     private val ioDispatcher: CoroutineDispatcher,
 ) {
     sealed interface Result : com.please.stop.app.core.models.domain.Result {
         data class Enqueued(val expenseCount: Int) : Result
+        data class CsvShareLaunched(val expenseCount: Int) : Result
         data object GoogleAccountNotLinked : Result
-        data object NotificationPermissionDenied : Result
         data object NoExpenses : Result
         data class Failure(override val errorType: ErrorType) : Result, ErrorResult
     }
 
     suspend operator fun invoke(
-        googleAccessToken: String,
+        destination: ExportDestination,
+        googleAccessToken: String?,
         tabLayout: TabLayout,
         startDate: Instant,
         endDate: Instant,
     ): Result = withContext(ioDispatcher) {
-        repository.validateAndEnqueueExport(googleAccessToken, tabLayout, startDate, endDate).toResult()
+        repository.validateAndEnqueueExport(destination, googleAccessToken, tabLayout, startDate, endDate).toResult()
     }
 }
 ```
 
-> Note: `Success(spreadsheetUrl)` is removed — the URL is delivered via push notification, not via use case return value.
+> Note: `Success(spreadsheetUrl)` is removed from the foreground use case return. The worker persists the URL from the callable response in `export_history`; push notification is best effort only.
 
 **Presentation layer**
 
@@ -1059,61 +1125,66 @@ sealed interface ExportState {
     data object Idle : ExportState
     data class Confirm(
         val expenseCount: Int,
-        val month: String,
+        val destination: ExportDestination = ExportDestination.GOOGLE_SHEETS,
         val tabLayout: TabLayout = TabLayout.SINGLE_TAB,
     ) : ExportState
     data object Enqueued : ExportState
+    data object CsvShareLaunched : ExportState
     data object NeedsGoogleAccount : ExportState
-    data object NeedsNotificationPermission : ExportState
     data object NoExpenses : ExportState
     data class Error(val errorType: ErrorType) : ExportState
 }
 ```
 
-> **Simplified states:** No `Exporting` spinner or `Success` with URL. User sees `Confirm` → `Enqueued` ("Your export is being prepared. You'll receive a notification when it's ready.") → bottom sheet auto-dismisses after a short delay.
+> **Simplified states:** No `Exporting` spinner or `Success` with URL. User sees `Confirm` → `Enqueued` ("Your export is being prepared. You'll receive a notification when it's ready, if notifications are enabled.") → bottom sheet auto-dismisses after a short delay.
 
 `features/export/presentation/ExportEvent.kt`
 ```kotlin
 sealed interface ExportEvent {
     data object ExportTapped : ExportEvent
+    data class DestinationSelected(val destination: ExportDestination) : ExportEvent
     data class TabLayoutSelected(val tabLayout: TabLayout) : ExportEvent
     /** Carries the Google access token obtained from GoogleButtonUiContainer in the UI layer */
     data class ConfirmExport(val googleAccessToken: String) : ExportEvent
+    data object ShareCsvTapped : ExportEvent
     data class GoogleAccountConnected(val googleUser: GoogleUser) : ExportEvent
-    data object EnableNotificationsTapped : ExportEvent
     data object DismissError : ExportEvent
     data object Dismiss : ExportEvent
 }
 
+enum class ExportDestination { GOOGLE_SHEETS, CSV }
 enum class TabLayout { SINGLE_TAB, SEPARATE_TABS }
 ```
 
 `features/export/presentation/ExportStateHolder.kt`
 - Extends `StateHolder<ExportState, ExportEvent>`
 - **Guard against double-tap:** `resolveEventResult(ExportTapped)` returns `emptyFlow()` when current state is `Enqueued`
-- `resolveEventResult(ExportTapped)` → check `IGoogleAccountStorage` → if linked: count expenses + show `Confirm` state; if not linked: show `NeedsGoogleAccount`
-- `resolveEventResult(ConfirmExport(accessToken))` → call `exportToSheetsUseCase(accessToken)` → map to state
+- `resolveEventResult(ExportTapped)` → count expenses + show `Confirm` state. Google account linkage is checked only when the user chooses Google Sheets.
+- `resolveEventResult(ConfirmExport(accessToken))` → call `exportDataUseCase(destination = GOOGLE_SHEETS, googleAccessToken = accessToken)` → map to state
+- `resolveEventResult(ShareCsvTapped)` → call `exportDataUseCase(destination = CSV, googleAccessToken = null)` → map to state
 - `resolveEventResult(GoogleAccountConnected(googleUser))` → call `connectGoogleAccountUseCase(googleUser)` → auto-retry export
 - `getStateByResult`:
   - `Enqueued(count)` → `ExportState.Enqueued` (auto-dismiss after 3s)
+  - `CsvShareLaunched(count)` → `ExportState.CsvShareLaunched` (show "Share sheet opened" / auto-dismiss after 1s)
   - `GoogleAccountNotLinked` → `NeedsGoogleAccount` (renders `GoogleButtonUiContainer`)
-  - `NotificationPermissionDenied` → `NeedsNotificationPermission`
   - `NoExpenses` → `NoExpenses`
 
 `features/export/presentation/ui/ExportBottomSheet.kt`
 - A `ModalBottomSheet` (Material3) composable
 - States:
   - `Idle` → export button + explanation text
-  - `Confirm` → "Export {count} expenses from {month}?" + **Tab layout toggle** (segmented button: "Single sheet" / "Sheet per month") + Export button wrapped in `GoogleButtonUiContainer(scopes = listOf("https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"))` to obtain access token on tap / Cancel button. Tab layout toggle dispatches `TabLayoutSelected` event to update state. Default: `SINGLE_TAB`
-  - `Enqueued` → checkmark + "Your export is being prepared. You'll receive a notification when it's ready." Auto-dismiss after 3s
+  - `Confirm` → "Export {count} expenses from selected range?" + **Destination toggle** ("Google Sheets" / "CSV") + **Tab layout toggle** only when Google Sheets is selected + action button / Cancel button. Default destination: `GOOGLE_SHEETS`.
+  - Google Sheets action button is wrapped in `GoogleButtonUiContainer(scopes = listOf("https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"))` to obtain access token on tap.
+  - CSV action button dispatches `ShareCsvTapped` and opens the platform share sheet. It does not render `GoogleButtonUiContainer`.
+  - `Enqueued` → checkmark + "Your export is being prepared. You'll receive a notification when it's ready, if notifications are enabled." Auto-dismiss after 3s
+  - `CsvShareLaunched` → checkmark + "Share sheet opened." Auto-dismiss after 1s
   - `NeedsGoogleAccount` → "Connect Google Account" button + explanation
-  - `NeedsNotificationPermission` → "Enable notifications to receive your export" + "Enable" button
   - `NoExpenses` → "Nothing to export for this period" message
   - `Error` → error message + retry button
 
 ### Step 3 — Notification Permission | Effort: Low
 
-**Hard requirement for export.** Since the export runs in the background and the result is delivered via push notification, notification permission must be granted. If denied, export is blocked with a message explaining why.
+**Optional enhancement for export.** Since the worker response updates local DB with the spreadsheet URL, notification permission is not required for export. Request permission from the UI when the user opts into notifications or before export if the UX asks, but denial should not block the worker.
 
 `composeApp/src/commonMain/kotlin/com/please/stop/app/core/INotificationPermission.kt`
 ```kotlin
@@ -1123,10 +1194,10 @@ interface INotificationPermission {
 }
 ```
 
-- **Android:** Check/request `POST_NOTIFICATIONS` (API 33+). Below API 33, always returns `true`.
+- **Android:** Check `POST_NOTIFICATIONS` (API 33+). Below API 33, always returns `true`. Runtime permission requests must be triggered from Activity/Compose UI, not from `ExportRepositoryImpl`.
 - **iOS:** `UNUserNotificationCenter.requestAuthorization(options: [.alert, .sound])`
 
-Called in `ExportRepositoryImpl.validateAndEnqueueExport()` before enqueuing the worker. If denied, returns `NotificationPermissionDenied` and the UI shows `NeedsNotificationPermission` state with an "Enable" button.
+`ExportRepositoryImpl.validateAndEnqueueExport()` may read permission state to decide whether to fetch/send an FCM token, but it must still enqueue export if permission is denied.
 
 ### Step 4 — FCM Token Retrieval | Effort: Low
 
@@ -1146,7 +1217,7 @@ interface IFcmTokenProvider {
 
 **Deep link scheme:** `plzstop://open?url=<percent-encoded-spreadsheet-url>`
 
-> **URL encoding is critical.** Google Sheets URLs contain `?`, `=`, `#`. The Cloud Function must use `urllib.parse.quote(url, safe='')`. The app must decode with `URLDecoder.decode(url, "UTF-8")` (Android) or `removingPercentEncoding` (iOS).
+> **URL encoding is critical.** Google Sheets URLs contain `?`, `=`, `#`. The Cloud Function must use `encodeURIComponent(url)`. The app must decode with `URLDecoder.decode(url, "UTF-8")` (Android) or `removingPercentEncoding` (iOS).
 
 > **Security note:** The `plzstop://` custom scheme is NOT verified — any app can register it. This is acceptable because: (a) the spreadsheet URL is also returned inline via the callable function, (b) the URL only opens a public Google Sheets link, no sensitive action is taken. If stronger security is needed later, switch to Android App Links / iOS Universal Links with domain verification.
 
@@ -1192,7 +1263,7 @@ interface UrlOpener {
 }
 ```
 - Android: `CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))` — bound in `PlatformModule.android.kt`
-- iOS: `UIApplication.sharedApplication.openURL(NSURL(string = url)!!)` — bound in `PlatformModule.ios.kt`
+- iOS: present `SFSafariViewController(url = NSURL(string = url)!!)` from the active view controller — bound in `PlatformModule.ios.kt`
 
 ### Step 6 — Export Button in Analytics Screen | Effort: Low
 
@@ -1222,10 +1293,13 @@ val exportModule = module {
             fcmTokenProvider = get(),
             notificationPermission = get(),
             exportWorkerScheduler = get(),
+            documentSharer = get(),
+            csvExportBuilder = get(),
         )
     }
-    factory { ExportToSheetsUseCase(repository = get(), ioDispatcher = get(named(DispatchersQualifiers.IO.name))) }
-    viewModel { ExportStateHolder(exportToSheetsUseCase = get(), connectGoogleAccountUseCase = get()) }
+    factory { CsvExportBuilder() }
+    factory { ExportDataUseCase(repository = get(), ioDispatcher = get(named(DispatchersQualifiers.IO.name))) }
+    viewModel { ExportStateHolder(exportDataUseCase = get(), connectGoogleAccountUseCase = get()) }
 }
 ```
 
@@ -1235,11 +1309,13 @@ Platform modules:
   - `single<INotificationPermission> { AndroidNotificationPermission(context = get()) }`
   - `single<ExportWorkerScheduler> { AndroidExportWorkerScheduler(context = get()) }`
   - `single<UrlOpener> { AndroidUrlOpener(context = get()) }`
+  - `single<DocumentSharer> { AndroidDocumentSharer(context = get()) }`
 - `PlatformModule.ios.kt`:
   - `single<IFcmTokenProvider> { IosFcmTokenProvider(bridge = get()) }`
   - `single<INotificationPermission> { IosNotificationPermission() }`
   - `single<ExportWorkerScheduler> { IosExportWorkerScheduler(bridge = get()) }`
   - `single<UrlOpener> { IosUrlOpener() }`
+  - `single<DocumentSharer> { IosDocumentSharer(bridge = get()) }`
 
 Register `exportModule` in `AppModule.kt`.
 
@@ -1253,26 +1329,29 @@ Register `exportModule` in `AppModule.kt`.
 | 2 | **Double-tap export** | WorkManager `ExistingWorkPolicy.KEEP` ignores duplicate enqueue. StateHolder ignores event when `Enqueued` |
 | 3 | **Archived categories** | Uses existing `observeAllIncludingArchived().first()` — no new DAO queries needed |
 | 4 | **Null subcategory** | Replaced with `""` before serialization (iOS `FirebaseCallableFunctions` safety) |
-| 5 | **Multi-currency expenses** | Include `originalAmount` + `originalCurrency` columns (if decided yes in Open Questions) |
-| 6 | **Deep link URL encoding** | Python: `urllib.parse.quote(url, safe='')`. App: decode before opening |
+| 5 | **Multi-currency expenses** | Export converted amount only. Do not include original amount/currency columns |
+| 6 | **Deep link URL encoding** | Cloud Function: `encodeURIComponent(url)`. App: decode before opening |
 | 7 | **Timezone for date range boundaries** | Use `TimeZone.currentSystemDefault()` for start/end calculation |
 | 8 | **Cold start from deep link** | Queue deep link, process after nav graph composition |
-| 9 | **Notification permission denied** | Export blocked — UI shows `NeedsNotificationPermission` with "Enable" button. Notifications are required for result delivery |
-| 10 | **Google token expired mid-function** | Unlikely with batch ops (<30s), but function returns `TOKEN_EXPIRED` error → push notification with error message |
+| 9 | **Notification permission denied** | Export proceeds. No FCM push is sent, but worker response persists `spreadsheetUrl` in local DB |
+| 10 | **Google token expired mid-function** | Unlikely with batch ops (<30s), but function returns `TOKEN_EXPIRED` error. Error push is best effort when an FCM token is available |
 | 11 | **Apple first sign-in email** | Email stored on backend during first auth — subsequent logins use subject ID |
 | 12 | **Network failure mid-export** | WorkManager retries automatically (Android). Orphan spreadsheet may exist — title includes date range for discoverability |
-| 13 | **Sheets API quota** | Batch ops keep it to ~5 API calls. Function returns `QUOTA_EXCEEDED` → push notification with error |
+| 13 | **Sheets API quota** | Batch ops keep it to ~5 API calls. Function returns `QUOTA_EXCEEDED`; error push is best effort when an FCM token is available |
 | 14 | **Stale Google session on logout** | `LogoutUseCase` clears `IGoogleAccountStorage` + `BearerTokenClearer` + Firebase Auth + Google Sign-In |
 | 15 | **iOS FCM token nil before APNs registration** | Use callback variant of `Messaging.messaging().token(completion:)` |
 | 16 | **`amountMinorUnits` conversion** | `BigDecimal.movePointLeft(decimalPlaces)` — handles JPY (0 places), EUR (2), BHD (3) |
 | 17 | **Payload size** | < 100KB raw JSON (most months). >= 100KB → gzip+base64 (multi-month/yearly). `compressed` flag in payload |
 | 18 | **Auto-retry after Google connect** | Apple user connects Google → `ExportStateHolder` auto-triggers export, no second tap |
-| 19 | **Worker fails silently** | Cloud Function sends error notification via FCM if export fails (e.g., "Export failed — please try again") |
+| 19 | **Worker fails silently** | Worker updates `export_history` with `FAILED`. Error push is best effort only when an FCM token is available |
 | 20 | **App killed during background export** | Android: WorkManager survives process death. iOS: background URLSession continues independently |
 | 21 | **Google access token in worker** | **Resolved:** Token is obtained before enqueuing the worker (requires Activity context on Android). Passed as WorkManager input data. Token lasts ~60min; WorkManager with `NetworkType.CONNECTED` runs promptly |
 | 22 | **Delete account requires re-auth** | Firebase requires recent authentication for `user.delete()`. If stale session, show re-auth flow (Google/Apple button) then retry |
 | 23 | **Delete account server-side cleanup** | Firebase Auth `onDelete` trigger cleans Firestore records. Client clears local DB via `appDatabase.clearAllTables()` |
 | 24 | **Delete account during export** | If WorkManager export is in-flight when account is deleted, Cloud Function will fail (invalid auth) — orphan spreadsheet may exist but user won't be notified |
+| 25 | **CSV share cancelled** | Treat share sheet launch as success; platforms do not reliably report final delivery |
+| 26 | **No compatible CSV app** | Platform share sheet shows no targets or returns failure; map to export error/snackbar |
+| 27 | **CSV + separate tabs** | Hide tab-layout control for CSV or force `SINGLE_TAB`; one CSV file cannot represent workbook tabs |
 
 ---
 
@@ -1302,6 +1381,7 @@ Register `exportModule` in `AppModule.kt`.
 | `core/db/dao/ExportHistoryDao.kt` | DAO for export history (insert, updateResult, updateError, observeLatest) |
 | `core/IFcmTokenProvider.kt` | FCM token interface |
 | `core/INotificationPermission.kt` | Notification permission check/request interface |
+| `core/DocumentSharer.kt` | Platform share-sheet interface for CSV files |
 | `features/auth/domain/repository/AuthRepository.kt` | Auth repository interface |
 | `features/auth/domain/usecase/SignInWithGoogleUseCase.kt` | Google sign-in use case (takes `GoogleUser`) |
 | `features/auth/domain/usecase/SignInWithAppleUseCase.kt` | Apple sign-in use case (takes `AppleUser`) |
@@ -1317,10 +1397,13 @@ Register `exportModule` in `AppModule.kt`.
 | `features/auth/presentation/ui/AuthScreen.kt` | Login screen composable |
 | `features/auth/di/AuthModule.kt` | Koin auth module |
 | `features/export/domain/repository/ExportRepository.kt` | Export repository interface |
-| `features/export/domain/usecase/ExportToSheetsUseCase.kt` | Export use case |
+| `features/export/domain/usecase/ExportDataUseCase.kt` | Export use case for Google Sheets and CSV |
+| `features/export/domain/model/ExportDestination.kt` | Export destination enum (`GOOGLE_SHEETS`, `CSV`) |
+| `features/export/domain/model/ExportExpenseRow.kt` | Shared normalized export row for Sheets and CSV |
+| `features/export/data/CsvExportBuilder.kt` | RFC 4180 CSV builder |
 | `features/export/data/repository/ExportRepositoryImpl.kt` | Export repository implementation |
 | `features/export/domain/ExportWorkerScheduler.kt` | Common interface for platform background worker |
-| `features/export/presentation/ExportState.kt` | Export UI state (Confirm, Enqueued, NeedsNotificationPermission) |
+| `features/export/presentation/ExportState.kt` | Export UI state (Confirm, Enqueued, CsvShareLaunched, NeedsGoogleAccount, NoExpenses) |
 | `features/export/presentation/ExportEvent.kt` | Export events (`ConfirmExport` carries access token from UI) |
 | `features/export/presentation/ExportStateHolder.kt` | Export state holder (double-tap guard) |
 | `features/export/presentation/ui/ExportBottomSheet.kt` | Export bottom sheet composable |
@@ -1352,6 +1435,7 @@ Register `exportModule` in `AppModule.kt`.
 | `features/export/data/AndroidExportWorkerScheduler.kt` | WorkManager enqueue logic |
 | `features/export/data/KoinWorkerFactory.kt` | Custom WorkerFactory for DI in WorkManager workers |
 | `utils/AndroidUrlOpener.kt` | Custom Tabs URL opener |
+| `utils/AndroidDocumentSharer.kt` | Writes CSV to cache + shares via `Intent.ACTION_SEND` / `FileProvider` |
 
 ### New files — `iosMain`
 
@@ -1365,7 +1449,8 @@ Register `exportModule` in `AppModule.kt`.
 | `features/auth/data/IosFcmTokenProvider.kt` | KMP side of FCM token retrieval |
 | `features/auth/data/IosNotificationPermission.kt` | UNUserNotificationCenter permission |
 | `features/export/data/IosExportWorkerScheduler.kt` | Bridge to Swift export worker |
-| `utils/IosUrlOpener.kt` | UIApplication URL opener |
+| `utils/IosUrlOpener.kt` | `SFSafariViewController` URL opener |
+| `utils/IosDocumentSharer.kt` | Writes CSV to temp directory + presents `UIActivityViewController` |
 
 ### New files — `iosApp` (Swift)
 
@@ -1375,15 +1460,15 @@ Register `exportModule` in `AppModule.kt`.
 | `iosApp/IosFirebaseAuthBridgeImpl.swift` | Firebase Auth `signIn(with:)` + `signOut()` |
 | `iosApp/IosFcmTokenBridgeImpl.swift` | Firebase Messaging token retrieval |
 | `iosApp/ExportWorkerImpl.swift` | Background export using URLSession background configuration |
+| `iosApp/IosDocumentSharerImpl.swift` | Presents `UIActivityViewController` for CSV sharing |
 
-### New files — `functions/` (Python)
+### New files — `functions/` (TypeScript)
 
 | Path | Description |
 |------|-------------|
-| `functions/export_to_sheets/main.py` | Cloud Function: build sheet + send FCM |
-| `functions/export_to_sheets/requirements.txt` | gspread, google-auth, firebase-admin |
-| `functions/verify_google_token/main.py` | Verify Google ID token, manage user record |
-| `functions/verify_apple_token/main.py` | Verify Apple identity token, store email on first auth |
+| `functions/src/exportToSheets.ts` | Cloud Function: build sheet + optional FCM |
+| `functions/src/index.ts` | Export `exportToSheets` from the existing TypeScript Functions entry point |
+| `functions/src/userProfile.ts` | Optional user-profile helpers for first Apple sign-in email storage |
 
 ### Modified files
 
@@ -1394,13 +1479,13 @@ Register `exportModule` in `AppModule.kt`.
 | `composeApp/build.gradle.kts` | Wire `androidMain` security-crypto + work-runtime + firebase-auth + firebase-messaging; `commonMain` kotlinx-io-core |
 | `core/db/AppDatabase.kt` | Add `ExportHistoryEntity` to `@Database(entities)`, add `exportHistoryDao()` |
 | `di/AppModule.kt` | Include `authModule`, `exportModule` |
-| `di/PlatformModule.android.kt` | Bind `GoogleAuthProvider`, `FirebaseAuthProvider`, `AppleAuthProvider`, `IFcmTokenProvider`, `INotificationPermission`, `ExportWorkerScheduler`, `UrlOpener` |
-| `di/PlatformModule.ios.kt` | Bind `GoogleAuthProvider`, `FirebaseAuthProvider`, `AppleAuthProvider`, `IFcmTokenProvider`, `INotificationPermission`, `ExportWorkerScheduler`, `UrlOpener` |
+| `di/PlatformModule.android.kt` | Bind `GoogleAuthProvider`, `FirebaseAuthProvider`, `AppleAuthProvider`, `IFcmTokenProvider`, `INotificationPermission`, `ExportWorkerScheduler`, `UrlOpener`, `DocumentSharer` |
+| `di/PlatformModule.ios.kt` | Bind `GoogleAuthProvider`, `FirebaseAuthProvider`, `AppleAuthProvider`, `IFcmTokenProvider`, `INotificationPermission`, `ExportWorkerScheduler`, `UrlOpener`, `DocumentSharer` |
 | `navigation/routes/RegisteredRoutes.kt` | Register `AuthRoute` |
 | `navigation/RootContent.kt` | Handle `OpenExternalUrl` deep link + cold start queuing |
 | `features/analytics/presentation/AnalyticsEvent.kt` | Add `ExportTapped`, `DismissExportSheet` |
 | `features/analytics/presentation/AnalyticsScreen.kt` | Add export button + `ExportBottomSheet` |
-| `androidApp/src/main/AndroidManifest.xml` | Add `plzstop://` intent filter + `POST_NOTIFICATIONS` permission |
+| `androidApp/src/main/AndroidManifest.xml` | Add `plzstop://` intent filter + `POST_NOTIFICATIONS` permission + `FileProvider` for CSV sharing |
 | `iosApp/Info.plist` | Add `CFBundleURLSchemes`, `GIDClientID`, `GIDServerClientID`, reversed client ID URL scheme |
 | `androidApp/src/main/kotlin/.../PleaseStopApplication.kt` | Register `KoinWorkerFactory` for WorkManager |
 
@@ -1415,13 +1500,14 @@ Register `exportModule` in `AppModule.kt`.
 5. Phase 1, Step 8: connect-google-account flow
 6. Phase 1, Step 9: logout cleanup
 7. Phase 1, Step 10: delete account
-8. Phase 1, Backend: `verifyGoogleToken` + `verifyAppleToken` + `deleteUserData` Cloud Functions
-9. Phase 2, Steps 3–4: notification permission + FCM token provider
-10. Phase 2, Step 1: `exportToSheets` Cloud Function
-11. Phase 2, Step 2: background worker (Android WorkManager + iOS bridge)
-12. Phase 2, Step 2 continued: export feature module (data → domain → presentation)
-13. Phase 2, Step 5: deep link handling (`plzstop://open`)
-14. Phase 2, Steps 6–7: export button in Analytics + DI wiring
+8. Phase 1, Backend: optional user-profile storage for first Apple sign-in email + optional `deleteUserData` cleanup trigger
+9. Phase 2, Step 0 + Step 1a: destination selector + CSV row model/builder + `DocumentSharer` platform implementations
+10. Phase 2, Steps 3–4: notification permission + FCM token provider
+11. Phase 2, Step 1: `exportToSheets` Cloud Function
+12. Phase 2, Step 2: background worker (Android WorkManager + iOS bridge)
+13. Phase 2, Step 2 continued: export feature module (data → domain → presentation)
+14. Phase 2, Step 5: deep link handling (`plzstop://open`)
+15. Phase 2, Steps 6–7: export button in Analytics + DI wiring
 
 ---
 
@@ -1432,11 +1518,11 @@ Register `exportModule` in `AppModule.kt`.
 | **Android two-step auth** — Credential Manager gives ID token only, not scoped access token | Explicit second step via `Identity.getAuthorizationClient().authorize()` with `spreadsheets` scope |
 | **Google token scope missing** | Request `spreadsheets` + `drive.file` scopes explicitly in `GoogleButtonUiContainer(scopes=...)` and `IosSocialAuthBridgeImpl`. `drive.file` needed for create + share; scoped to app-created files only |
 | **Apple Sign-In email only on first auth** | Store email on backend during first sign-in; subsequent logins use subject identifier to look up stored email |
-| **FCM token null / notification denied** | Export blocked at pre-flight check. Notification permission is required since push is the only result delivery mechanism |
+| **FCM token null / notification denied** | Export continues. Worker response persists the URL locally; push notification is best effort |
 | **Google access token in background worker (Android)** | **Resolved:** Token obtained before enqueuing, passed as WorkManager input data. `AuthorizationClient` requires Activity context — cannot run inside worker. Token is short-lived (~60min) but worker runs promptly with `NetworkType.CONNECTED` constraint |
 | **iOS `keyWindow` deprecated** | Use `UIApplication.shared.connectedScenes` to get active `UIWindowScene` |
-| **Custom URL scheme not verified** | Accept risk — spreadsheet URL is also returned inline. Deep link is convenience, not sole delivery path |
-| **Orphan spreadsheet on network failure** | Titled with date range for discoverability. WorkManager retries on Android. Cloud Function sends error push on failure |
+| **Custom URL scheme not verified** | Accept risk — spreadsheet URL is also persisted from the worker response. Deep link is convenience, not sole delivery path |
+| **Orphan spreadsheet on network failure** | Titled with date range for discoverability. WorkManager retries on Android. Error push is best effort only when an FCM token is available |
 | **Worker process death (Android)** | WorkManager persists work across process death — export resumes automatically |
 | **iOS background time limit** | Use background `URLSession` for the Cloud Function call — continues even after app suspension. `Task {}` alone only gets ~30s |
 | **Stale Google token on logout** | `LogoutUseCase` atomically clears `IGoogleAccountStorage` + `BearerTokenClearer` + calls `FirebaseAuthProvider.signOut()` + `GoogleAuthProvider.signOut()` |
@@ -1445,3 +1531,6 @@ Register `exportModule` in `AppModule.kt`.
 | **`IosFirebaseCallableFunctions` null handling** | Replace null subcategory with `""` before serialization to avoid cast crash in iOS bridge |
 | **Sheets API quota** | Use batch operations exclusively (~5 API calls total). Return `QUOTA_EXCEEDED` error if hit |
 | **Cloud Function timeout** | Set to 300s. Batch ops should complete in <30s, but large months have buffer |
+| **CSV escaping bugs** | Centralize CSV generation in `CsvExportBuilder` and unit-test commas, quotes, newlines, empty fields, and UTF-8 text |
+| **Android file URI exposure** | Use `FileProvider` content URIs and `FLAG_GRANT_READ_URI_PERMISSION`; never share `file://` URIs |
+| **iOS share sheet lifecycle** | Present `UIActivityViewController` from the active view controller and treat completion as best effort |

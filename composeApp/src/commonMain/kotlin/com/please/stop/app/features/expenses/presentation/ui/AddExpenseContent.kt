@@ -56,11 +56,13 @@ import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.format
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import com.please.stop.app.utils.date.nowMillis
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.add_expense_add_receipt_manually
+import plzstop.composeapp.generated.resources.add_expense_analyzing_receipt
 import plzstop.composeapp.generated.resources.add_expense_cancel
 import plzstop.composeapp.generated.resources.add_expense_confirm
 import plzstop.composeapp.generated.resources.add_expense_delete
@@ -75,8 +77,6 @@ import plzstop.composeapp.generated.resources.content_desc_navigate_back
 import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_calendar
 import plzstop.composeapp.generated.resources.ic_trash_bin
-import kotlinx.collections.immutable.ImmutableList
-import plzstop.composeapp.generated.resources.add_expense_analyzing_receipt
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)

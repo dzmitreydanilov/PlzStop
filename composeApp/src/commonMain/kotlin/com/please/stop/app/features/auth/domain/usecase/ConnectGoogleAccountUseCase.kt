@@ -14,17 +14,18 @@ class ConnectGoogleAccountUseCase(
     private val googleAccountStorage: IGoogleAccountStorage,
     private val ioDispatcher: CoroutineDispatcher,
 ) {
-    sealed interface ConnectResult : Result {
-        data object Success : ConnectResult
-        data class Failure(override val errorType: ErrorType) : ConnectResult, ErrorResult
-    }
 
-    suspend operator fun invoke(googleUser: GoogleUser): ConnectResult = withContext(ioDispatcher) {
+    suspend operator fun invoke(googleUser: GoogleUser): ConnectGoogleAccount = withContext(ioDispatcher) {
         runCatching {
             googleAccountStorage.write(GoogleAccountLink(email = "", isConnected = true))
         }.fold(
-            onSuccess = { ConnectResult.Success },
-            onFailure = { ConnectResult.Failure(it.toErrorType()) },
+            onSuccess = { ConnectGoogleAccount.Success },
+            onFailure = { ConnectGoogleAccount.Failure(it.toErrorType()) },
         )
     }
+}
+
+sealed interface ConnectGoogleAccount : Result {
+    data object Success : ConnectGoogleAccount
+    data class Failure(override val errorType: ErrorType) : ConnectGoogleAccount, ErrorResult
 }

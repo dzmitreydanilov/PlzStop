@@ -11,7 +11,10 @@ import pytest
 from main import (
     EPOCH,
     MAX_DECOMPRESSED_SIZE,
+    _build_separate_tabs,
+    _build_single_tab,
     _build_pivot_summary,
+    _cell_data,
     _detect_months,
     _expense_row,
     _month_serial_range,
@@ -23,6 +26,32 @@ from main import (
 
 # _MockHttpsError is registered in conftest.py
 from firebase_functions.https_fn import HttpsError
+
+
+def _get_batch_update_rows(ws):
+    """Extract primitive row values from the updateCells request."""
+    call = ws.spreadsheet.batch_update.call_args
+    payload = call.args[0] if call.args else call.kwargs
+    update_request = next(
+        request["updateCells"]
+        for request in payload["requests"]
+        if "updateCells" in request
+    )
+    rows = []
+    for row_data in update_request["rows"]:
+        row = []
+        for cell_data in row_data["values"]:
+            value = cell_data.get("userEnteredValue", {})
+            if "formulaValue" in value:
+                row.append(value["formulaValue"])
+            elif "numberValue" in value:
+                row.append(value["numberValue"])
+            elif "stringValue" in value:
+                row.append(value["stringValue"])
+            else:
+                row.append("")
+        rows.append(row)
+    return rows
 
 
 # ── _sanitize ────────────────────────────────────────────────────────────────
@@ -184,9 +213,7 @@ class TestWriteSheet:
 
     @staticmethod
     def _get_rows(ws):
-        """Extract the rows passed to ws.update()."""
-        call = ws.update.call_args
-        return call.kwargs.get("values") or call[1].get("values")
+        return _get_batch_update_rows(ws)
 
     def test_category_labels_sanitized(self):
         ws = self._make_ws()
@@ -306,6 +333,53 @@ class TestWriteSheet:
         first_cols = [r[0] for r in rows if r]
         assert "  '=EVIL" in first_cols
 
+    def test_formula_cell_data_uses_formula_value(self):
+        assert _cell_data("=SUM(E2:E3)", 4) == {
+            "userEnteredValue": {"formulaValue": "=SUM(E2:E3)"}
+        }
+
+    def test_amount_cell_data_uses_number_value(self):
+        assert _cell_data("12.34", 4) == {
+            "userEnteredValue": {"numberValue": 12.34}
+        }
+
+    def test_single_tab_uses_one_spreadsheet_batch(self):
+        spreadsheet = MagicMock()
+        spreadsheet.sheet1.id = 0
+
+        _build_single_tab(
+            spreadsheet=spreadsheet,
+            expenses=[{"date": "2024-01-01", "category": "Food", "amount": "10"}],
+            headers=["Date", "Title", "Category", "Subcategory", "Amount", "Notes"],
+            all_categories=["Food"],
+            num_fmt="0.00",
+            label="Jan 2024",
+        )
+
+        spreadsheet.batch_update.assert_called_once()
+        requests = spreadsheet.batch_update.call_args.args[0]["requests"]
+        assert any("updateCells" in request for request in requests)
+
+    def test_separate_tabs_uses_one_spreadsheet_batch(self):
+        spreadsheet = MagicMock()
+        spreadsheet.sheet1.id = 0
+
+        _build_separate_tabs(
+            spreadsheet=spreadsheet,
+            expenses=[
+                {"date": "2024-01-01", "category": "Food", "amount": "10"},
+                {"date": "2024-02-01", "category": "Food", "amount": "20"},
+            ],
+            headers=["Date", "Title", "Category", "Subcategory", "Amount", "Notes"],
+            all_categories=["Food"],
+            num_fmt="0.00",
+        )
+
+        spreadsheet.batch_update.assert_called_once()
+        requests = spreadsheet.batch_update.call_args.args[0]["requests"]
+        assert sum(1 for request in requests if "updateCells" in request) == 2
+        assert sum(1 for request in requests if "addSheet" in request) == 1
+
 
 # ── Pivot summary ────────────────────────────────────────────────────────────
 
@@ -356,8 +430,7 @@ class TestPivotSummary:
 
         _write_sheet(ws, expenses, headers, ["Food", "Transport"], "0.00", pivot=True)
 
-        call = ws.update.call_args
-        rows = call.kwargs.get("values") or call[1].get("values")
+        rows = _get_batch_update_rows(ws)
 
         # Find the header row of the summary (contains "Category")
         summary_header = None
@@ -385,8 +458,7 @@ class TestPivotSummary:
 
         _write_sheet(ws, expenses, headers, ["Food"], "0.00", pivot=True)
 
-        call = ws.update.call_args
-        rows = call.kwargs.get("values") or call[1].get("values")
+        rows = _get_batch_update_rows(ws)
 
         # Find the Food category row
         food_row = None
@@ -415,8 +487,7 @@ class TestPivotSummary:
 
         _write_sheet(ws, expenses, headers, ["Food"], "0.00", pivot=True)
 
-        call = ws.update.call_args
-        rows = call.kwargs.get("values") or call[1].get("values")
+        rows = _get_batch_update_rows(ws)
 
         # Find indented subcategory row
         sub_row = None
@@ -446,8 +517,7 @@ class TestPivotSummary:
 
         _write_sheet(ws, expenses, headers, ["Food"], "0.00", pivot=True)
 
-        call = ws.update.call_args
-        rows = call.kwargs.get("values") or call[1].get("values")
+        rows = _get_batch_update_rows(ws)
 
         # Summary header should be simple (Category + Amount), no month columns
         summary_header = None
