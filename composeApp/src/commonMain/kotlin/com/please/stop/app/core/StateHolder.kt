@@ -32,24 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import kotlin.reflect.KClass
 
-/**
- * Determines when bootstrap() should execute relative to state emission.
- */
-enum class BootstrapTiming {
-    /**
-     * Bootstrap executes immediately, blocking initial state emission until complete.
-     * Use for critical initialization that must complete before the screen can render.
-     */
-    IMMEDIATE,
-
-    /**
-     * Bootstrap executes after the initial state is emitted to UI.
-     * Use for non-critical initialization like retry logic or background data refresh.
-     * This improves perceived performance by allowing UI to render immediately.
-     */
-    DEFERRED
-}
-
 @Suppress("TooManyFunctions")
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class StateHolder<S, E> : ViewModel() {
@@ -131,15 +113,19 @@ abstract class StateHolder<S, E> : ViewModel() {
         }
     }
 
+    private fun resultSourcePlugins(): List<ResultSourcePlugin> = listOf(
+        ResultSourcePlugin { eventResultsFlow() },
+        ResultSourcePlugin { whileSubscribedResultsFlow() },
+        ResultSourcePlugin { bootstrapOnceFlow() },
+    )
+
     /**
      * Collects every result source that can update state, dispatch navigation, or dispatch effects.
      */
     protected fun collectDataFlows(): Flow<Result> {
-        return merge(
-            eventResultsFlow(),
-            whileSubscribedResultsFlow(),
-            bootstrapOnceFlow(),
-        )
+        return resultSourcePlugins()
+            .map { it.results() }
+            .merge()
     }
 
     /**
