@@ -3,6 +3,7 @@
 ########################
 build/
 .gradle/
+.gradle-local/
 local.properties
 
 # KMP / Kotlin

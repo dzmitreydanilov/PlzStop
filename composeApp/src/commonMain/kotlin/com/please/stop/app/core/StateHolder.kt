@@ -32,24 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import kotlin.reflect.KClass
 
-/**
- * Determines when bootstrap() should execute relative to state emission.
- */
-enum class BootstrapTiming {
-    /**
-     * Bootstrap executes immediately, blocking initial state emission until complete.
-     * Use for critical initialization that must complete before the screen can render.
-     */
-    IMMEDIATE,
-
-    /**
-     * Bootstrap executes after the initial state is emitted to UI.
-     * Use for non-critical initialization like retry logic or background data refresh.
-     * This improves perceived performance by allowing UI to render immediately.
-     */
-    DEFERRED
-}
-
 @Suppress("TooManyFunctions")
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class StateHolder<S, E> : ViewModel() {
@@ -131,71 +113,84 @@ abstract class StateHolder<S, E> : ViewModel() {
         }
     }
 
+    private fun resultSourcePlugins(): List<ResultSourcePlugin> = listOf(
+        ResultSourcePlugin { eventResultsFlow() },
+        ResultSourcePlugin { whileSubscribedResultsFlow() },
+        ResultSourcePlugin { bootstrapOnceFlow() },
+    )
+
     /**
-     * Collects the data flows needed to produce results. By default, merges flows from events and
-     * any additional flows provided in [collectFlowsOnInit].
-     *
-     * @return A flow of results that will be processed to update state.
+     * Collects every result source that can update state, dispatch navigation, or dispatch effects.
      */
     protected fun collectDataFlows(): Flow<Result> {
-        return merge(
-            events.flatMapLatest(::resolveEventResult),
-            // Defer calling subclass overrides until the state is actually collected.
-            flow { emitAll(collectFlowsOnInit()) },
-            flow {
-                // Run once-per-ViewModel bootstrap work (e.g., initial fetch) without re-triggering on re-subscribe.
-                if (!onceInitCompleted.value && onceInitInProgress.compareAndSet(
-                        expect = false,
-                        update = true
-                    )
-                ) {
-                    try {
-                        // For DEFERRED timing, yield to allow initial state to emit first
-                        if (bootstrapTiming == BootstrapTiming.DEFERRED) {
-                            yield()
-                        }
-
-                        val timeoutMillis = bootstrapWatchdogTimeoutMillis
-                        if (timeoutMillis != null && timeoutMillis > 0L) {
-                            coroutineScope {
-                                val watchdog = launch {
-                                    delay(timeoutMillis)
-                                    if (!onceInitCompleted.value && onceInitInProgress.value) {
-                                        Logger.w { "$tag bootstrapOnce is still running after ${timeoutMillis}ms" }
-                                    }
-                                }
-
-                                try {
-                                    bootstrap { result -> emit(result) }
-                                } finally {
-                                    watchdog.cancel()
-                                }
-                            }
-                        } else {
-                            bootstrap { result -> emit(result) }
-                        }
-
-                        onceInitCompleted.value = true
-                    } catch (cancellationExc: CancellationException) {
-                        /**
-                         * Do not mark bootstrap as completed on cancellation (screen not visible / collection stopped).
-                         */
-                        throw cancellationExc
-                    } finally {
-                        onceInitInProgress.value = false
-                    }
-                }
-            }
-        )
+        return resultSourcePlugins()
+            .map { it.results() }
+            .merge()
     }
 
     /**
-     * A hook for subclasses to provide additional flows that should be active whenever the state is collected.
+     * A hook for subclasses to provide flows that should be active whenever the state is collected.
      *
      * @return An empty flow by default, but subclasses can override to add specific flows.
      */
-    protected open fun collectFlowsOnInit(): Flow<Result> {
+    protected open fun collectWhileSubscribed(): Flow<Result> {
         return emptyFlow()
+    }
+
+    private fun eventResultsFlow(): Flow<Result> {
+        return events.flatMapLatest(::resolveEventResult)
+    }
+
+    private fun whileSubscribedResultsFlow(): Flow<Result> {
+        return flow {
+            // Defer calling subclass overrides until the state is actually collected.
+            emitAll(collectWhileSubscribed())
+        }
+    }
+
+    private fun bootstrapOnceFlow(): Flow<Result> {
+        return flow {
+            // Run once-per-ViewModel bootstrap work (e.g., initial fetch) without re-triggering on re-subscribe.
+            if (!onceInitCompleted.value && onceInitInProgress.compareAndSet(
+                    expect = false,
+                    update = true
+                )
+            ) {
+                try {
+                    // For DEFERRED timing, yield to allow initial state to emit first.
+                    if (bootstrapTiming == BootstrapTiming.DEFERRED) {
+                        yield()
+                    }
+
+                    val timeoutMillis = bootstrapWatchdogTimeoutMillis
+                    if (timeoutMillis != null && timeoutMillis > 0L) {
+                        coroutineScope {
+                            val watchdog = launch {
+                                delay(timeoutMillis)
+                                if (!onceInitCompleted.value && onceInitInProgress.value) {
+                                    Logger.w { "$tag bootstrapOnce is still running after ${timeoutMillis}ms" }
+                                }
+                            }
+
+                            try {
+                                bootstrap { result -> emit(result) }
+                            } finally {
+                                watchdog.cancel()
+                            }
+                        }
+                    } else {
+                        bootstrap { result -> emit(result) }
+                    }
+
+                    onceInitCompleted.value = true
+                } catch (cancellationExc: CancellationException) {
+                    // Do not mark bootstrap as completed when collection stops before bootstrap finishes.
+                    throw cancellationExc
+                } finally {
+                    onceInitInProgress.value = false
+                }
+            }
+        }
     }
 
     /**

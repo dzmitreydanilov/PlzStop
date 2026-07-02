@@ -49,7 +49,7 @@ class MonthlyExpensesStateHolder(
 
     override fun getInitial(): MonthlyWindowState = MonthlyWindowState()
 
-    override fun collectFlowsOnInit(): Flow<DomainResult> =
+    override fun collectWhileSubscribed(): Flow<DomainResult> =
         windowFlow.flatMapLatest { window ->
             if (window.isEmpty()) return@flatMapLatest emptyFlow()
             window.map { (year, month) -> observeMonthlyExpensesUseCase(year, month) }.merge()

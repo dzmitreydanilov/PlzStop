@@ -34,7 +34,7 @@ class AnalyticsStateHolder(
 
     override fun getInitial(): AnalyticsState = AnalyticsState.Loading
 
-    override fun collectFlowsOnInit(): Flow<DomainResult> = observeAnalyticsDataUseCase()
+    override fun collectWhileSubscribed(): Flow<DomainResult> = observeAnalyticsDataUseCase()
 
     override fun resolveEventResult(event: AnalyticsEvent): Flow<DomainResult> = when (event) {
         is AnalyticsEvent.DayTapped -> handleDayTapped(event.dayOfMonth)
@@ -269,4 +269,3 @@ private sealed interface AnalyticsResult : DomainResult {
     data object DismissSheet : AnalyticsResult
     data object DismissError : AnalyticsResult
 }
-

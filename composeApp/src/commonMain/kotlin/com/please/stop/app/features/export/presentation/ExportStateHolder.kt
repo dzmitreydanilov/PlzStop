@@ -27,7 +27,7 @@ class ExportStateHolder(
 
     override fun getInitial(): ExportState = ExportState.Idle()
 
-    override fun collectFlowsOnInit(): Flow<DomainResult> {
+    override fun collectWhileSubscribed(): Flow<DomainResult> {
         return hasExpensesToExportUseCase()
     }
 
