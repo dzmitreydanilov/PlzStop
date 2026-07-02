@@ -36,7 +36,7 @@ class ArchivedCategoriesStateHolder(
         else -> null
     }
 
-    override fun collectFlowsOnInit(): Flow<DomainResult> = observeArchivedCategoriesUseCase()
+    override fun collectWhileSubscribed(): Flow<DomainResult> = observeArchivedCategoriesUseCase()
 
     override fun resolveEventResult(
         event: ArchivedCategoriesEvent,

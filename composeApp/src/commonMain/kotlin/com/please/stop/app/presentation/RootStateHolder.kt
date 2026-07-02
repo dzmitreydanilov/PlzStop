@@ -29,7 +29,7 @@ class RootStateHolder(
         backfillCurrencyProfileUseCase()
     }
 
-    override fun collectFlowsOnInit(): Flow<Result> =
+    override fun collectWhileSubscribed(): Flow<Result> =
         observeOnboardingCompletedUseCase()
             .map { completed ->
                 if (completed) RootResult.OnboardingCompleted else RootResult.OnboardingRequired

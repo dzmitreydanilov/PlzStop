@@ -25,7 +25,7 @@ class HomeStateHolder(
 
     override fun getInitial(): HomeState = HomeState.Loading
 
-    override fun collectFlowsOnInit(): Flow<Result> = observeHomeDataUseCase()
+    override fun collectWhileSubscribed(): Flow<Result> = observeHomeDataUseCase()
 
     override fun resolveEventResult(event: HomeEvent): Flow<Result> = when (event) {
         is HomeEvent.CategoryClicked -> flowOf(HomeResult.NavigateToAddExpense(event.categoryId))

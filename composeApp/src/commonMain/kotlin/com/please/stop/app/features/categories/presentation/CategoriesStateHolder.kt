@@ -42,7 +42,7 @@ class CategoriesStateHolder(
         else -> null
     }
 
-    override fun collectFlowsOnInit(): Flow<DomainResult> = observeCategoriesUseCase()
+    override fun collectWhileSubscribed(): Flow<DomainResult> = observeCategoriesUseCase()
 
     @Suppress("CyclomaticComplexMethod")
     override fun resolveEventResult(event: CategoriesEvent): Flow<DomainResult> = when (event) {

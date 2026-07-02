@@ -65,7 +65,7 @@ abstract class BaseExpenseStateHolder(
         subcategories = persistentListOf(),
     )
 
-    override fun collectFlowsOnInit(): Flow<DomainResult> = observeFormDataUseCase()
+    override fun collectWhileSubscribed(): Flow<DomainResult> = observeFormDataUseCase()
 
     override fun getNavigationResults(): Set<KClass<out DomainResult>> {
         return setOf(ExpenseResult.NavigateBack::class, ExpenseResult.NavigateToReceiptItems::class)

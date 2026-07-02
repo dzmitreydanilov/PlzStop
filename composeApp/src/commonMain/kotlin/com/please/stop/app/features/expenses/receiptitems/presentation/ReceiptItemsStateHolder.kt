@@ -80,7 +80,7 @@ class ReceiptItemsStateHolder(
         }
     }
 
-    override fun collectFlowsOnInit(): Flow<DomainResult> = observeFormDataUseCase()
+    override fun collectWhileSubscribed(): Flow<DomainResult> = observeFormDataUseCase()
 
     override fun getNavigationResults(): Set<KClass<out DomainResult>> =
         setOf(
