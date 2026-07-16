@@ -8,6 +8,7 @@ import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.google.firebase.Firebase
 import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.please.stop.app.core.logger.initLogger
 import com.please.stop.app.di.initKoin
@@ -21,11 +22,14 @@ class PleaseStopApplication : Application() {
         initLogger()
 
         val isDebug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        if (!isDebug) {
-            Firebase.appCheck.installAppCheckProviderFactory(
-                PlayIntegrityAppCheckProviderFactory.getInstance()
-            )
+        val appCheckProviderFactory = if (isDebug) {
+            DebugAppCheckProviderFactory.getInstance()
+        } else {
+            PlayIntegrityAppCheckProviderFactory.getInstance()
         }
+        Firebase.appCheck.installAppCheckProviderFactory(
+            appCheckProviderFactory,
+        )
 
         initKoin(
             config = {

@@ -14,7 +14,9 @@ sealed interface ExportState {
     val currentStartDateMillis: Long
     val currentEndDateMillis: Long
     val fileName: String?
+    val folderName: String?
     val hasExpensesToExport: Boolean
+    val forceGoogleConsent: Boolean
 
     data class Idle(
         override val currentSpreadSheetFormat: SpreadSheetFormat = SpreadSheetFormat.SINGLE_TAB,
@@ -22,16 +24,9 @@ sealed interface ExportState {
         override val currentStartDateMillis: Long = nowMillis(),
         override val currentEndDateMillis: Long = nowMillis(),
         override val fileName: String? = null,
-        override val hasExpensesToExport: Boolean = true
-    ) : ExportState
-
-    data class Confirm(
-        override val currentSpreadSheetFormat: SpreadSheetFormat,
-        override val currentDestination: ExportDestination,
-        override val currentStartDateMillis: Long,
-        override val currentEndDateMillis: Long,
-        override val fileName: String?,
-        override val hasExpensesToExport: Boolean
+        override val folderName: String? = null,
+        override val hasExpensesToExport: Boolean = true,
+        override val forceGoogleConsent: Boolean = false,
     ) : ExportState
 
     data class Enqueued(
@@ -40,7 +35,9 @@ sealed interface ExportState {
         override val currentStartDateMillis: Long,
         override val currentEndDateMillis: Long,
         override val fileName: String?,
-        override val hasExpensesToExport: Boolean
+        override val folderName: String?,
+        override val hasExpensesToExport: Boolean,
+        override val forceGoogleConsent: Boolean,
     ) : ExportState
 
     data class CsvShareLaunched(
@@ -49,7 +46,9 @@ sealed interface ExportState {
         override val currentStartDateMillis: Long,
         override val currentEndDateMillis: Long,
         override val fileName: String?,
-        override val hasExpensesToExport: Boolean
+        override val folderName: String?,
+        override val hasExpensesToExport: Boolean,
+        override val forceGoogleConsent: Boolean,
     ) : ExportState
 
     data class NeedsGoogleAccount(
@@ -58,7 +57,20 @@ sealed interface ExportState {
         override val currentStartDateMillis: Long,
         override val currentEndDateMillis: Long,
         override val fileName: String?,
-        override val hasExpensesToExport: Boolean
+        override val folderName: String?,
+        override val hasExpensesToExport: Boolean,
+        override val forceGoogleConsent: Boolean,
+    ) : ExportState
+
+    data class AuthenticationRequired(
+        override val currentSpreadSheetFormat: SpreadSheetFormat,
+        override val currentDestination: ExportDestination,
+        override val currentStartDateMillis: Long,
+        override val currentEndDateMillis: Long,
+        override val fileName: String?,
+        override val folderName: String?,
+        override val hasExpensesToExport: Boolean,
+        override val forceGoogleConsent: Boolean,
     ) : ExportState
 
     data class Error(
@@ -68,6 +80,8 @@ sealed interface ExportState {
         override val currentStartDateMillis: Long,
         override val currentEndDateMillis: Long,
         override val fileName: String?,
-        override val hasExpensesToExport: Boolean
+        override val folderName: String?,
+        override val hasExpensesToExport: Boolean,
+        override val forceGoogleConsent: Boolean,
     ) : ExportState
 }

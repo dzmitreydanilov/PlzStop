@@ -3,6 +3,8 @@ package com.please.stop.app.features.auth.data
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.OAuthProvider
+import com.please.stop.app.core.runSuspendCatching
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -18,7 +20,7 @@ internal class AndroidFirebaseAuthProvider : FirebaseAuthProvider {
     }
 
     override suspend fun signInWithGoogleCredential(idToken: String): Result<String> =
-        runCatching {
+        runSuspendCatching {
             val credential = FirebaseGoogleAuthProvider.getCredential(idToken, null)
             val result = auth.signInWithCredential(credential).await()
             result.user?.uid ?: error("Firebase user is null after sign-in")
@@ -27,7 +29,7 @@ internal class AndroidFirebaseAuthProvider : FirebaseAuthProvider {
     override suspend fun signInWithAppleCredential(
         identityToken: String,
         nonce: String,
-    ): Result<String> = runCatching {
+    ): Result<String> = runSuspendCatching {
         val credential = OAuthProvider.newCredentialBuilder(APPLE_PROVIDER_ID)
             .setIdTokenWithRawNonce(identityToken, nonce)
             .build()
@@ -42,6 +44,8 @@ internal class AndroidFirebaseAuthProvider : FirebaseAuthProvider {
         return try {
             user.delete().await()
             DeleteAccountResult.Success
+        } catch (error: CancellationException) {
+            throw error
         } catch (_: FirebaseAuthRecentLoginRequiredException) {
             DeleteAccountResult.NeedsReauthentication
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
@@ -49,7 +53,7 @@ internal class AndroidFirebaseAuthProvider : FirebaseAuthProvider {
         }
     }
 
-    override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = runCatching {
+    override suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit> = runSuspendCatching {
         val credential = FirebaseGoogleAuthProvider.getCredential(idToken, null)
         auth.currentUser?.reauthenticate(credential)?.await()
             ?: error("No current user for reauthentication")
@@ -58,7 +62,7 @@ internal class AndroidFirebaseAuthProvider : FirebaseAuthProvider {
     override suspend fun reauthenticateWithApple(
         identityToken: String,
         nonce: String,
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = runSuspendCatching {
         val credential = OAuthProvider.newCredentialBuilder(APPLE_PROVIDER_ID)
             .setIdTokenWithRawNonce(identityToken, nonce)
             .build()

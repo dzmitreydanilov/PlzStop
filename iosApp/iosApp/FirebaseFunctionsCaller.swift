@@ -9,18 +9,24 @@ class AppFirebaseFunctionsCaller: IosFirebaseFunctionsCaller {
         name: String,
         data: [String: Any],
         onSuccess: @escaping ([String: Any]) -> Void,
-        onError: @escaping (String) -> Void
+        onError: @escaping (String, String?, String?) -> Void
     ) {
         let callable = functions.httpsCallable(name)
 
         callable.call(data) { result, error in
             if let error = error {
-                onError(error.localizedDescription)
+                let nsError = error as NSError
+                let details = nsError.userInfo[FunctionsErrorDetailsKey] as? [String: Any]
+                onError(
+                    error.localizedDescription,
+                    String(nsError.code),
+                    details?["reason"] as? String
+                )
                 return
             }
 
             guard let resultData = result?.data as? [String: Any] else {
-                onError("Unexpected response format")
+                onError("Unexpected response format", nil, nil)
                 return
             }
 

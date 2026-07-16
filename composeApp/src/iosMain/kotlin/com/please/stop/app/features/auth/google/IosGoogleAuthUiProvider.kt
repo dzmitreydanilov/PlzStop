@@ -10,16 +10,28 @@ internal class IosGoogleAuthUiProvider(
     override suspend fun signIn(
         filterByAuthorizedAccounts: Boolean,
         isAutoSelectEnabled: Boolean,
-        scopes: List<String>,
-    ): GoogleUser? = suspendCancellableCoroutine { continuation ->
+    ): GoogleSignInCredential? = suspendCancellableCoroutine { continuation ->
         bridge.signInWithGoogle(
-            scopes = scopes,
-            onSuccess = { idToken, accessToken ->
-                continuation.resume(GoogleUser(idToken = idToken, accessToken = accessToken))
+            onSuccess = { idToken ->
+                continuation.resume(GoogleSignInCredential(idToken = idToken))
             },
             onError = {
                 continuation.resume(null)
             },
         )
     }
+
+    override suspend fun authorizeSheets(forceConsent: Boolean): GoogleSheetsAuthorizationCode? =
+        suspendCancellableCoroutine { continuation ->
+            bridge.authorizeGoogleSheets(
+                scopes = GoogleAuthUiProvider.GOOGLE_SHEETS_SCOPES,
+                forceConsent = forceConsent,
+                onSuccess = { code ->
+                    continuation.resume(GoogleSheetsAuthorizationCode(value = code))
+                },
+                onError = {
+                    continuation.resume(null)
+                },
+            )
+        }
 }

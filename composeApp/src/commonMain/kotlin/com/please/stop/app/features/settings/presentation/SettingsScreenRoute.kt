@@ -42,6 +42,8 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.settings_tab
+import plzstop.composeapp.generated.resources.settings_user_manage
+import plzstop.composeapp.generated.resources.settings_user_name
 
 private const val SECTION_ANIMATION_DURATION_MS = 400
 private const val SECTION_INITIAL_OFFSET_PX = -20f
@@ -50,6 +52,7 @@ private const val SECTION_DELAY_STEP_MS = 150
 
 @Composable
 fun SettingsScreenRoute(
+    onNavigateToUser: () -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToSubscriptions: () -> Unit,
     onNavigateToExportData: () -> Unit,
@@ -63,6 +66,7 @@ fun SettingsScreenRoute(
     ) {
         SettingsContent(
             state = state,
+            onNavigateToUser = onNavigateToUser,
             onItemClick = { item ->
                 when (item) {
                     is SettingsItem.Categories -> onNavigateToCategories()
@@ -78,6 +82,7 @@ fun SettingsScreenRoute(
 @Composable
 private fun SettingsContent(
     state: SettingsState,
+    onNavigateToUser: () -> Unit,
     onItemClick: (SettingsItem) -> Unit,
 ) {
     val appColors = LocalAppColors.current
@@ -87,7 +92,10 @@ private fun SettingsContent(
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        SettingsHeader(headerBackground = appColors.headerGradient)
+        SettingsHeader(
+            headerBackground = appColors.headerGradient,
+            onUserClick = onNavigateToUser,
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -115,9 +123,13 @@ private fun SettingsContent(
 }
 
 @Composable
-private fun SettingsHeader(headerBackground: androidx.compose.ui.graphics.Brush) {
+private fun SettingsHeader(
+    headerBackground: androidx.compose.ui.graphics.Brush,
+    onUserClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
             .background(headerBackground)
@@ -134,6 +146,7 @@ private fun SettingsHeader(headerBackground: androidx.compose.ui.graphics.Brush)
         Spacer(modifier = Modifier.height(20.dp))
 
         Card(
+            modifier = Modifier.clickable(onClick = onUserClick),
             colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.18f)),
             shape = RoundedCornerShape(20.dp),
         ) {
@@ -160,13 +173,13 @@ private fun SettingsHeader(headerBackground: androidx.compose.ui.graphics.Brush)
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "User",
+                        text = stringResource(Res.string.settings_user_name),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Manage your account",
+                        text = stringResource(Res.string.settings_user_manage),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.7f),
                     )

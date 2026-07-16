@@ -54,6 +54,11 @@ export const VALID_STATUSES: ReadonlySet<string> = new Set<ReceiptStatus>([
   "error",
 ]);
 
+const MAX_OUTPUT_TEXT_LENGTH = 200;
+const MAX_OUTPUT_MESSAGE_LENGTH = 500;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_CURRENCY = /^[A-Z]{3}$/;
+
 export interface ReceiptItem {
   name: string;
   amount: number;
@@ -77,21 +82,19 @@ export interface PreparedRequest {
   imageBase64: string;
   userPrompt: string;
   validCategoryIds: ReadonlySet<number>;
-  validSubcategoryIds: ReadonlySet<number>;
+  subcategoryParents: ReadonlyMap<number, number>;
 }
 
 export async function prepareRequest(
-  request: { auth?: { uid: string }; rawRequest: { ip?: string }; data: Record<string, unknown> }
+  request: { auth?: { uid: string }; data: Record<string, unknown> }
 ): Promise<PreparedRequest> {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Authentication required.");
   }
 
-  const clientIp = request.rawRequest.ip ?? "unknown";
-  await checkRateLimit(clientIp);
-
   const { imageBase64, categories, subcategories } =
     validateAndSanitize(request.data);
+  await checkRateLimit(request.auth.uid);
 
   const subcategoryMap = new Map<number, Subcategory[]>();
   for (const sub of subcategories) {
@@ -115,13 +118,18 @@ export async function prepareRequest(
     .join("\n");
 
   const validCategoryIds = new Set(categories.map((c) => c.id));
-  const validSubcategoryIds = new Set(subcategories.map((s) => s.id));
+  const subcategoryParents = new Map(
+    subcategories.map((subcategory) => [
+      subcategory.id,
+      subcategory.parentCategoryId,
+    ])
+  );
 
   return {
     imageBase64,
     userPrompt: `Categories:\n${categoriesText}`,
     validCategoryIds,
-    validSubcategoryIds,
+    subcategoryParents,
   };
 }
 
@@ -130,7 +138,7 @@ export function parseResponse(responseText: string | undefined): ReceiptResponse
     return { status: "error", data: null, message: "Model returned an empty response." };
   }
 
-  let parsed: ReceiptResponse;
+  let parsed: unknown;
   try {
     parsed = JSON.parse(responseText);
   } catch {
@@ -145,6 +153,10 @@ export function parseResponse(responseText: string | undefined): ReceiptResponse
     }
   }
 
+  if (!isRecord(parsed)) {
+    return { status: "error", data: null, message: "Unexpected model response." };
+  }
+
   const normalizedStatus: ReceiptStatus =
     typeof parsed.status === "string" && VALID_STATUSES.has(parsed.status)
       ? (parsed.status as ReceiptStatus)
@@ -154,76 +166,126 @@ export function parseResponse(responseText: string | undefined): ReceiptResponse
     normalizedStatus === "not_receipt" ||
     normalizedStatus === "unreadable"
   ) {
-    return { status: normalizedStatus, data: null, message: parsed.message ?? null };
+    return {
+      status: normalizedStatus,
+      data: null,
+      message: boundedString(parsed.message, MAX_OUTPUT_MESSAGE_LENGTH),
+    };
   }
 
   if (normalizedStatus === "error") {
     return {
       status: "error",
       data: null,
-      message: parsed.message ?? "Unexpected model response.",
+      message:
+        boundedString(parsed.message, MAX_OUTPUT_MESSAGE_LENGTH) ??
+        "Unexpected model response.",
     };
   }
 
-  const rawItems: unknown[] = Array.isArray(parsed.data?.items)
-    ? parsed.data.items
+  const parsedData = isRecord(parsed.data) ? parsed.data : {};
+  const rawItems: unknown[] = Array.isArray(parsedData.items)
+    ? parsedData.items
     : [];
-  const items: ReceiptItem[] = (rawItems as Record<string, unknown>[])
+  const items: ReceiptItem[] = rawItems
+    .filter(isRecord)
     .filter(
       (item) =>
-        typeof item.name === "string" && typeof item.amount === "number"
+        typeof item.name === "string" &&
+        typeof item.amount === "number" &&
+        Number.isFinite(item.amount)
     )
     .map((item) => ({
-      name: item.name as string,
+      name: (item.name as string).trim().slice(0, MAX_OUTPUT_TEXT_LENGTH),
       amount: item.amount as number,
       categoryId:
-        typeof item.categoryId === "number" ? item.categoryId : null,
+        typeof item.categoryId === "number" &&
+        Number.isInteger(item.categoryId)
+          ? item.categoryId
+          : null,
       subcategoryId:
-        typeof item.subcategoryId === "number" ? item.subcategoryId : null,
+        typeof item.subcategoryId === "number" &&
+        Number.isInteger(item.subcategoryId)
+          ? item.subcategoryId
+          : null,
     }));
 
+  const currency = strictBoundedString(parsedData.currency, 3)?.toUpperCase() ?? null;
+  const receiptDate = strictBoundedString(parsedData.date, 10);
   return {
     status: normalizedStatus === "partial" ? "partial" : "success",
     data: {
-      merchantName: parsed.data?.merchantName ?? null,
+      merchantName: boundedString(
+        parsedData.merchantName,
+        MAX_OUTPUT_TEXT_LENGTH
+      ),
       totalAmount:
-        typeof parsed.data?.totalAmount === "number"
-          ? parsed.data.totalAmount
+        typeof parsedData.totalAmount === "number" &&
+        Number.isFinite(parsedData.totalAmount)
+          ? parsedData.totalAmount
           : null,
-      currency: parsed.data?.currency ?? null,
-      date: parsed.data?.date ?? null,
+      currency: currency !== null && ISO_CURRENCY.test(currency) ? currency : null,
+      date: receiptDate !== null && ISO_DATE.test(receiptDate) ? receiptDate : null,
       items,
     },
-    message: parsed.message ?? null,
+    message: boundedString(parsed.message, MAX_OUTPUT_MESSAGE_LENGTH),
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function boundedString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const sanitized = value.replace(/[\x00-\x1F\x7F]/g, "").trim();
+  return sanitized ? sanitized.slice(0, maxLength) : null;
+}
+
+function strictBoundedString(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const sanitized = value.replace(/[\x00-\x1F\x7F]/g, "").trim();
+  return sanitized && sanitized.length <= maxLength ? sanitized : null;
 }
 
 export function validateResponseData(
   response: ReceiptResponse,
   validCategoryIds: ReadonlySet<number>,
-  validSubcategoryIds: ReadonlySet<number>
+  subcategoryParents: ReadonlyMap<number, number>
 ): ReceiptResponse {
   if (!response.data) return response;
 
   const { totalAmount, items } = response.data;
 
-  if (totalAmount !== null && totalAmount <= 0) {
+  if (
+    totalAmount !== null &&
+    (!Number.isFinite(totalAmount) || totalAmount <= 0)
+  ) {
     response.data.totalAmount = null;
   }
 
   response.data.items = items
-    .filter((item) => item.amount > 0)
-    .map((item) => ({
-      ...item,
-      categoryId:
+    .filter((item) => Number.isFinite(item.amount) && item.amount > 0)
+    .slice(0, 200)
+    .map((item) => {
+      const categoryId =
         item.categoryId !== null && validCategoryIds.has(item.categoryId)
           ? item.categoryId
-          : null,
-      subcategoryId:
-        item.subcategoryId !== null && validSubcategoryIds.has(item.subcategoryId)
+          : null;
+      const subcategoryId =
+        item.subcategoryId !== null &&
+        categoryId !== null &&
+        subcategoryParents.get(item.subcategoryId) === categoryId
           ? item.subcategoryId
-          : null,
-    }));
+          : null;
+      return {
+        ...item,
+        name: item.name.trim().slice(0, 200),
+        categoryId,
+        subcategoryId,
+      };
+    })
+    .filter((item) => item.name.length > 0);
 
   return response;
 }
@@ -235,7 +297,7 @@ export function handleError(error: unknown): never {
 
   const errorMessage =
     error instanceof Error ? error.message : "Unknown error";
-  console.error("analyzeReceipt error:", errorMessage);
+  console.error("analyzeReceipt failed");
 
   if (errorMessage.includes("quota") || errorMessage.includes("429")) {
     throw new HttpsError(

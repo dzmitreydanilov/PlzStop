@@ -23,7 +23,7 @@ class ExportCsvUseCase(
             endDateMillis = endDateMillis,
         ).map {
             it.fold(
-                onSuccess = { ExportResult.Enqueued(expenseCount = 0) },
+                onSuccess = { ExportResult.CsvShareLaunched(expenseCount = 0) },
                 onFailure = { ExportResult.Failure(it.toErrorType()) },
             )
         }.flowOn(dispatcher)

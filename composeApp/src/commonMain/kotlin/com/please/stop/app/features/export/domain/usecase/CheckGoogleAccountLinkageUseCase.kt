@@ -1,26 +1,53 @@
 package com.please.stop.app.features.export.domain.usecase
 
 import com.please.stop.app.core.flow.flowFromSuspend
+import com.please.stop.app.core.models.domain.ErrorResult
+import com.please.stop.app.core.models.domain.ErrorType
+import com.please.stop.app.core.models.domain.Result
+import com.please.stop.app.core.models.domain.toErrorType
+import com.please.stop.app.features.auth.domain.repository.GoogleAccountRepository
+import com.please.stop.app.features.expenses.data.remote.FirebaseCallableErrorReason
+import com.please.stop.app.features.expenses.data.remote.FirebaseCallableException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 class CheckGoogleAccountLinkageUseCase(
-    private val dispatcher: CoroutineDispatcher
+    private val googleAccountRepository: GoogleAccountRepository,
+    private val dispatcher: CoroutineDispatcher,
 ) {
 
     operator fun invoke(): Flow<HasGoogleAccountLinkageResult> {
         return flowFromSuspend {
-            false
-        }.map { hasGoogleAccountLinkage ->
-            HasGoogleAccountLinkageResult.GoogleAccountLinked.takeIf { hasGoogleAccountLinkage }
-                ?: HasGoogleAccountLinkageResult.GoogleAccountNotLinked
+            googleAccountRepository.isLinked()
+        }.map { linkageResult ->
+            linkageResult.fold(
+                onSuccess = { isLinked ->
+                    if (isLinked) {
+                        HasGoogleAccountLinkageResult.GoogleAccountLinked
+                    } else {
+                        HasGoogleAccountLinkageResult.GoogleAccountNotLinked
+                    }
+                },
+                onFailure = { error ->
+                    if (
+                        (error as? FirebaseCallableException)?.reason ==
+                        FirebaseCallableErrorReason.FirebaseSignInRequired
+                    ) {
+                        HasGoogleAccountLinkageResult.AuthenticationRequired
+                    } else {
+                        HasGoogleAccountLinkageResult.Failure(errorType = error.toErrorType())
+                    }
+                },
+            )
         }.flowOn(dispatcher)
     }
 }
 
-sealed interface HasGoogleAccountLinkageResult : com.please.stop.app.core.models.domain.Result {
+sealed interface HasGoogleAccountLinkageResult : Result {
     data object GoogleAccountLinked : HasGoogleAccountLinkageResult
     data object GoogleAccountNotLinked : HasGoogleAccountLinkageResult
+    data object AuthenticationRequired : HasGoogleAccountLinkageResult
+    data class Failure(override val errorType: ErrorType) : HasGoogleAccountLinkageResult, ErrorResult
 }

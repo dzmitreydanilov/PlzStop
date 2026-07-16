@@ -1,5 +1,6 @@
 package com.please.stop.app.features.expenses.data.remote
 
+import com.please.stop.app.core.runSuspendCatching
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -13,7 +14,7 @@ interface IosFirebaseFunctionsCaller {
         name: String,
         data: Map<String, Any>,
         onSuccess: (Map<String, Any>) -> Unit,
-        onError: (String) -> Unit,
+        onError: (message: String, code: String?, reason: String?) -> Unit,
     )
 }
 
@@ -25,7 +26,7 @@ class IosFirebaseCallableFunctions(
     override suspend fun call(
         functionName: String,
         data: Map<String, Any?>,
-    ): Result<Map<String, Any?>> = runCatching {
+    ): Result<Map<String, Any?>> = runSuspendCatching {
         suspendCancellableCoroutine { continuation ->
             val nonNullData = data.filterValues { it != null } as Map<String, Any>
             caller.callFunction(
@@ -34,8 +35,14 @@ class IosFirebaseCallableFunctions(
                 onSuccess = { result ->
                     continuation.resume(result)
                 },
-                onError = { error ->
-                    continuation.resumeWithException(Exception(error))
+                onError = { message, code, reason ->
+                    continuation.resumeWithException(
+                        FirebaseCallableException(
+                            code = code,
+                            reason = reason?.let(::FirebaseCallableErrorReason),
+                            message = message,
+                        )
+                    )
                 },
             )
         }

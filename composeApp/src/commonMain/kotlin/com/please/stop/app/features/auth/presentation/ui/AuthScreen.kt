@@ -14,6 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewWrapper
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.please.stop.app.features.auth.google.GoogleButtonUiContainer
@@ -21,9 +23,10 @@ import com.please.stop.app.features.auth.presentation.AuthEvent
 import com.please.stop.app.features.auth.presentation.AuthNavigation
 import com.please.stop.app.features.auth.presentation.AuthState
 import com.please.stop.app.features.auth.presentation.AuthStateHolder
+import com.please.stop.app.features.auth.presentation.asOverlay
 import com.please.stop.app.navigation.CollectNavigationFlow
-import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
+import com.please.stop.app.uicomponents.previews.ApplicationPreviewThemeWrapper
 import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -101,8 +104,12 @@ private fun AuthContent(
     }
 }
 
-private val AuthState.asOverlay: ScreenOverlay?
-    @Composable get() = when (this) {
-        is AuthState.Error -> ScreenOverlay.Error(type = errorType)
-        else -> null
-    }
+@Preview(showBackground = true, showSystemUi = true)
+@PreviewWrapper(ApplicationPreviewThemeWrapper::class)
+@Composable
+private fun AuthContentPreview() {
+    AuthContent(
+        state = AuthState.Idle,
+        onEvent = {},
+    )
+}

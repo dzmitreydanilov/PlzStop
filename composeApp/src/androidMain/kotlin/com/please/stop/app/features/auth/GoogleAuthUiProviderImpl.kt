@@ -19,13 +19,11 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingExcept
 import com.please.stop.app.core.logger.logDebug
 import com.please.stop.app.features.auth.google.GoogleAuthCredentials
 import com.please.stop.app.features.auth.google.GoogleAuthUiProvider
-import com.please.stop.app.features.auth.google.GoogleUser
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.launch
+import com.please.stop.app.features.auth.google.GoogleSheetsAuthorizationCode
+import com.please.stop.app.features.auth.google.GoogleSignInCredential
+import com.please.stop.app.features.auth.google.PendingAuthorizationResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -34,142 +32,111 @@ internal class GoogleAuthUiProviderImpl(
     private val credentialManager: CredentialManager,
     private val credentials: GoogleAuthCredentials,
     private val scopeIntentLauncher: (IntentSenderRequest) -> Unit,
-    private val authResultChannel: ReceiveChannel<ActivityResult>
+    private val pendingAuthorizationResult: PendingAuthorizationResult<ActivityResult>,
 ) : GoogleAuthUiProvider {
 
     override suspend fun signIn(
         filterByAuthorizedAccounts: Boolean,
         isAutoSelectEnabled: Boolean,
-        scopes: List<String>
-    ): GoogleUser? {
-
-        val googleUser = try {
+    ): GoogleSignInCredential? {
+        return try {
             getGoogleUserFromCredential(
                 filterByAuthorizedAccounts = filterByAuthorizedAccounts,
                 isAutoSelectEnabled = isAutoSelectEnabled,
-                scopes = scopes
             )
         } catch (e: NoCredentialException) {
             logDebug("GoogleAuthUiProvider: NoCredentialException while getting credential")
-            if (!filterByAuthorizedAccounts)
-                return handleCredentialException(e = e)
+            if (!filterByAuthorizedAccounts) return null
             try {
                 getGoogleUserFromCredential(
                     filterByAuthorizedAccounts = false,
                     isAutoSelectEnabled = isAutoSelectEnabled,
-                    scopes = scopes
                 )
-            } catch (e: GetCredentialException) {
+            } catch (_: GetCredentialException) {
                 logDebug("GoogleAuthUiProvider: GetCredentialException while getting credential")
-                handleCredentialException(e = e)
-            } catch (@Suppress("TooGenericExceptionCaught") e: NullPointerException) {
+                null
+            } catch (@Suppress("TooGenericExceptionCaught") _: NullPointerException) {
                 logDebug("GoogleAuthUiProvider: NullPointerException while getting credential")
                 null
             }
-        } catch (e: GetCredentialException) {
+        } catch (_: GetCredentialException) {
             logDebug("GoogleAuthUiProvider: GetCredentialException while getting credential")
-            handleCredentialException(e = e)
-        } catch (@Suppress("TooGenericExceptionCaught") e: NullPointerException) {
+            null
+        } catch (@Suppress("TooGenericExceptionCaught") _: NullPointerException) {
             logDebug("GoogleAuthUiProvider: NullPointerException while getting credential")
             null
         }
-        return googleUser
     }
 
-    private fun handleCredentialException(
-        e: GetCredentialException,
-    ): GoogleUser? {
-        logDebug("GoogleAuthUiProvider error: $e and message: ${e.message}")
-        return null
+    override suspend fun authorizeSheets(forceConsent: Boolean): GoogleSheetsAuthorizationCode? {
+        return try {
+            val authorizationResult = fetchAuthorizationResult(forceConsent = forceConsent)
+            authorizationResult.serverAuthCode?.let(::GoogleSheetsAuthorizationCode)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (@Suppress("TooGenericExceptionCaught") _: Exception) {
+            logDebug("GoogleAuthUiProvider: Google Sheets authorization failed")
+            null
+        }
     }
 
     private suspend fun getGoogleUserFromCredential(
         filterByAuthorizedAccounts: Boolean,
         isAutoSelectEnabled: Boolean,
-        scopes: List<String>
-    ): GoogleUser? {
+    ): GoogleSignInCredential? {
         val credential = credentialManager.getCredential(
             context = activityContext,
             request = getCredentialRequest(
-                filterByAuthorizedAccounts,
-                isAutoSelectEnabled,
+                filterByAuthorizedAccounts = filterByAuthorizedAccounts,
+                isAutoSelectEnabled = isAutoSelectEnabled,
             )
-
         ).credential
-
-        logDebug("GoogleAuthUiProvider Received Credential: $credential")
 
         return when {
             credential is CustomCredential &&
                 credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL -> {
                 try {
-                    val googleIdTokenCredential =
-                        GoogleIdTokenCredential.createFrom(credential.data)
-                    val accessToken =
-                        if (scopes != GoogleAuthUiProvider.BASIC_AUTH_SCOPE) {
-                            fetchAccessTokenWithScopes(
-                                scopes
-                            ).accessToken
-                        } else {
-                            null
-                        }
-
-                    GoogleUser(
-                        idToken = googleIdTokenCredential.idToken,
-                        accessToken = accessToken
-                    )
-                } catch (e: GoogleIdTokenParsingException) {
-                    logDebug("GoogleAuthUiProvider Received an invalid google id token response: ${e.message}")
+                    val parsedCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    GoogleSignInCredential(idToken = parsedCredential.idToken)
+                } catch (_: GoogleIdTokenParsingException) {
+                    logDebug("GoogleAuthUiProvider: invalid Google ID token response")
                     null
                 }
             }
 
             else -> {
-                logDebug("GoogleAuthUiProvider Received an invalid credential response: ${credential.type}")
+                logDebug("GoogleAuthUiProvider: unsupported credential response")
                 null
             }
         }
     }
 
-    private suspend fun fetchAccessTokenWithScopes(scopes: List<String>): AuthorizationResult {
+    private suspend fun fetchAuthorizationResult(forceConsent: Boolean): AuthorizationResult {
         val authClient = Identity.getAuthorizationClient(activityContext)
-        val request = AuthorizationRequest.builder()
-            .setRequestedScopes(scopes.map(::Scope))
-            .build()
+        val requestBuilder = AuthorizationRequest.builder()
+            .setRequestedScopes(GoogleAuthUiProvider.GOOGLE_SHEETS_SCOPES.map(::Scope))
+            .requestOfflineAccess(credentials.webClientId)
 
-        return suspendCancellableCoroutine { continuation ->
-            authClient.authorize(request)
-                .addOnSuccessListener { r ->
-                    if (r.hasResolution()) {
-                        r.pendingIntent?.let { intent ->
-                            scopeIntentLauncher(IntentSenderRequest.Builder(intent).build())
-                            CoroutineScope(Dispatchers.Main).launch {
-                                try {
-                                    val result = authResultChannel.receive()
-                                    val authResult = processAuthResult(activityContext, result)
-                                    continuation.resume(authResult)
-                                } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    continuation.resumeWithException(e)
-                                }
-                            }
-                        } ?: run {
-                            continuation.resumeWithException(
-                                IllegalStateException("Authorization has resolution but no pending intent")
-                            )
-                        }
-                    } else {
-                        continuation.resume(r)
-                    }
-                }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(e)
-                }
-
-            continuation.invokeOnCancellation {
-                authResultChannel.cancel()
-            }
+        if (forceConsent) {
+            requestBuilder.setPrompt(AuthorizationRequest.Prompt.CONSENT)
         }
+        val initialResult = suspendCancellableCoroutine { continuation ->
+            authClient.authorize(requestBuilder.build())
+                .addOnSuccessListener(continuation::resume)
+                .addOnFailureListener(continuation::resumeWithException)
+        }
+
+        if (!initialResult.hasResolution()) return initialResult
+
+        val pendingIntent = initialResult.pendingIntent
+            ?: error("Authorization has resolution but no pending intent")
+        val activityResult = pendingAuthorizationResult.launchAndAwait {
+            scopeIntentLauncher(IntentSenderRequest.Builder(pendingIntent).build())
+        }
+        return processAuthResult(
+            context = activityContext,
+            res = activityResult,
+        )
     }
 
     private fun processAuthResult(context: Context, res: ActivityResult): AuthorizationResult {
@@ -184,7 +151,7 @@ internal class GoogleAuthUiProviderImpl(
 
     private fun getCredentialRequest(
         filterByAuthorizedAccounts: Boolean,
-        isAutoSelectEnabled: Boolean
+        isAutoSelectEnabled: Boolean,
     ): GetCredentialRequest {
         return GetCredentialRequest.Builder()
             .addCredentialOption(
@@ -192,7 +159,7 @@ internal class GoogleAuthUiProviderImpl(
                     serverClientId = credentials.webClientId,
                     filterByAuthorizedAccounts = filterByAuthorizedAccounts,
                     isAutoSelectEnabled = isAutoSelectEnabled,
-                )
+                ),
             )
             .build()
     }
@@ -200,7 +167,7 @@ internal class GoogleAuthUiProviderImpl(
     private fun getGoogleIdOption(
         serverClientId: String,
         filterByAuthorizedAccounts: Boolean,
-        isAutoSelectEnabled: Boolean
+        isAutoSelectEnabled: Boolean,
     ): GetGoogleIdOption {
         return GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(filterByAuthorizedAccounts)

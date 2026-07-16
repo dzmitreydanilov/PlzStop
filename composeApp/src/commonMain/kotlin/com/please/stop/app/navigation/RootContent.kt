@@ -22,6 +22,7 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.please.stop.app.core.UrlOpener
 import com.please.stop.app.features.auth.presentation.ui.AuthScreen
+import com.please.stop.app.features.auth.presentation.ui.UserScreen
 import com.please.stop.app.features.categories.presentation.archived.ArchivedCategoriesScreen
 import com.please.stop.app.features.categories.presentation.ui.CategoriesScreen
 import com.please.stop.app.features.expenses.presentation.ui.CreateExpenseScreen
@@ -54,6 +55,7 @@ import com.please.stop.app.navigation.routes.MainBottomTabs
 import com.please.stop.app.navigation.routes.OnboardingRoute
 import com.please.stop.app.navigation.routes.ReceiptItemsRoute
 import com.please.stop.app.navigation.routes.SubscriptionsListRoute
+import com.please.stop.app.navigation.routes.UserRoute
 import com.please.stop.app.navigation.routes.registerGlobalRotes
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -184,6 +186,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
                 router.push(CreateExpenseRoute(categoryId = categoryId))
             },
             onNavigateToSettings = {},
+            onNavigateToUser = { router.push(UserRoute) },
             onNavigateToCreateExpense = { router.push(CreateExpenseRoute()) },
             onNavigateToEditExpense = { expenseId -> router.push(EditExpenseRoute(expenseId)) },
             onNavigateToCategories = { router.push(CategoriesRoute) },
@@ -231,6 +234,10 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
 
     entry<ExportRoute> {
         ExportScreenRoute(onNavigateBack = { router.pop() })
+    }
+
+    entry<UserRoute> {
+        UserScreen(onNavigateBack = { router.pop() })
     }
 }
 

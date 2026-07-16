@@ -58,31 +58,65 @@ export function validateAndSanitize(data: Record<string, unknown>): ValidatedInp
     throw new HttpsError("invalid-argument", "INVALID_REQUEST: Invalid base64 encoding");
   }
 
-  const sanitizedCategories: Category[] = categories.map((c) => {
-    if (typeof c.id !== "number" || !Number.isInteger(c.id)) {
+  const categoryIds = new Set<number>();
+  const sanitizedCategories: Category[] = categories.map((category) => {
+    if (
+      !category ||
+      typeof category !== "object" ||
+      typeof category.id !== "number" ||
+      !Number.isInteger(category.id)
+    ) {
       throw new HttpsError("invalid-argument", "INVALID_REQUEST: Category ID must be an integer");
     }
-    return { id: c.id, name: sanitizeName(c.name) };
+    if (categoryIds.has(category.id)) {
+      throw new HttpsError("invalid-argument", "INVALID_REQUEST: Duplicate category ID");
+    }
+    const name = sanitizeName(category.name);
+    if (!name) {
+      throw new HttpsError("invalid-argument", "INVALID_REQUEST: Category name is required");
+    }
+    categoryIds.add(category.id);
+    return { id: category.id, name };
   });
 
   const sanitizedSubcategories: Subcategory[] = [];
+  const subcategoryIds = new Set<number>();
   if (subcategories && Array.isArray(subcategories)) {
     if (subcategories.length > MAX_SUBCATEGORIES) {
       throw new HttpsError("invalid-argument", "INVALID_REQUEST: Too many subcategories");
     }
-    for (const sub of subcategories) {
-      if (typeof sub.id !== "number" || !Number.isInteger(sub.id)) {
+    for (const subcategory of subcategories) {
+      if (
+        !subcategory ||
+        typeof subcategory !== "object" ||
+        typeof subcategory.id !== "number" ||
+        !Number.isInteger(subcategory.id)
+      ) {
         throw new HttpsError("invalid-argument", "INVALID_REQUEST: Subcategory ID must be an integer");
       }
-      if (typeof sub.parentCategoryId !== "number" || !Number.isInteger(sub.parentCategoryId)) {
+      if (subcategoryIds.has(subcategory.id)) {
+        throw new HttpsError("invalid-argument", "INVALID_REQUEST: Duplicate subcategory ID");
+      }
+      if (
+        typeof subcategory.parentCategoryId !== "number" ||
+        !Number.isInteger(subcategory.parentCategoryId) ||
+        !categoryIds.has(subcategory.parentCategoryId)
+      ) {
         throw new HttpsError("invalid-argument", "INVALID_REQUEST: Subcategory parentCategoryId must be an integer");
       }
+      const name = sanitizeName(subcategory.name);
+      if (!name) {
+        throw new HttpsError("invalid-argument", "INVALID_REQUEST: Subcategory name is required");
+      }
+      subcategoryIds.add(subcategory.id);
       sanitizedSubcategories.push({
-        id: sub.id,
-        parentCategoryId: sub.parentCategoryId,
-        name: sanitizeName(sub.name),
+        id: subcategory.id,
+        parentCategoryId: subcategory.parentCategoryId,
+        name,
       });
     }
+  } else if (subcategories !== undefined && subcategories !== null) {
+    throw new HttpsError("invalid-argument", "INVALID_REQUEST: Subcategories must be an array");
   }
 
   return {

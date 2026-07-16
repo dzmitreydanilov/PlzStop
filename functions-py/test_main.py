@@ -3,11 +3,13 @@
 import base64
 import gzip
 import json
-from datetime import date
+from datetime import date, datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from cryptography.fernet import Fernet
 
+import main
 from main import (
     EPOCH,
     MAX_DECOMPRESSED_SIZE,
@@ -15,18 +17,249 @@ from main import (
     _build_single_tab,
     _build_pivot_summary,
     _cell_data,
+    _claim_export,
     _detect_months,
+    _decrypt_refresh_token,
+    _encrypt_refresh_token,
     _expense_row,
     _month_serial_range,
     _parse_expenses,
+    _resolve_drive_folder,
+    _Formula,
     _sanitize,
     _to_serial,
+    _validate_export_request,
     _write_sheet,
 )
 
 # _MockHttpsError is registered in conftest.py
 from firebase_functions.https_fn import HttpsError
 
+
+@pytest.fixture(autouse=True)
+def bypass_firestore_rate_limits(monkeypatch):
+    monkeypatch.setattr(main, "_check_daily_limit", MagicMock())
+
+
+class TestGoogleOAuthStorage:
+    def setup_method(self):
+        main.GOOGLE_OAUTH_CLIENT_ID = MagicMock()
+        main.GOOGLE_OAUTH_CLIENT_SECRET = MagicMock()
+        main.GOOGLE_TOKEN_ENCRYPTION_KEY = MagicMock()
+        main.GOOGLE_TOKEN_ENCRYPTION_KEY.value = Fernet.generate_key().decode()
+
+    def test_refresh_token_is_encrypted_at_rest(self):
+        encrypted = _encrypt_refresh_token("refresh-token")
+
+        assert encrypted != "refresh-token"
+        assert _decrypt_refresh_token(encrypted) == "refresh-token"
+
+    def test_link_stores_encrypted_refresh_token(self, monkeypatch):
+        main.GOOGLE_OAUTH_CLIENT_ID.value = "client-id"
+        main.GOOGLE_OAUTH_CLIENT_SECRET.value = "client-secret"
+        response = MagicMock(ok=True)
+        response.json.return_value = {
+            "refresh_token": "refresh-token",
+            "scope": f"{main.GOOGLE_SHEETS_SCOPE} {main.GOOGLE_DRIVE_FILE_SCOPE}",
+        }
+        monkeypatch.setattr(main.requests, "post", MagicMock(return_value=response))
+        document = MagicMock()
+        document.get.return_value.exists = False
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        request = MagicMock(data={"authorizationCode": "one-time-code"})
+        request.auth.uid = "firebase-uid"
+
+        assert main.linkGoogleAccount(request) == {"linked": True}
+        stored = document.set.call_args.args[0]
+        assert stored[main.ENCRYPTED_REFRESH_TOKEN_FIELD] != "refresh-token"
+        assert _decrypt_refresh_token(stored[main.ENCRYPTED_REFRESH_TOKEN_FIELD]) == "refresh-token"
+        assert set(stored["scopes"]) == main.REQUIRED_GOOGLE_SCOPES
+        assert "createdAt" in stored
+        assert document.set.call_args.kwargs == {}
+
+    def test_link_rejects_missing_scope_without_overwriting_existing_grant(self, monkeypatch):
+        response = MagicMock(ok=True)
+        response.json.return_value = {
+            "refresh_token": "new-refresh-token",
+            "scope": main.GOOGLE_SHEETS_SCOPE,
+        }
+        monkeypatch.setattr(main.requests, "post", MagicMock(return_value=response))
+        document = MagicMock()
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        request = MagicMock(data={"authorizationCode": "one-time-code"})
+        request.auth.uid = "firebase-uid"
+
+        with pytest.raises(HttpsError) as error:
+            main.linkGoogleAccount(request)
+
+        assert error.value.details == {"reason": main.GOOGLE_SCOPES_MISSING}
+        document.set.assert_not_called()
+
+    def test_link_rejects_missing_refresh_token(self, monkeypatch):
+        response = MagicMock(ok=True)
+        response.json.return_value = {
+            "scope": f"{main.GOOGLE_SHEETS_SCOPE} {main.GOOGLE_DRIVE_FILE_SCOPE}",
+        }
+        monkeypatch.setattr(main.requests, "post", MagicMock(return_value=response))
+        document = MagicMock()
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        request = MagicMock(data={"authorizationCode": "one-time-code"})
+        request.auth.uid = "firebase-uid"
+
+        with pytest.raises(HttpsError) as error:
+            main.linkGoogleAccount(request)
+
+        assert error.value.details == {"reason": main.GOOGLE_REFRESH_TOKEN_MISSING}
+        document.set.assert_not_called()
+
+    def test_link_requires_firebase_auth_before_token_exchange(self, monkeypatch):
+        post = MagicMock()
+        monkeypatch.setattr(main.requests, "post", post)
+        request = MagicMock(data={"authorizationCode": "one-time-code"})
+        request.auth = None
+
+        with pytest.raises(HttpsError) as error:
+            main.linkGoogleAccount(request)
+
+        assert error.value.details == {"reason": main.FIREBASE_SIGN_IN_REQUIRED}
+        post.assert_not_called()
+
+    def test_link_reports_missing_authorization_code(self):
+        request = MagicMock(data={})
+        request.auth.uid = "firebase-uid"
+
+        with pytest.raises(HttpsError) as error:
+            main.linkGoogleAccount(request)
+
+        assert error.value.details == {"reason": main.GOOGLE_AUTH_CODE_MISSING}
+
+    def test_link_maps_token_endpoint_outage_without_logging_body(self, monkeypatch, caplog):
+        response = MagicMock(ok=False, status_code=503)
+        response.text = "sensitive-provider-response"
+        monkeypatch.setattr(main.requests, "post", MagicMock(return_value=response))
+        request = MagicMock(data={"authorizationCode": "one-time-code"})
+        request.auth.uid = "firebase-uid"
+
+        with pytest.raises(HttpsError) as error:
+            main.linkGoogleAccount(request)
+
+        assert error.value.details == {"reason": main.GOOGLE_TOKEN_ENDPOINT_UNAVAILABLE}
+        assert "sensitive-provider-response" not in caplog.text
+
+    def test_link_status_accepts_encrypted_ciphertext_field(self, monkeypatch):
+        snapshot = MagicMock(exists=True)
+        snapshot.to_dict.return_value = {
+            main.ENCRYPTED_REFRESH_TOKEN_FIELD: "ciphertext",
+            "scopes": list(main.REQUIRED_GOOGLE_SCOPES),
+        }
+        document = MagicMock()
+        document.get.return_value = snapshot
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        request = MagicMock()
+        request.auth.uid = "firebase-uid"
+
+        assert main.hasGoogleAccountLink(request) == {"linked": True}
+
+    def test_link_status_does_not_accept_development_legacy_field(self, monkeypatch):
+        snapshot = MagicMock(exists=True)
+        snapshot.to_dict.return_value = {
+            "refreshToken": "development-only-ciphertext",
+            "scopes": list(main.REQUIRED_GOOGLE_SCOPES),
+        }
+        document = MagicMock()
+        document.get.return_value = snapshot
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        request = MagicMock()
+        request.auth.uid = "firebase-uid"
+
+        assert main.hasGoogleAccountLink(request) == {"linked": False}
+
+    def test_expired_refresh_token_removes_link(self, monkeypatch):
+        encrypted = _encrypt_refresh_token("expired-refresh-token")
+        snapshot = MagicMock(exists=True)
+        snapshot.to_dict.return_value = {
+            main.ENCRYPTED_REFRESH_TOKEN_FIELD: encrypted,
+            "scopes": list(main.REQUIRED_GOOGLE_SCOPES),
+        }
+        document = MagicMock()
+        document.get.return_value = snapshot
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        credentials = MagicMock()
+        credentials.refresh.side_effect = main.RefreshError("invalid_grant")
+        monkeypatch.setattr(main, "Credentials", MagicMock(return_value=credentials))
+
+        with pytest.raises(HttpsError) as error:
+            main._google_credentials("firebase-uid")
+
+        assert error.value.details == {"reason": main.GOOGLE_RECONNECT_REQUIRED}
+        document.delete.assert_called_once_with()
+
+    def test_transient_refresh_failure_keeps_link(self, monkeypatch):
+        encrypted = _encrypt_refresh_token("refresh-token")
+        snapshot = MagicMock(exists=True)
+        snapshot.to_dict.return_value = {
+            main.ENCRYPTED_REFRESH_TOKEN_FIELD: encrypted,
+            "scopes": list(main.REQUIRED_GOOGLE_SCOPES),
+        }
+        document = MagicMock()
+        document.get.return_value = snapshot
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        credentials = MagicMock()
+        credentials.refresh.side_effect = main.RefreshError("temporarily unavailable")
+        monkeypatch.setattr(main, "Credentials", MagicMock(return_value=credentials))
+
+        with pytest.raises(HttpsError) as error:
+            main._google_credentials("firebase-uid")
+
+        assert error.value.details == {"reason": main.GOOGLE_TOKEN_ENDPOINT_UNAVAILABLE}
+        document.delete.assert_not_called()
+
+    def test_unlink_deletes_undecryptable_grant(self, monkeypatch):
+        snapshot = MagicMock(exists=True)
+        snapshot.to_dict.return_value = {
+            main.ENCRYPTED_REFRESH_TOKEN_FIELD: "not-fernet-ciphertext",
+            "scopes": list(main.REQUIRED_GOOGLE_SCOPES),
+        }
+        document = MagicMock()
+        document.get.return_value = snapshot
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        request = MagicMock()
+        request.auth.uid = "firebase-uid"
+
+        assert main.unlinkGoogleAccount(request) == {"linked": False}
+        document.delete.assert_called_once_with()
+
+    def test_unlink_posts_refresh_token_in_request_body(self, monkeypatch):
+        encrypted = _encrypt_refresh_token("refresh-token")
+        snapshot = MagicMock(exists=True)
+        snapshot.to_dict.return_value = {
+            main.ENCRYPTED_REFRESH_TOKEN_FIELD: encrypted,
+            "scopes": list(main.REQUIRED_GOOGLE_SCOPES),
+        }
+        document = MagicMock()
+        document.get.return_value = snapshot
+        monkeypatch.setattr(main, "_oauth_document", MagicMock(return_value=document))
+        post = MagicMock(return_value=MagicMock(ok=True))
+        monkeypatch.setattr(main.requests, "post", post)
+        request = MagicMock()
+        request.auth.uid = "firebase-uid"
+
+        main.unlinkGoogleAccount(request)
+
+        assert post.call_args.kwargs["data"] == {"token": "refresh-token"}
+        assert "params" not in post.call_args.kwargs
+
+    def test_export_requires_firebase_auth_before_google_access(self, monkeypatch):
+        google_credentials = MagicMock()
+        monkeypatch.setattr(main, "_google_credentials", google_credentials)
+        request = MagicMock(data={"expenses": [{"title": "Coffee"}]})
+        request.auth = None
+
+        with pytest.raises(HttpsError) as error:
+            main.exportToSheets(request)
+
+        assert error.value.details == {"reason": main.FIREBASE_SIGN_IN_REQUIRED}
+        google_credentials.assert_not_called()
 
 def _get_batch_update_rows(ws):
     """Extract primitive row values from the updateCells request."""
@@ -169,7 +402,12 @@ class TestParseExpenses:
     """Payload parsing: plain, compressed, and edge cases."""
 
     def test_plain_expenses(self):
-        data = {"expenses": [{"title": "A"}, {"title": "B"}]}
+        data = {
+            "expenses": [
+                {"date": "2026-01-01", "title": "A", "amount": 1.0},
+                {"date": "2026-01-02", "title": "B", "amount": 2.0},
+            ]
+        }
         assert len(_parse_expenses(data, compressed=False)) == 2
 
     def test_empty_expenses_raises(self):
@@ -181,7 +419,7 @@ class TestParseExpenses:
             _parse_expenses({}, compressed=False)
 
     def test_compressed_expenses(self):
-        expenses = [{"title": "Coffee", "amount": "3.50"}]
+        expenses = [{"date": "2026-01-01", "title": "Coffee", "amount": 3.50}]
         payload = base64.b64encode(gzip.compress(json.dumps(expenses).encode())).decode()
         result = _parse_expenses({"expenses": payload}, compressed=True)
         assert len(result) == 1
@@ -196,6 +434,157 @@ class TestParseExpenses:
         payload = base64.b64encode(gzip.compress(large)).decode()
         with pytest.raises(HttpsError):
             _parse_expenses({"expenses": payload}, compressed=True)
+
+
+class TestValidateExportRequest:
+    def test_normalizes_valid_request(self):
+        result = _validate_export_request(
+            {
+                "exportId": "42",
+                "dateRangeLabel": "January 2026",
+                "tabLayout": "single_tab",
+                "decimalPlaces": 2,
+                "title": "January expenses",
+                "folderName": "PlzStop exports",
+                "expenses": [
+                    {
+                        "date": "2026-01-01",
+                        "title": "Coffee",
+                        "category": "Food",
+                        "subcategory": "",
+                        "amount": 3.5,
+                        "notes": "",
+                    }
+                ],
+            }
+        )
+
+        assert result["exportId"] == "42"
+        assert result["expenses"][0]["amount"] == 3.5
+        assert result["title"] == "January expenses"
+        assert result["folderName"] == "PlzStop exports"
+
+    def test_blank_folder_name_uses_drive_root(self):
+        result = _validate_export_request(
+            {
+                "exportId": "42",
+                "folderName": "   ",
+                "expenses": [
+                    {"date": "2026-01-01", "title": "Coffee", "amount": 3.5}
+                ],
+            }
+        )
+
+        assert result["folderName"] is None
+
+    def test_requires_idempotency_key(self):
+        with pytest.raises(HttpsError) as error:
+            _validate_export_request(
+                {
+                    "expenses": [
+                        {"date": "2026-01-01", "title": "Coffee", "amount": 3.5}
+                    ]
+                }
+            )
+
+        assert error.value.details == {"reason": main.EXPORT_ID_REQUIRED}
+
+    def test_rejects_formula_amount(self):
+        with pytest.raises(HttpsError):
+            _validate_export_request(
+                {
+                    "exportId": "42",
+                    "expenses": [
+                        {
+                            "date": "2026-01-01",
+                            "title": "Coffee",
+                            "amount": '=IMPORTDATA("https://example.com")',
+                        }
+                    ],
+                }
+            )
+
+    def test_rejects_invalid_layout(self):
+        with pytest.raises(HttpsError):
+            _validate_export_request(
+                {
+                    "exportId": "42",
+                    "tabLayout": "unknown",
+                    "expenses": [
+                        {"date": "2026-01-01", "title": "Coffee", "amount": 3.5}
+                    ],
+                }
+            )
+
+
+class TestDriveFolder:
+    def test_reuses_existing_exact_name_folder(self):
+        gc = MagicMock()
+        response = MagicMock()
+        response.json.return_value = {
+            "files": [{"id": "existing-folder", "name": "PlzStop exports"}]
+        }
+        gc.http_client.request.return_value = response
+
+        result = _resolve_drive_folder(gc, "PlzStop exports")
+
+        assert result == "existing-folder"
+        gc.http_client.request.assert_called_once()
+
+    def test_creates_folder_when_no_match_exists(self):
+        gc = MagicMock()
+        search_response = MagicMock()
+        search_response.json.return_value = {"files": []}
+        create_response = MagicMock()
+        create_response.json.return_value = {"id": "new-folder"}
+        gc.http_client.request.side_effect = [search_response, create_response]
+
+        result = _resolve_drive_folder(gc, "PlzStop exports")
+
+        assert result == "new-folder"
+        create_call = gc.http_client.request.call_args_list[1]
+        assert create_call.args[:2] == ("post", main.DRIVE_FILES_API_V3_URL)
+        assert create_call.kwargs["json"] == {
+            "name": "PlzStop exports",
+            "mimeType": "application/vnd.google-apps.folder",
+        }
+
+
+class TestExportIdempotency:
+    def test_completed_export_returns_existing_url(self, monkeypatch):
+        snapshot = MagicMock(exists=True)
+        snapshot.to_dict.return_value = {
+            "status": "success",
+            "spreadsheetUrl": "https://docs.google.com/spreadsheets/existing",
+        }
+        document = MagicMock()
+        document.get.return_value = snapshot
+        transaction = MagicMock()
+        monkeypatch.setattr(main, "_export_document", MagicMock(return_value=document))
+        main.firestore.client.return_value.transaction.return_value = transaction
+
+        result = _claim_export(uid="firebase-uid", export_id="42")
+
+        assert result == "https://docs.google.com/spreadsheets/existing"
+        transaction.set.assert_not_called()
+
+    def test_active_export_returns_structured_in_progress_error(self, monkeypatch):
+        snapshot = MagicMock(exists=True)
+        snapshot.to_dict.return_value = {
+            "status": "processing",
+            "startedAt": datetime.now(timezone.utc),
+        }
+        document = MagicMock()
+        document.get.return_value = snapshot
+        transaction = MagicMock()
+        monkeypatch.setattr(main, "_export_document", MagicMock(return_value=document))
+        main.firestore.client.return_value.transaction.return_value = transaction
+
+        with pytest.raises(HttpsError) as error:
+            _claim_export(uid="firebase-uid", export_id="42")
+
+        assert error.value.details == {"reason": main.EXPORT_IN_PROGRESS}
+        transaction.set.assert_not_called()
 
 
 # ── _write_sheet ─────────────────────────────────────────────────────────────
@@ -241,7 +630,7 @@ class TestWriteSheet:
         # Find the SUMIF formula row for this category
         sumif_cells = [str(cell) for row in rows if row for cell in row if "SUMIF" in str(cell)]
         assert sumif_cells, "Expected a SUMIF formula"
-        assert '\\"' in sumif_cells[0], f"Expected escaped quotes in: {sumif_cells[0]}"
+        assert '""' in sumif_cells[0], f"Expected escaped quotes in: {sumif_cells[0]}"
 
     def test_total_row_formula(self):
         ws = self._make_ws()
@@ -334,8 +723,15 @@ class TestWriteSheet:
         assert "  '=EVIL" in first_cols
 
     def test_formula_cell_data_uses_formula_value(self):
-        assert _cell_data("=SUM(E2:E3)", 4) == {
+        assert _cell_data(_Formula("=SUM(E2:E3)"), 4) == {
             "userEnteredValue": {"formulaValue": "=SUM(E2:E3)"}
+        }
+
+    def test_untrusted_formula_string_is_written_as_text(self):
+        assert _cell_data('=IMPORTDATA("https://example.com")', 4) == {
+            "userEnteredValue": {
+                "stringValue": '=IMPORTDATA("https://example.com")'
+            }
         }
 
     def test_amount_cell_data_uses_number_value(self):

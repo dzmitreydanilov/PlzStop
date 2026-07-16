@@ -7,7 +7,6 @@ import com.please.stop.app.features.export.data.ExportWorkRunner
 import com.please.stop.app.features.export.data.repository.CSVExportRepository
 import com.please.stop.app.features.export.data.repository.GoogleSheetExportRepository
 import com.please.stop.app.features.export.domain.usecase.CheckGoogleAccountLinkageUseCase
-import com.please.stop.app.features.export.domain.usecase.CheckNotificationPermissionUseCase
 import com.please.stop.app.features.export.domain.usecase.ExportCsvUseCase
 import com.please.stop.app.features.export.domain.usecase.GoogleSpreadSheetExportUseCase
 import com.please.stop.app.features.export.domain.usecase.HasExpensesToExportUseCase
@@ -48,20 +47,14 @@ val exportModule = module {
             subcategoryDao = database.subcategoryDao(),
             userProfileDao = database.userProfileDao(),
             callableFunctions = get(),
-            fcmTokenProvider = get(),
             exportHistoryDao = database.exportHistoryDao(),
         )
     }
 
     factory {
         CheckGoogleAccountLinkageUseCase(
+            googleAccountRepository = get(),
             dispatcher = get(named(DispatchersQualifiers.IO.name)),
-        )
-    }
-
-    factory {
-        CheckNotificationPermissionUseCase(
-            notificationPermission = get(),
         )
     }
 
@@ -81,8 +74,8 @@ val exportModule = module {
 
     factory {
         GoogleSpreadSheetExportUseCase(
-            hasGoogleAccountLinkageResult = get(),
-            hasNotificationPermissionResult = get(),
+            observeAuthStateUseCase = get(),
+            googleAccountLinkedUseCase = get(),
             googleSheetExportRepository = get(),
             dispatcher = get(named(DispatchersQualifiers.IO.name)),
         )

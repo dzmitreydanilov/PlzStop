@@ -35,7 +35,23 @@ Unit coverage for the Python helper logic is in place and currently passes with:
 
 ## Lint Baseline
 
-- `./gradlew detekt -q` still fails on pre-existing unrelated issues.
-- Export-related detekt warnings found during this pass were fixed.
-- Last detekt run in this session reported one new `ExportWorkRunner` catch warning plus the existing backlog; the catch warning was fixed afterward, and detekt was not rerun per session instruction.
+- `./gradlew :composeApp:detekt --auto-correct -q` was rerun after the export work.
+- Export/auth changes have no remaining detekt findings.
+- Detekt still exits non-zero on the unrelated repository baseline: 50 weighted issues in existing analytics, date/time,
+  navigation, theming, scanner, onboarding, and shared UI files.
 - Remaining failures should be handled separately or baselined intentionally.
+
+## iOS Test Linker Baseline
+
+- Shared and iOS platform test sources compile with `:composeApp:compileTestKotlinIosSimulatorArm64`.
+- The same common suite executes through Android KMP host tests: 60 tests pass.
+- `:composeApp:iosSimulatorArm64Test` and the final Xcode app link are blocked by the local toolchain mismatch: the
+  Compose framework references `UIViewLayoutRegion`, but Xcode 16.3 / iOS Simulator SDK 18.4 does not provide the
+  expected symbol. Swift source compilation, including the auth bridges, completes before this unrelated link failure.
+- Upgrade/alignment of Xcode, the simulator SDK, Compose, and Kotlin/Native is tracked separately from the export change.
+
+## External Release Verification
+
+- Verify and record that the Google OAuth consent screen is published/Production and approved for the `spreadsheets` and
+  `drive.file` scopes. Repository code cannot prove Google Cloud Console state.
+- Complete the Android and iOS interactive runtime matrices in OpenSpec tasks 5.3 and 5.4 on configured devices/accounts.

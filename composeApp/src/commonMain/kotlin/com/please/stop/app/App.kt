@@ -50,18 +50,20 @@ import plzstop.composeapp.generated.resources.onboarding_tagline
 @Composable
 fun App(
     deepLinkUri: String? = null,
+    deepLinkHandler: DeepLinkHandler? = null,
 ) {
     AppTheme {
         val rootStateHolder = koinViewModel<RootStateHolder>()
         val state by rootStateHolder.state.collectAsStateWithLifecycle()
-        val deepLinkHandler = retain<DeepLinkHandler> { DeepLinkHandler(DeepLinkResolver()) }
+        val retainedDeepLinkHandler = retain<DeepLinkHandler> { DeepLinkHandler(DeepLinkResolver()) }
+        val resolvedDeepLinkHandler = deepLinkHandler ?: retainedDeepLinkHandler
 
         when (val s = state) {
             is RootState.Loading -> SplashScreen()
             is RootState.Ready -> RootContent(
                 initialRoute = s.initialRoute,
                 deepLinkUri = deepLinkUri,
-                deepLinkHandler = deepLinkHandler,
+                deepLinkHandler = resolvedDeepLinkHandler,
             )
         }
     }
