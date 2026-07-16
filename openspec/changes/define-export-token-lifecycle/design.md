@@ -141,9 +141,10 @@ with data authorization, asks for sensitive scopes before the user uses export, 
 
 ### 3. Authorize Sheets incrementally and exchange the code on the backend
 
-The authoritative link check is the authenticated `hasGoogleAccountLink` callable, not the local
-`GoogleAccountLink.isConnected` cache. A network failure is an unknown/error state and MUST NOT be interpreted as
-"not linked."
+`GoogleAccountLink.isConnected` is a last-known-linked optimization. When it is true, the client skips
+`hasGoogleAccountLink` and lets `exportToSheets` authoritatively validate the refresh token. When it is missing or false,
+the authenticated `hasGoogleAccountLink` callable checks for a server record. A network failure is an unknown/error state
+and MUST NOT be interpreted as "not linked."
 
 When the server reports no link, the foreground client requests exactly these scopes:
 
@@ -174,6 +175,7 @@ sequenceDiagram
     participant OAuth as Google OAuth endpoint
     participant Store as Firestore token store
 
+    Note over App,Auth: Cache-miss or disconnected-marker path
     App->>Auth: hasGoogleAccountLink()
     Auth-->>App: linked = false
     User->>App: Approve Connect Google Sheets
@@ -288,8 +290,9 @@ stateDiagram-v2
 ```
 
 `hasGoogleAccountLink` returns `linked = true` only when the server record exists and its required metadata is valid. It
-does not refresh the token on every UI check. Actual refresh remains export-time validation, which avoids unnecessary
-token endpoint calls. An invalid refresh transitions the server record to unlinked by deleting it.
+does not refresh the token when called. Actual refresh remains export-time validation, which avoids unnecessary token
+endpoint calls. An invalid refresh transitions the server record to unlinked by deleting it, and the permanent reconnect
+result clears the client's last-known-linked marker.
 
 Normal authorization requests do not force a consent screen. A reconnect flow may force explicit consent when the server
 lost or invalidated its refresh token; on Android this uses the supported prompt/consent option with offline access. The

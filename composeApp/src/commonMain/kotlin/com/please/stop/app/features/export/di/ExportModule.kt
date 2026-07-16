@@ -3,6 +3,7 @@ package com.please.stop.app.features.export.di
 import com.please.stop.app.core.db.AppDatabase
 import com.please.stop.app.di.dispatchers.DispatchersQualifiers
 import com.please.stop.app.features.export.data.CsvExportBuilder
+import com.please.stop.app.features.export.data.ExportToSheetsPayloadBuilder
 import com.please.stop.app.features.export.data.ExportWorkRunner
 import com.please.stop.app.features.export.data.repository.CSVExportRepository
 import com.please.stop.app.features.export.data.repository.GoogleSheetExportRepository
@@ -38,6 +39,7 @@ val exportModule = module {
     }
 
     factory { CsvExportBuilder() }
+    factory { ExportToSheetsPayloadBuilder() }
 
     factory {
         val database = get<AppDatabase>()
@@ -48,11 +50,14 @@ val exportModule = module {
             userProfileDao = database.userProfileDao(),
             callableFunctions = get(),
             exportHistoryDao = database.exportHistoryDao(),
+            googleAccountStorage = get(),
+            payloadBuilder = get(),
         )
     }
 
     factory {
         CheckGoogleAccountLinkageUseCase(
+            googleAccountStorage = get(),
             googleAccountRepository = get(),
             dispatcher = get(named(DispatchersQualifiers.IO.name)),
         )

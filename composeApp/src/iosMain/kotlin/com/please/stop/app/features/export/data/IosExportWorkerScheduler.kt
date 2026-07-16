@@ -4,6 +4,7 @@ import com.please.stop.app.core.coroutines.ICoroutineScopeProvider
 import com.please.stop.app.features.export.domain.ExportWorkerScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class IosExportWorkerScheduler(
     private val exportWorkRunner: ExportWorkRunner,
@@ -33,7 +34,7 @@ internal class IosExportWorkerScheduler(
                     ExportWorkResult.Failure -> return@launch
                     ExportWorkResult.Retry -> {
                         if (attempt < MAX_ATTEMPTS - 1) {
-                            delay(INITIAL_RETRY_DELAY_MILLIS shl attempt)
+                            delay((INITIAL_RETRY_DELAY_MILLIS shl attempt).milliseconds)
                         }
                     }
                 }

@@ -147,8 +147,10 @@ At application launch, Firebase restores its own session. PlzStop does not silen
 
 ## Google Sheets connection
 
-The authoritative status call is `hasGoogleAccountLink`. If it returns `linked=false`, the foreground app requests these
-two scopes and offline access with the Web/server client ID:
+The client first checks its encrypted last-known-linked marker. A connected marker skips `hasGoogleAccountLink` and lets
+`exportToSheets` validate the refresh token while starting the export. If the marker is missing or disconnected, the
+client calls `hasGoogleAccountLink`; a `linked=false` result starts authorization for these two scopes and offline access
+with the Web/server client ID:
 
 - `https://www.googleapis.com/auth/spreadsheets`
 - `https://www.googleapis.com/auth/drive.file`
@@ -173,6 +175,7 @@ sequenceDiagram
     participant OAuth as Google OAuth endpoint
     participant Store as googleOAuthAccounts
 
+    Note over UI,Status: Cache-miss or disconnected-marker path
     UI->>Callable: hasGoogleAccountLink with empty data
     Callable->>Status: Firebase ID token attached by SDK
     Status-->>UI: linked = false
@@ -192,6 +195,9 @@ sequenceDiagram
 The backend writes a replacement only after a complete successful exchange. A bad replacement code leaves an existing
 valid grant unchanged.
 
+`GOOGLE_RECONNECT_REQUIRED` and `GOOGLE_SCOPES_MISSING` export failures clear the local marker. The next foreground
+export therefore returns to the connection flow instead of trusting stale last-known state.
+
 ## User export flow
 
 ```mermaid
@@ -203,7 +209,9 @@ flowchart TD
     Destination -->|CSV| BuildCsv[Build CSV from local database]
     BuildCsv --> Share[Open platform share sheet]
 
-    Destination -->|Google Sheets| LinkCheck[Call authoritative link status]
+    Destination -->|Google Sheets| LocalLink{Cached as linked?}
+    LocalLink -->|No| LinkCheck[Call server link status]
+    LocalLink -->|Yes| Enqueue
     LinkCheck -->|Lookup failed| Error[Show retryable error]
     LinkCheck -->|Unlinked| Consent[Request foreground Google consent]
     Consent -->|Cancelled| Ready[Return to export options]

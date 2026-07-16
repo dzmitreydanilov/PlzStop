@@ -1,22 +1,19 @@
 package com.please.stop.app.features.export.data
 
+import com.please.stop.app.core.IGoogleAccountStorage
 import com.please.stop.app.core.db.dao.CategoryDao
 import com.please.stop.app.core.db.dao.ExpenseDao
 import com.please.stop.app.core.db.dao.ExportHistoryDao
 import com.please.stop.app.core.db.dao.SubcategoryDao
 import com.please.stop.app.core.db.dao.UserProfileDao
 import com.please.stop.app.core.db.entity.ExportStatus
+import com.please.stop.app.core.runSuspendCatching
 import com.please.stop.app.features.expenses.data.remote.FirebaseCallableErrorReason
 import com.please.stop.app.features.expenses.data.remote.FirebaseCallableException
 import com.please.stop.app.features.expenses.data.remote.FirebaseCallableFunctions
-import com.please.stop.app.features.export.domain.model.ExportExpenseRow
-import com.please.stop.app.utils.date.localDateTimeFromMillis
 import com.please.stop.app.utils.date.now
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlin.math.abs
 
 internal class ExportWorkRunner(
     private val expenseDao: ExpenseDao,
@@ -25,6 +22,8 @@ internal class ExportWorkRunner(
     private val userProfileDao: UserProfileDao,
     private val callableFunctions: FirebaseCallableFunctions,
     private val exportHistoryDao: ExportHistoryDao,
+    private val googleAccountStorage: IGoogleAccountStorage,
+    private val payloadBuilder: ExportToSheetsPayloadBuilder,
 ) {
 
     suspend fun run(request: ExportWorkRequest): ExportWorkResult {
@@ -50,7 +49,9 @@ internal class ExportWorkRunner(
             startDateMillis = request.startDateMillis,
             endDateMillis = request.endDateMillis,
         )
-        val expenses = expenseDao.getExpensesInRange(
+        // TODO: Larger exports require paged DAO reads and matching
+        //  idempotent chunk handling in exportToSheets.
+        val expenses = expenseDao.getExpensesForExport(
             fromEpochMillis = dateRange.fromMillis,
             toEpochMillis = dateRange.toMillis,
         )
@@ -58,50 +59,30 @@ internal class ExportWorkRunner(
         val allSubcategories = subcategoryDao.observeAllIncludingArchived().first()
         val userProfile = userProfileDao.get()
 
-        val categoryMap = allCategories.associateBy { it.id }
-        val subcategoryMap = allSubcategories.associateBy { it.id }
-        val decimalPlaces = userProfile?.decimalPlaces ?: DEFAULT_DECIMAL_PLACES
-        val expensesList = expenses
-            .sortedBy { it.dateEpochMillis }
-            .map { expense ->
-                ExportExpenseRow(
-                    date = formatIsoDate(expense.dateEpochMillis),
-                    title = expense.title,
-                    category = categoryMap[expense.categoryId]?.name.orEmpty(),
-                    subcategory = subcategoryMap[expense.subcategoryId]?.name.orEmpty(),
-                    amount = formatMinorUnits(expense.amountMinorUnits, decimalPlaces),
-                    notes = expense.notes.orEmpty(),
-                )
-            }
-
-        val payloadExpenses = buildPayloadExpenses(expensesList)
-        val payload = buildExportToSheetsPayload(
-            exportId = request.exportId,
-            dateRangeLabel = "${formatIsoDate(request.startDateMillis)} to " +
-                formatIsoDate(request.endDateMillis),
-            tabLayout = request.tabLayout,
-            currencySymbol = userProfile?.currencySymbol.orEmpty(),
-            decimalPlaces = decimalPlaces,
-            compressed = payloadExpenses.compressed,
-            expenses = payloadExpenses.expenses,
-            spreadsheetTitle = request.spreadsheetTitle,
-            folderName = request.folderName,
+        val payload = payloadBuilder.build(
+            request = request,
+            expenses = expenses,
+            categories = allCategories,
+            subcategories = allSubcategories,
+            userProfile = userProfile,
         )
 
-        return callableFunctions.call(functionName = "exportToSheets", data = payload).fold(
-            onSuccess = { data ->
-                exportHistoryDao.updateResult(
-                    id = request.exportId,
-                    status = ExportStatus.SUCCESS,
-                    url = data["spreadsheetUrl"] as? String,
-                    completedAt = now().toEpochMilliseconds(),
-                )
-                ExportWorkResult.Success
-            },
-            onFailure = { error ->
-                handleCallableFailure(exportId = request.exportId, error = error)
-            },
-        )
+        return callableFunctions
+            .call(functionName = "exportToSheets", data = payload)
+            .fold(
+                onSuccess = { data ->
+                    exportHistoryDao.updateResult(
+                        id = request.exportId,
+                        status = ExportStatus.SUCCESS,
+                        url = data["spreadsheetUrl"] as? String,
+                        completedAt = now().toEpochMilliseconds(),
+                    )
+                    ExportWorkResult.Success
+                },
+                onFailure = { error ->
+                    handleCallableFailure(exportId = request.exportId, error = error)
+                },
+            )
     }
 
     private suspend fun handleCallableFailure(
@@ -111,25 +92,12 @@ internal class ExportWorkRunner(
         return when (val decision = error.toExportFailureDecision()) {
             ExportFailureDecision.Retry -> ExportWorkResult.Retry
             is ExportFailureDecision.Terminal -> {
+                if (decision.invalidatesGoogleLink) {
+                    runSuspendCatching { googleAccountStorage.delete() }
+                }
                 markFailed(exportId = exportId, error = decision.reason)
                 ExportWorkResult.Failure
             }
-        }
-    }
-
-    private fun buildPayloadExpenses(expenses: List<ExportExpenseRow>): PayloadExpenses {
-        val expensesJson = Json.encodeToString(expenses)
-        val bytes = expensesJson.encodeToByteArray()
-        return if (bytes.size >= COMPRESSION_THRESHOLD_BYTES) {
-            PayloadExpenses(
-                compressed = true,
-                expenses = gzipBase64(bytes),
-            )
-        } else {
-            PayloadExpenses(
-                compressed = false,
-                expenses = expenses.map { it.toPayloadMap() },
-            )
         }
     }
 
@@ -141,16 +109,6 @@ internal class ExportWorkRunner(
             completedAt = now().toEpochMilliseconds(),
         )
     }
-
-    private data class PayloadExpenses(
-        val compressed: Boolean,
-        val expenses: Any,
-    )
-
-    private companion object {
-        const val COMPRESSION_THRESHOLD_BYTES = 100_000
-        const val DEFAULT_DECIMAL_PLACES = 2
-    }
 }
 
 internal sealed interface ExportWorkResult {
@@ -161,7 +119,10 @@ internal sealed interface ExportWorkResult {
 
 internal sealed interface ExportFailureDecision {
     data object Retry : ExportFailureDecision
-    data class Terminal(val reason: String) : ExportFailureDecision
+    data class Terminal(
+        val reason: String,
+        val invalidatesGoogleLink: Boolean,
+    ) : ExportFailureDecision
 }
 
 internal fun Throwable.toExportFailureDecision(): ExportFailureDecision {
@@ -173,59 +134,12 @@ internal fun Throwable.toExportFailureDecision(): ExportFailureDecision {
     ) {
         ExportFailureDecision.Retry
     } else {
-        ExportFailureDecision.Terminal(reason = reason?.value ?: EXPORT_FAILED_REASON)
+        ExportFailureDecision.Terminal(
+            reason = reason?.value ?: EXPORT_FAILED_REASON,
+            invalidatesGoogleLink = reason == FirebaseCallableErrorReason.GoogleReconnectRequired ||
+                reason == FirebaseCallableErrorReason.GoogleScopesMissing,
+        )
     }
 }
 
-internal fun buildExportToSheetsPayload(
-    exportId: Long,
-    dateRangeLabel: String,
-    tabLayout: String,
-    currencySymbol: String,
-    decimalPlaces: Int,
-    compressed: Boolean,
-    expenses: Any,
-    spreadsheetTitle: String,
-    folderName: String,
-): Map<String, Any?> = buildMap {
-    put("exportId", exportId.toString())
-    put("dateRangeLabel", dateRangeLabel)
-    put("tabLayout", tabLayout)
-    put("currencySymbol", currencySymbol)
-    put("decimalPlaces", decimalPlaces)
-    put("compressed", compressed)
-    put("expenses", expenses)
-    spreadsheetTitle.trim().takeIf(String::isNotEmpty)?.let { put("title", it) }
-    folderName.trim().takeIf(String::isNotEmpty)?.let { put("folderName", it) }
-}
-
-private fun ExportExpenseRow.toPayloadMap(): Map<String, Any> = mapOf(
-    "date" to date,
-    "title" to title,
-    "category" to category,
-    "subcategory" to subcategory,
-    "amount" to amount.toDouble(),
-    "notes" to notes,
-)
-
-private fun formatIsoDate(epochMillis: Long): String = localDateTimeFromMillis(epochMillis).date.toString()
-
-private fun formatMinorUnits(minorUnits: Long, decimalPlaces: Int): String {
-    if (decimalPlaces == 0) return minorUnits.toString()
-    val multiplier = powerOfTen(decimalPlaces)
-    val sign = if (minorUnits < 0) "-" else ""
-    val absoluteValue = abs(minorUnits)
-    val whole = absoluteValue / multiplier
-    val fraction = (absoluteValue % multiplier).toString().padStart(decimalPlaces, '0')
-    return "$sign$whole.$fraction"
-}
-
-private fun powerOfTen(decimalPlaces: Int): Long {
-    var result = INITIAL_MULTIPLIER
-    repeat(decimalPlaces) { result *= DECIMAL_RADIX }
-    return result
-}
-
-private const val INITIAL_MULTIPLIER = 1L
-private const val DECIMAL_RADIX = 10L
 private const val EXPORT_FAILED_REASON = "EXPORT_FAILED"

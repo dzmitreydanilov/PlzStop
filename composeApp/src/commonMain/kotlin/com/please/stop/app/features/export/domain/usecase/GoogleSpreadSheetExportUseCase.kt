@@ -32,19 +32,20 @@ class GoogleSpreadSheetExportUseCase(
         spreadsheetTitle: String,
         folderName: String,
     ): Flow<GoogleSpreadSheetExportResult> {
-        return observeAuthStateUseCase().take(1).flatMapLatest { isAuthenticated ->
-            if (isAuthenticated) {
-                exportForAuthenticatedUser(
-                    startDateMillis = startDateMillis,
-                    endDateMillis = endDateMillis,
-                    spreadSheetFormat = spreadSheetFormat,
-                    spreadsheetTitle = spreadsheetTitle,
-                    folderName = folderName,
-                )
-            } else {
-                flowOf(GoogleSpreadSheetExportResult.AuthenticationRequired)
+        return observeAuthStateUseCase().take(1)
+            .flatMapLatest { isAuthenticated ->
+                if (isAuthenticated) {
+                    exportForAuthenticatedUser(
+                        startDateMillis = startDateMillis,
+                        endDateMillis = endDateMillis,
+                        spreadSheetFormat = spreadSheetFormat,
+                        spreadsheetTitle = spreadsheetTitle,
+                        folderName = folderName,
+                    )
+                } else {
+                    flowOf(GoogleSpreadSheetExportResult.AuthenticationRequired)
+                }
             }
-        }
             .flowOn(dispatcher)
             .onStart { emit(GoogleSpreadSheetExportResult.Loading) }
     }
@@ -57,38 +58,39 @@ class GoogleSpreadSheetExportUseCase(
         spreadsheetTitle: String,
         folderName: String,
     ): Flow<GoogleSpreadSheetExportResult> =
-        googleAccountLinkedUseCase().flatMapLatest { linkageResult ->
-            when (linkageResult) {
-                HasGoogleAccountLinkageResult.GoogleAccountLinked -> {
-                    googleSheetExportRepository.enqueExport(
-                        startDateMillis = startDateMillis,
-                        endDateMillis = endDateMillis,
-                        spreadSheetFormat = spreadSheetFormat,
-                        spreadsheetTitle = spreadsheetTitle,
-                        folderName = folderName,
-                    ).map { result ->
-                        result.fold(
-                            onSuccess = { GoogleSpreadSheetExportResult.Enqueued },
-                            onFailure = {
-                                GoogleSpreadSheetExportResult.Failure(errorType = it.toErrorType())
-                            },
-                        )
+        googleAccountLinkedUseCase()
+            .flatMapLatest { linkageResult ->
+                when (linkageResult) {
+                    HasGoogleAccountLinkageResult.GoogleAccountLinked -> {
+                        googleSheetExportRepository.enqueExport(
+                            startDateMillis = startDateMillis,
+                            endDateMillis = endDateMillis,
+                            spreadSheetFormat = spreadSheetFormat,
+                            spreadsheetTitle = spreadsheetTitle,
+                            folderName = folderName,
+                        ).map { result ->
+                            result.fold(
+                                onSuccess = { GoogleSpreadSheetExportResult.Enqueued },
+                                onFailure = {
+                                    GoogleSpreadSheetExportResult.Failure(errorType = it.toErrorType())
+                                },
+                            )
+                        }
+                    }
+
+                    HasGoogleAccountLinkageResult.GoogleAccountNotLinked -> {
+                        flowOf(GoogleSpreadSheetExportResult.GoogleAccountNotLinked)
+                    }
+
+                    HasGoogleAccountLinkageResult.AuthenticationRequired -> {
+                        flowOf(GoogleSpreadSheetExportResult.AuthenticationRequired)
+                    }
+
+                    is HasGoogleAccountLinkageResult.Failure -> {
+                        flowOf(GoogleSpreadSheetExportResult.Failure(linkageResult.errorType))
                     }
                 }
-
-                HasGoogleAccountLinkageResult.GoogleAccountNotLinked -> {
-                    flowOf(GoogleSpreadSheetExportResult.GoogleAccountNotLinked)
-                }
-
-                HasGoogleAccountLinkageResult.AuthenticationRequired -> {
-                    flowOf(GoogleSpreadSheetExportResult.AuthenticationRequired)
-                }
-
-                is HasGoogleAccountLinkageResult.Failure -> {
-                    flowOf(GoogleSpreadSheetExportResult.Failure(linkageResult.errorType))
-                }
             }
-        }
 }
 
 sealed interface GoogleSpreadSheetExportResult : Result {

@@ -30,9 +30,6 @@ class DeleteAccountUseCase(
         data class Failure(override val errorType: ErrorType) : DeleteResult, ErrorResult
     }
 
-    /** Account deletion always starts with an explicit recent-login challenge. */
-    suspend operator fun invoke(): DeleteResult = DeleteResult.NeedsReauthentication
-
     suspend operator fun invoke(credential: GoogleSignInCredential): DeleteResult =
         withContext(ioDispatcher) {
             firebaseAuthProvider.reauthenticateWithGoogle(credential.idToken).fold(

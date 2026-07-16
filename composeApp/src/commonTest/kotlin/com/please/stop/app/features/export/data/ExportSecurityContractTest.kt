@@ -3,6 +3,7 @@ package com.please.stop.app.features.export.data
 import com.please.stop.app.core.db.dao.ExportHistoryDao
 import com.please.stop.app.core.db.entity.ExportHistoryEntity
 import com.please.stop.app.core.db.entity.ExportStatus
+import com.please.stop.app.core.db.entity.UserProfileEntity
 import com.please.stop.app.features.expenses.data.remote.FirebaseCallableErrorReason
 import com.please.stop.app.features.expenses.data.remote.FirebaseCallableException
 import com.please.stop.app.features.export.data.repository.GoogleSheetExportRepository
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.single
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -77,16 +79,26 @@ class ExportSecurityContractTest {
 
     @Test
     fun callablePayloadContainsNoOauthCredential() {
-        val payload = buildExportToSheetsPayload(
-            exportId = 42,
-            dateRangeLabel = "2026-01-01 to 2026-01-31",
-            tabLayout = "single_tab",
-            currencySymbol = "EUR",
-            decimalPlaces = 2,
-            compressed = false,
-            expenses = emptyList<Map<String, String>>(),
-            spreadsheetTitle = "January expenses",
-            folderName = "PlzStop exports",
+        val payload = ExportToSheetsPayloadBuilder().build(
+            request = ExportWorkRequest(
+                exportId = 42,
+                tabLayout = "single_tab",
+                startDateMillis = 1_000,
+                endDateMillis = 2_000,
+                spreadsheetTitle = "January expenses",
+                folderName = "PlzStop exports",
+            ),
+            expenses = emptyList(),
+            categories = emptyList(),
+            subcategories = emptyList(),
+            userProfile = UserProfileEntity(
+                displayName = null,
+                currencyCode = "EUR",
+                currencySymbol = "EUR",
+                decimalPlaces = 2,
+                monthlyBudget = 0,
+                onboardingCompleted = true,
+            ),
         )
 
         assertEquals(
@@ -138,6 +150,32 @@ class ExportSecurityContractTest {
 
         val decision = assertIs<ExportFailureDecision.Terminal>(error.toExportFailureDecision())
         assertEquals("GOOGLE_RECONNECT_REQUIRED", decision.reason)
+        assertTrue(decision.invalidatesGoogleLink)
+    }
+
+    @Test
+    fun missingScopesInvalidatesCachedLink() {
+        val error = FirebaseCallableException(
+            code = "PERMISSION_DENIED",
+            reason = FirebaseCallableErrorReason.GoogleScopesMissing,
+            message = "Required scopes are missing",
+        )
+
+        val decision = assertIs<ExportFailureDecision.Terminal>(error.toExportFailureDecision())
+        assertTrue(decision.invalidatesGoogleLink)
+    }
+
+    @Test
+    fun unrelatedTerminalFailureKeepsCachedLink() {
+        val error = FirebaseCallableException(
+            code = "INTERNAL",
+            reason = null,
+            message = "Export failed",
+        )
+
+        val decision = assertIs<ExportFailureDecision.Terminal>(error.toExportFailureDecision())
+        assertEquals("EXPORT_FAILED", decision.reason)
+        assertFalse(decision.invalidatesGoogleLink)
     }
 
     private fun assertNoOauthCredentialKeys(keys: Set<String>) {

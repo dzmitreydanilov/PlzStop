@@ -69,11 +69,49 @@ class GoogleAccountFlowTest {
             linkedResult = Result.failure(IllegalStateException("network unavailable")),
         )
         val useCase = CheckGoogleAccountLinkageUseCase(
+            googleAccountStorage = FakeGoogleAccountStorage(),
             googleAccountRepository = repository,
             dispatcher = UnconfinedTestDispatcher(testScheduler),
         )
 
         assertIs<HasGoogleAccountLinkageResult.Failure>(useCase().single())
+    }
+
+    @Test
+    fun cachedLinkSkipsRemoteLookup() = runTest {
+        val repository = FakeGoogleAccountRepository()
+        val storage = FakeGoogleAccountStorage().apply {
+            link = GoogleAccountLink(email = "", isConnected = true)
+        }
+        val useCase = CheckGoogleAccountLinkageUseCase(
+            googleAccountStorage = storage,
+            googleAccountRepository = repository,
+            dispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+
+        assertEquals(
+            HasGoogleAccountLinkageResult.GoogleAccountLinked,
+            useCase().single(),
+        )
+        assertEquals(0, repository.linkLookupCount)
+    }
+
+    @Test
+    fun remoteLinkLookupPopulatesCache() = runTest {
+        val repository = FakeGoogleAccountRepository(linkedResult = Result.success(true))
+        val storage = FakeGoogleAccountStorage()
+        val useCase = CheckGoogleAccountLinkageUseCase(
+            googleAccountStorage = storage,
+            googleAccountRepository = repository,
+            dispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+
+        assertEquals(
+            HasGoogleAccountLinkageResult.GoogleAccountLinked,
+            useCase().single(),
+        )
+        assertEquals(GoogleAccountLink(email = "", isConnected = true), storage.link)
+        assertEquals(1, repository.linkLookupCount)
     }
 
     @Test
@@ -88,6 +126,7 @@ class GoogleAccountFlowTest {
             ),
         )
         val useCase = CheckGoogleAccountLinkageUseCase(
+            googleAccountStorage = FakeGoogleAccountStorage(),
             googleAccountRepository = repository,
             dispatcher = UnconfinedTestDispatcher(testScheduler),
         )
@@ -110,6 +149,7 @@ class GoogleAccountFlowTest {
             ),
         )
         val useCase = CheckGoogleAccountLinkageUseCase(
+            googleAccountStorage = FakeGoogleAccountStorage(),
             googleAccountRepository = repository,
             dispatcher = UnconfinedTestDispatcher(testScheduler),
         )
@@ -124,13 +164,17 @@ private class FakeGoogleAccountRepository(
     private val unlinkResult: Result<Unit> = Result.success(Unit),
 ) : GoogleAccountRepository {
     var linkedCode: GoogleSheetsAuthorizationCode? = null
+    var linkLookupCount: Int = 0
 
     override suspend fun link(authorizationCode: GoogleSheetsAuthorizationCode): Result<Unit> {
         linkedCode = authorizationCode
         return linkResult
     }
 
-    override suspend fun isLinked(): Result<Boolean> = linkedResult
+    override suspend fun isLinked(): Result<Boolean> {
+        linkLookupCount += 1
+        return linkedResult
+    }
 
     override suspend fun unlink(): Result<Unit> = unlinkResult
 }

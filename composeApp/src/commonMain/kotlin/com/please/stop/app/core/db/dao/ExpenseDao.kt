@@ -110,6 +110,20 @@ interface ExpenseDao {
         toEpochMillis: Long,
     ): List<ExpenseEntity>
 
+    @Query(
+        """
+        SELECT * FROM expense
+        WHERE isDeleted = 0
+          AND dateEpochMillis >= :fromEpochMillis
+          AND dateEpochMillis < :toEpochMillis
+        ORDER BY dateEpochMillis ASC
+        """
+    )
+    suspend fun getExpensesForExport(
+        fromEpochMillis: Long,
+        toEpochMillis: Long,
+    ): List<ExpenseEntity>
+
     @Query("DELETE FROM expense")
     suspend fun deleteAll()
 }
