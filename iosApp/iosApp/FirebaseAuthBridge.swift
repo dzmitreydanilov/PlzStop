@@ -77,6 +77,13 @@ final class AppFirebaseAuthBridge: IosFirebaseAuthBridge {
         onComplete()
     }
 
+    func currentSignInProviderId() -> String? {
+        return Auth.auth().currentUser?.providerData.first(where: { userInfo in
+            userInfo.providerID == AuthProviderID.google.rawValue ||
+                userInfo.providerID == AuthProviderID.apple.rawValue
+        })?.providerID
+    }
+
     func observeIsAuthenticated(onChanged: @escaping (KotlinBoolean) -> Void) {
         removeAuthStateListener()
         authStateHandle = Auth.auth().addStateDidChangeListener { _, user in

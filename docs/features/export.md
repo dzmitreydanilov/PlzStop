@@ -338,10 +338,14 @@ codes, tokens, client secrets, encryption keys, or ciphertext.
 
 - Explicit Sheets disconnect calls `unlinkGoogleAccount` while Firebase auth is available.
 - Sign-out first attempts remote unlink, then always clears the local Google link marker, Firebase session, and Google
-  identity SDK state even if unlink is offline.
-- Account deletion always requires a fresh Google ID token or fresh Apple identity-token/nonce pair before cleanup. After
-  reauthentication, it attempts unlink and deletes the Firebase user. An Auth user-deletion trigger attempts revocation
-  of any decryptable remaining grant and always removes the `googleOAuthAccounts/{uid}` record.
+  identity SDK state even if unlink is offline. It preserves the local expense database.
+- Account deletion first asks Firebase to delete the current user without reopening provider UI. If Firebase requires a
+  recent login, the client reauthenticates with only the provider used to sign in to PlzStop and retries deletion. The
+  Auth user-deletion trigger attempts revocation of any decryptable remaining grant and always removes the
+  `googleOAuthAccounts/{uid}` record; account deletion does not call the unlink callable from the client.
+- Google deletion reauthentication filters to accounts already authorized for PlzStop and enables automatic selection.
+  Android still shows the system account chooser when more than one eligible credential exists; Firebase rejects a
+  credential belonging to a different user. iOS additionally supplies the current Firebase email as the Google hint.
 - Token revocation is best effort; ciphertext deletion is mandatory.
 
 ```mermaid
@@ -363,13 +367,16 @@ sequenceDiagram
         App->>App: Clear local marker and Google identity state
     else Delete account
         User->>App: Confirm deletion
-        App->>Firebase: Reauthenticate with fresh provider credential
-        Firebase-->>App: Recent login confirmed
-        App->>Unlink: Best-effort unlink while authenticated
         App->>Firebase: Delete Firebase user
+        opt Firebase requires a recent login
+            Firebase-->>App: Reauthentication required
+            App->>Firebase: Reauthenticate with current sign-in provider
+            App->>Firebase: Retry Firebase user deletion
+        end
         Firebase->>Trigger: User deletion event
-        Trigger->>Trigger: Delete any remaining token record
-        App->>App: Clear local account data and identity state
+        Trigger->>Google: Best-effort revoke remaining grant
+        Trigger->>Trigger: Delete token record
+        App->>App: Clear user data and identity state; preserve default categories
     end
 ```
 

@@ -25,6 +25,7 @@ class LogoutUseCase(
 
     operator fun invoke(): Flow<LogoutResult> {
         return flow {
+            // Logging out ends remote sessions but intentionally preserves the local database.
             val cleanupResults = listOf(
                 googleAccountRepository.unlink(),
                 runSuspendCatching { googleAccountStorage.delete() },

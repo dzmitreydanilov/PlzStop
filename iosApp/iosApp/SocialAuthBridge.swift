@@ -1,6 +1,7 @@
 import AuthenticationServices
 import ComposeApp
 import CryptoKit
+import FirebaseAuth
 import FirebaseCore
 import GoogleSignIn
 import Security
@@ -15,7 +16,11 @@ final class AppSocialAuthBridge: NSObject, IosSocialAuthBridge {
         onSuccess: @escaping (String) -> Void,
         onError: @escaping (String) -> Void
     ) {
-        performGoogleSignIn(additionalScopes: [], onError: onError) { result in
+        performGoogleSignIn(
+            accountHint: Auth.auth().currentUser?.email,
+            additionalScopes: [],
+            onError: onError
+        ) { result in
             guard let idToken = result.user.idToken?.tokenString else {
                 onError("Google identity token unavailable")
                 return
@@ -31,7 +36,11 @@ final class AppSocialAuthBridge: NSObject, IosSocialAuthBridge {
         onError: @escaping (String) -> Void
     ) {
         let authorize = { [weak self] in
-            self?.performGoogleSignIn(additionalScopes: scopes, onError: onError) { result in
+            self?.performGoogleSignIn(
+                accountHint: nil,
+                additionalScopes: scopes,
+                onError: onError
+            ) { result in
                 guard let serverAuthCode = result.serverAuthCode else {
                     onError("Google server authorization code unavailable")
                     return
@@ -54,6 +63,7 @@ final class AppSocialAuthBridge: NSObject, IosSocialAuthBridge {
     }
 
     private func performGoogleSignIn(
+        accountHint: String?,
         additionalScopes: [String],
         onError: @escaping (String) -> Void,
         onSuccess: @escaping (GIDSignInResult) -> Void
@@ -68,7 +78,7 @@ final class AppSocialAuthBridge: NSObject, IosSocialAuthBridge {
         }
         GIDSignIn.sharedInstance.signIn(
             withPresenting: presentingViewController,
-            hint: nil,
+            hint: accountHint,
             additionalScopes: additionalScopes
         ) { result, error in
             if error != nil {

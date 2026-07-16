@@ -1,5 +1,6 @@
 package com.please.stop.app.features.auth.data
 
+import com.please.stop.app.features.auth.domain.model.FirebaseSignInProvider
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -67,10 +68,22 @@ internal class IosFirebaseAuthProvider(
         }
     }
 
+    override fun currentSignInProvider(): FirebaseSignInProvider? =
+        when (bridge.currentSignInProviderId()) {
+            GOOGLE_PROVIDER_ID -> FirebaseSignInProvider.GOOGLE
+            APPLE_PROVIDER_ID -> FirebaseSignInProvider.APPLE
+            else -> null
+        }
+
     override fun observeIsAuthenticated(): Flow<Boolean> = callbackFlow {
         bridge.observeIsAuthenticated { isAuthenticated ->
             trySend(isAuthenticated)
         }
         awaitClose { bridge.removeAuthStateListener() }
+    }
+
+    private companion object {
+        const val GOOGLE_PROVIDER_ID = "google.com"
+        const val APPLE_PROVIDER_ID = "apple.com"
     }
 }

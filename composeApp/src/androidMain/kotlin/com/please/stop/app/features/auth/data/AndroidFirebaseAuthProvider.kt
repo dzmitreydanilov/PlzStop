@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.OAuthProvider
 import com.please.stop.app.core.runSuspendCatching
+import com.please.stop.app.features.auth.domain.model.FirebaseSignInProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -73,6 +74,15 @@ internal class AndroidFirebaseAuthProvider : FirebaseAuthProvider {
     override suspend fun signOut() {
         auth.signOut()
     }
+
+    override fun currentSignInProvider(): FirebaseSignInProvider? =
+        auth.currentUser?.providerData?.firstNotNullOfOrNull { userInfo ->
+            when (userInfo.providerId) {
+                FirebaseGoogleAuthProvider.PROVIDER_ID -> FirebaseSignInProvider.GOOGLE
+                APPLE_PROVIDER_ID -> FirebaseSignInProvider.APPLE
+                else -> null
+            }
+        }
 
     override fun observeIsAuthenticated(): Flow<Boolean> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->

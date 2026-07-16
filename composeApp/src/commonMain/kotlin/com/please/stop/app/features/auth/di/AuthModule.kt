@@ -8,6 +8,7 @@ import com.please.stop.app.features.auth.domain.repository.AuthRepository
 import com.please.stop.app.features.auth.domain.repository.GoogleAccountRepository
 import com.please.stop.app.features.auth.domain.usecase.ConnectGoogleAccountUseCase
 import com.please.stop.app.features.auth.domain.usecase.DeleteAccountUseCase
+import com.please.stop.app.features.auth.domain.usecase.GetCurrentSignInProviderUseCase
 import com.please.stop.app.features.auth.domain.usecase.LogoutUseCase
 import com.please.stop.app.features.auth.domain.usecase.ObserveAuthStateUseCase
 import com.please.stop.app.features.auth.domain.usecase.SignInWithAppleUseCase
@@ -44,6 +45,8 @@ val authModule = module {
 
     factory { ObserveAuthStateUseCase(repository = get()) }
 
+    factory { GetCurrentSignInProviderUseCase(repository = get()) }
+
     factory {
         ConnectGoogleAccountUseCase(
             googleAccountStorage = get(),
@@ -66,7 +69,6 @@ val authModule = module {
         DeleteAccountUseCase(
             firebaseAuthProvider = get(),
             googleAccountStorage = get(),
-            googleAccountRepository = get(),
             googleAuthProvider = get(),
             appDatabase = get<AppDatabase>(),
             ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
@@ -86,6 +88,8 @@ val authModule = module {
             signInWithGoogleUseCase = get(),
             signInWithAppleUseCase = get(),
             logoutUseCase = get(),
+            deleteAccountUseCase = get(),
+            getCurrentSignInProviderUseCase = get(),
             appleAuthProvider = get(),
         )
     }

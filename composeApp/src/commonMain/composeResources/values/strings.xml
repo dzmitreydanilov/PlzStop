@@ -291,6 +291,15 @@
     <string name="user_continue_google">Continue with Google</string>
     <string name="user_continue_apple">Continue with Apple</string>
     <string name="user_logout">Log out</string>
+    <string name="user_delete_account">Delete account</string>
+    <string name="user_delete_account_title">Delete your account?</string>
+    <string name="user_delete_account_message">This permanently deletes your account and personal data from this device. Default categories remain available. This action cannot be undone.</string>
+    <string name="user_delete_account_reauthenticate_title">Sign in again to delete your account</string>
+    <string name="user_delete_account_reauthenticate_google">For your security, account deletion requires a recent sign-in. Continue with the same Google account currently connected to PlzStop.</string>
+    <string name="user_delete_account_reauthenticate_apple">For your security, account deletion requires a recent sign-in. Continue with the same Apple ID currently connected to PlzStop.</string>
+    <string name="user_delete_with_google">Sign in again with Google</string>
+    <string name="user_delete_with_apple">Sign in again with Apple</string>
+    <string name="user_delete_cancel">Cancel</string>
     <string name="subscriptions_list_title">Subscriptions</string>
     <string name="subscription_promo_title">Track Recurring Expenses</string>
     <string name="subscription_promo_body">Never lose track of your subscriptions. Set up recurring expenses to automatically track Netflix, gym, rent, and more.</string>

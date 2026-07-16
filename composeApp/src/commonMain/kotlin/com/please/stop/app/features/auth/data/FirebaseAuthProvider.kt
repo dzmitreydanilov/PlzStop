@@ -1,5 +1,6 @@
 package com.please.stop.app.features.auth.data
 
+import com.please.stop.app.features.auth.domain.model.FirebaseSignInProvider
 import kotlinx.coroutines.flow.Flow
 
 interface FirebaseAuthProvider {
@@ -9,6 +10,7 @@ interface FirebaseAuthProvider {
     suspend fun reauthenticateWithGoogle(idToken: String): Result<Unit>
     suspend fun reauthenticateWithApple(identityToken: String, nonce: String): Result<Unit>
     suspend fun signOut()
+    fun currentSignInProvider(): FirebaseSignInProvider?
     fun observeIsAuthenticated(): Flow<Boolean>
 }
 

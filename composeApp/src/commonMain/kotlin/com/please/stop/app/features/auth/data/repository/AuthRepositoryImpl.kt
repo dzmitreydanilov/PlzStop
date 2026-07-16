@@ -3,6 +3,7 @@ package com.please.stop.app.features.auth.data.repository
 import com.please.stop.app.features.auth.apple.AppleUser
 import com.please.stop.app.features.auth.data.DeleteAccountResult
 import com.please.stop.app.features.auth.data.FirebaseAuthProvider
+import com.please.stop.app.features.auth.domain.model.FirebaseSignInProvider
 import com.please.stop.app.features.auth.domain.repository.AuthRepository
 import com.please.stop.app.features.auth.google.GoogleSignInCredential
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +29,9 @@ internal class AuthRepositoryImpl(
             identityToken = credential.identityToken,
             nonce = credential.nonce,
         )
+
+    override fun currentSignInProvider(): FirebaseSignInProvider? =
+        firebaseAuthProvider.currentSignInProvider()
 
     override fun observeIsAuthenticated(): Flow<Boolean> =
         firebaseAuthProvider.observeIsAuthenticated()

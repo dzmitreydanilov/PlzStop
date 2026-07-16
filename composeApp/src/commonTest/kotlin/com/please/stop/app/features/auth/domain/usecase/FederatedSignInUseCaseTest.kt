@@ -72,5 +72,7 @@ private class RecordingAuthRepository : AuthRepository {
     override suspend fun reauthenticateWithApple(credential: AppleUser): Result<Unit> =
         Result.success(Unit)
 
+    override fun currentSignInProvider() = null
+
     override fun observeIsAuthenticated(): Flow<Boolean> = flowOf(true)
 }

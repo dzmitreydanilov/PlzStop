@@ -5,6 +5,7 @@ import com.please.stop.app.core.IGoogleAccountStorage
 import com.please.stop.app.core.models.data.GoogleAccountLink
 import com.please.stop.app.features.auth.data.DeleteAccountResult
 import com.please.stop.app.features.auth.data.FirebaseAuthProvider
+import com.please.stop.app.features.auth.domain.model.FirebaseSignInProvider
 import com.please.stop.app.features.auth.domain.repository.GoogleAccountRepository
 import com.please.stop.app.features.auth.google.GoogleAuthProvider
 import com.please.stop.app.features.auth.google.GoogleAuthUiProvider
@@ -86,6 +87,8 @@ private class RecordingFirebaseAuthProvider(
     override suspend fun signOut() {
         calls += "firebase"
     }
+
+    override fun currentSignInProvider(): FirebaseSignInProvider = FirebaseSignInProvider.GOOGLE
 
     override fun observeIsAuthenticated(): Flow<Boolean> = flowOf(true)
 }

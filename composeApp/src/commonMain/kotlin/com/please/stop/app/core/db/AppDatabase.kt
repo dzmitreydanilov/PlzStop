@@ -42,12 +42,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun receiptDao(): ReceiptDao
     abstract fun exportHistoryDao(): ExportHistoryDao
 
-    suspend fun clearAllData() {
+    suspend fun clearUserData() {
         expenseDao().deleteAll()
-        subcategoryDao().deleteAll()
-        categoryDao().deleteAll()
         receiptDao().deleteAll()
         exportHistoryDao().deleteAll()
+        subcategoryDao().deleteAllNonDefault()
+        categoryDao().deleteAllNonDefault()
         userProfileDao().deleteAll()
     }
 

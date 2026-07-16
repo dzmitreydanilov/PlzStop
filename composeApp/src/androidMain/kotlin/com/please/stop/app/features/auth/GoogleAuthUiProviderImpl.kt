@@ -46,19 +46,7 @@ internal class GoogleAuthUiProviderImpl(
             )
         } catch (e: NoCredentialException) {
             logDebug("GoogleAuthUiProvider: NoCredentialException while getting credential")
-            if (!filterByAuthorizedAccounts) return null
-            try {
-                getGoogleUserFromCredential(
-                    filterByAuthorizedAccounts = false,
-                    isAutoSelectEnabled = isAutoSelectEnabled,
-                )
-            } catch (_: GetCredentialException) {
-                logDebug("GoogleAuthUiProvider: GetCredentialException while getting credential")
-                null
-            } catch (@Suppress("TooGenericExceptionCaught") _: NullPointerException) {
-                logDebug("GoogleAuthUiProvider: NullPointerException while getting credential")
-                null
-            }
+            null
         } catch (_: GetCredentialException) {
             logDebug("GoogleAuthUiProvider: GetCredentialException while getting credential")
             null
