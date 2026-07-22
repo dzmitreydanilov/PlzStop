@@ -109,7 +109,6 @@ kotlin {
         }
 
         androidMain.dependencies {
-            implementation(libs.amplitude.android)
             implementation(libs.koin.android)
             implementation(libs.ktor.okhttp)
             implementation(libs.coil.gif)
