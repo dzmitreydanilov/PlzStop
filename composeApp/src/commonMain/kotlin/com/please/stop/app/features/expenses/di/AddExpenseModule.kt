@@ -179,6 +179,7 @@ val addExpenseModule = module {
             fetchAndApplyExchangeRateUseCase = get(),
             setPendingReceiptDataUseCase = get(),
             clearPendingReceiptDataUseCase = get(),
+            addSubcategoryUseCase = get(),
         )
     }
 
@@ -193,6 +194,7 @@ val addExpenseModule = module {
             fetchAndApplyExchangeRateUseCase = get(),
             setPendingReceiptDataUseCase = get(),
             clearPendingReceiptDataUseCase = get(),
+            addSubcategoryUseCase = get(),
         )
     }
 

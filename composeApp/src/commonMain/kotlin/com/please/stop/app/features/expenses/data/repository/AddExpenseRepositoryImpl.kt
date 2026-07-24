@@ -2,6 +2,7 @@ package com.please.stop.app.features.expenses.data.repository
 
 import com.please.stop.app.core.db.dao.CategoryDao
 import com.please.stop.app.core.db.dao.ExpenseDao
+import com.please.stop.app.core.db.dao.SubcategoryUsage
 import com.please.stop.app.core.db.dao.UserProfileDao
 import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.db.entity.ExpenseEntity
@@ -17,9 +18,11 @@ import com.please.stop.app.utils.DEFAULT_CURRENCY_DECIMAL_PLACES
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlin.time.ExperimentalTime
 
 class AddExpenseRepositoryImpl(
@@ -32,14 +35,39 @@ class AddExpenseRepositoryImpl(
 ) : AddExpenseRepository {
 
     override fun observeFormData(): Flow<AddExpenseFormData> {
-        return categoryDao.observeAll()
-            .map { categories ->
-                buildFormData(
-                    categories = categories,
-                    subcategories = resolveSubcategories(),
-                    currencyConversionEnabled = featureFlags.currencyConversionEnabled(),
-                )
+        val subcategories = flow {
+            subcategoryRepository.ensureSeeded()
+            emitAll(subcategoryRepository.observeAll())
+        }
+
+        return combine(
+            categoryDao.observeAll(),
+            subcategories,
+            expenseDao.observeSubcategoryUsage(),
+        ) { categories, observedSubcategories, subcategoryUsage ->
+            val resolvedSubcategories = if (featureFlags.subcategoriesEnabled()) {
+                observedSubcategories.map { it.toExpenseSubcategory() }
+            } else {
+                emptyList()
             }
+            val frequentSubcategoryIds = subcategoryUsage
+                .groupBy { it.categoryId }
+                .mapValues { (_, usage) ->
+                    usage
+                        .sortedWith(
+                            compareByDescending<SubcategoryUsage> { it.useCount }
+                                .thenByDescending { it.lastUsedEpochMillis },
+                        )
+                        .map { it.subcategoryId }
+                }
+
+            buildFormData(
+                categories = categories,
+                subcategories = resolvedSubcategories,
+                frequentSubcategoryIdsByCategory = frequentSubcategoryIds,
+                currencyConversionEnabled = featureFlags.currencyConversionEnabled(),
+            )
+        }
             .flowOn(ioDispatcher)
     }
 
@@ -62,6 +90,7 @@ class AddExpenseRepositoryImpl(
     private suspend fun buildFormData(
         categories: List<CategoryEntity>,
         subcategories: List<ExpenseSubcategory>,
+        frequentSubcategoryIdsByCategory: Map<Long, List<Long>> = emptyMap(),
         currencyConversionEnabled: Boolean,
     ): AddExpenseFormData {
         val profile = userProfileDao.get()
@@ -78,6 +107,7 @@ class AddExpenseRepositoryImpl(
                 )
             },
             subcategories = subcategories,
+            frequentSubcategoryIdsByCategory = frequentSubcategoryIdsByCategory,
             currencyConversionEnabled = currencyConversionEnabled,
         )
     }

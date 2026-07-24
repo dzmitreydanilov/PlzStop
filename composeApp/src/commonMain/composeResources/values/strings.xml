@@ -85,6 +85,15 @@
     <string name="add_expense_receipt_service_unavailable">Service temporarily unavailable. Enter manually.</string>
     <string name="add_expense_scan_receipt_hint">Snap a photo to auto-fill</string>
     <string name="add_expense_select_category">Select category</string>
+    <string name="add_expense_add_subcategory">Add Subcategory</string>
+    <string name="add_expense_change_subcategory">Change Subcategory</string>
+    <string name="add_expense_select_subcategory">Select Subcategory</string>
+    <string name="add_expense_under_category">Under %1$s</string>
+    <string name="add_expense_search_subcategories">Search subcategories</string>
+    <string name="add_expense_frequent_subcategories">Frequent</string>
+    <string name="add_expense_all_subcategories">All %1$s</string>
+    <string name="add_expense_no_subcategory_results">No subcategory found</string>
+    <string name="add_expense_create_subcategory">Create "%1$s"</string>
     <string name="add_expense_what_was_it_for">What was it for?</string>
     <string name="add_expense_notes_label">Notes</string>
     <string name="conversion_fetching_rate">Fetching rate…</string>

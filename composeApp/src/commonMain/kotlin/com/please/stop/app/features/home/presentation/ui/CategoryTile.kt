@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.home.presentation.HomeCategoryUiModel
 import com.please.stop.app.theme.AppTheme
 import com.please.stop.app.theme.LocalAppColors
-import com.please.stop.app.uicomponents.categoryEmojiForKey
+import com.please.stop.app.uicomponents.CategoryIconImage
 
 @Composable
 internal fun CategoryTile(
@@ -59,9 +59,10 @@ internal fun CategoryTile(
                     .background(gradients[gradientIndex]),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = categoryEmojiForKey(category.iconKey),
-                    style = MaterialTheme.typography.titleMedium,
+                CategoryIconImage(
+                    iconKey = category.iconKey,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(22.dp),
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))

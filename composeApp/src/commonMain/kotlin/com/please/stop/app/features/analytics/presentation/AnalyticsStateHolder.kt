@@ -8,7 +8,6 @@ import com.please.stop.app.features.analytics.domain.model.DailySpendingPoint
 import com.please.stop.app.features.analytics.domain.model.DayExpensesData
 import com.please.stop.app.features.analytics.domain.usecase.LoadDayExpensesUseCase
 import com.please.stop.app.features.analytics.domain.usecase.ObserveAnalyticsDataUseCase
-import com.please.stop.app.uicomponents.categoryEmojiForKey
 import com.please.stop.app.utils.date.DAYS_IN_WEEK
 import com.please.stop.app.utils.date.formatDayLabel
 import com.please.stop.app.utils.date.localDateToday
@@ -243,7 +242,7 @@ class AnalyticsStateHolder(
             expenses = expenses.map { item ->
                 DayExpenseUiItem(
                     title = item.title,
-                    categoryEmoji = categoryEmojiForKey(item.categoryIconKey),
+                    categoryIconKey = item.categoryIconKey,
                     subcategoryName = item.subcategoryName,
                     formattedAmount = formatCurrencyAmount(item.amountMinorUnits, currencySymbol, decimalPlaces),
                 )

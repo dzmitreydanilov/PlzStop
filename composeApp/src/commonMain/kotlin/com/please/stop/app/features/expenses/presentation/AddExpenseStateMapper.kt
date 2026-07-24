@@ -21,13 +21,19 @@ object AddExpenseStateMapper {
             )
         }.toImmutableList()
 
-    fun toSubcategoryUiModels(data: AddExpenseFormData): ImmutableList<SubcategoryUiModel> =
-        data.subcategories.map { sub ->
+    fun toSubcategoryUiModels(data: AddExpenseFormData): ImmutableList<SubcategoryUiModel> {
+        val frequentRanks = data.frequentSubcategoryIdsByCategory
+            .flatMap { (_, ids) -> ids.mapIndexed { index, id -> id to index } }
+            .toMap()
+
+        return data.subcategories.map { sub ->
             SubcategoryUiModel(
                 id = sub.id,
                 parentCategoryId = sub.parentCategoryId,
                 name = sub.name,
                 iconKey = sub.iconKey,
+                frequentRank = frequentRanks[sub.id],
             )
         }.toImmutableList()
+    }
 }

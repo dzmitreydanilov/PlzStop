@@ -124,7 +124,7 @@ class CategoriesRepositoryImpl(
         parentCategoryId: Long,
         name: String,
         comment: String?,
-    ): Result<Unit> {
+    ): Result<Long> {
         if (!featureFlags.subcategoriesEnabled()) {
             return Result.failure(IllegalStateException("Subcategories feature is disabled"))
         }

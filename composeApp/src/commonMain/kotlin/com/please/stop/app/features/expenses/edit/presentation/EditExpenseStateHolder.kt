@@ -1,6 +1,7 @@
 package com.please.stop.app.features.expenses.edit.presentation
 
 import com.please.stop.app.core.models.domain.ErrorType
+import com.please.stop.app.features.categories.domain.usecase.AddSubcategoryUseCase
 import com.please.stop.app.features.expenses.domain.model.ExpenseDetail
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
 import com.please.stop.app.features.expenses.domain.usecase.ClearPendingReceiptDataUseCase
@@ -33,6 +34,7 @@ class EditExpenseStateHolder(
     fetchAndApplyExchangeRateUseCase: FetchAndApplyExchangeRateUseCase,
     setPendingReceiptDataUseCase: SetPendingReceiptDataUseCase,
     clearPendingReceiptDataUseCase: ClearPendingReceiptDataUseCase,
+    addSubcategoryUseCase: AddSubcategoryUseCase,
 ) : BaseExpenseStateHolder(
     observeFormDataUseCase = observeFormDataUseCase,
     saveExpenseUseCase = saveExpenseUseCase,
@@ -40,6 +42,7 @@ class EditExpenseStateHolder(
     fetchAndApplyExchangeRateUseCase = fetchAndApplyExchangeRateUseCase,
     setPendingReceiptDataUseCase = setPendingReceiptDataUseCase,
     clearPendingReceiptDataUseCase = clearPendingReceiptDataUseCase,
+    addSubcategoryUseCase = addSubcategoryUseCase,
 ) {
     override val tag = "EditExpenseStateHolder"
     private var pendingExpenseDetail: ExpenseDetail? = null
@@ -169,6 +172,7 @@ class EditExpenseStateHolder(
                 initialForm = loadedForm,
             ),
             form = loadedForm,
+            initialCategoryId = expense.categoryId,
             conversion = conversionState,
         )
     }

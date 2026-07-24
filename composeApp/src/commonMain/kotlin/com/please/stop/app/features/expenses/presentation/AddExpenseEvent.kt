@@ -5,6 +5,7 @@ sealed interface AddExpenseEvent {
     data class TitleChanged(val text: String) : AddExpenseEvent
     data class CategorySelected(val categoryId: Long) : AddExpenseEvent
     data class SubcategorySelected(val subcategoryId: Long?) : AddExpenseEvent
+    data class CreateSubcategory(val name: String) : AddExpenseEvent
     data class DateChanged(val epochMillis: Long) : AddExpenseEvent
     data class NotesChanged(val text: String) : AddExpenseEvent
     data object SaveClicked : AddExpenseEvent

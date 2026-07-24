@@ -19,13 +19,13 @@ class AddSubcategoryUseCase(
         comment: String?,
     ): DomainResult = withContext(ioDispatcher) {
         repository.addSubcategory(parentCategoryId, name, comment).fold(
-            onSuccess = { Result.Success },
+            onSuccess = { Result.Success(it) },
             onFailure = { Result.Failure(it.toErrorType()) },
         )
     }
 
     sealed interface Result : DomainResult {
-        data object Success : Result
+        data class Success(val subcategoryId: Long) : Result
         data class Failure(override val errorType: ErrorType) : Result, ErrorResult
     }
 }

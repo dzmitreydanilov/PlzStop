@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.categories.presentation.CategoryRowUiModel
 import com.please.stop.app.features.categories.presentation.SubcategoryChipUiModel
 import com.please.stop.app.theme.AppTheme
-import com.please.stop.app.uicomponents.categoryEmojiForKey
+import com.please.stop.app.uicomponents.CategoryIconImage
 import kotlinx.collections.immutable.persistentListOf
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -67,9 +67,10 @@ internal fun CategoryManagementRow(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = categoryEmojiForKey(category.iconKey),
-                    style = MaterialTheme.typography.titleMedium,
+                CategoryIconImage(
+                    iconKey = category.iconKey,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(

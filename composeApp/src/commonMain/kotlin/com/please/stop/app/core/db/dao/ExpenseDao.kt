@@ -70,6 +70,18 @@ interface ExpenseDao {
 
     @Query(
         """
+        SELECT categoryId, subcategoryId, COUNT(*) AS useCount, MAX(dateEpochMillis) AS lastUsedEpochMillis
+        FROM expense
+        WHERE isDeleted = 0
+          AND subcategoryId IS NOT NULL
+        GROUP BY categoryId, subcategoryId
+        ORDER BY useCount DESC, lastUsedEpochMillis DESC
+        """
+    )
+    fun observeSubcategoryUsage(): Flow<List<SubcategoryUsage>>
+
+    @Query(
+        """
         SELECT SUM(amountMinorUnits)
         FROM expense
         WHERE isDeleted = 0
@@ -137,4 +149,11 @@ data class CategorySubcategorySpending(
     val categoryId: Long,
     val subcategoryId: Long?,
     val totalMinorUnits: Long,
+)
+
+data class SubcategoryUsage(
+    val categoryId: Long,
+    val subcategoryId: Long,
+    val useCount: Int,
+    val lastUsedEpochMillis: Long,
 )
