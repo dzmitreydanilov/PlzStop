@@ -1,7 +1,18 @@
 package com.please.stop.app.features.settings.presentation
 
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.ic_analytics_outlined
+import plzstop.composeapp.generated.resources.ic_app
+import plzstop.composeapp.generated.resources.ic_archive
+import plzstop.composeapp.generated.resources.ic_currency_exchange
+import plzstop.composeapp.generated.resources.ic_lock
+import plzstop.composeapp.generated.resources.ic_other
+import plzstop.composeapp.generated.resources.ic_schedule
+import plzstop.composeapp.generated.resources.ic_send
+import plzstop.composeapp.generated.resources.ic_settings
+import plzstop.composeapp.generated.resources.ic_subscriptions
 import plzstop.composeapp.generated.resources.settings_app_version_subtitle
 import plzstop.composeapp.generated.resources.settings_app_version_title
 import plzstop.composeapp.generated.resources.settings_appearance_subtitle
@@ -27,75 +38,75 @@ sealed interface SettingsItem {
     val id: Int
     val title: StringResource
     val subtitle: StringResource
-    val emoji: String
+    val icon: DrawableResource
 
     data class Currency(
         override val id: Int = 1,
         override val title: StringResource = Res.string.settings_currency_title,
         override val subtitle: StringResource = Res.string.settings_currency_subtitle,
-        override val emoji: String = "💱",
+        override val icon: DrawableResource = Res.drawable.ic_currency_exchange,
     ) : SettingsItem
 
     data class Categories(
         override val id: Int = 2,
         override val title: StringResource = Res.string.settings_categories_title,
         override val subtitle: StringResource = Res.string.settings_categories_subtitle,
-        override val emoji: String = "📁",
+        override val icon: DrawableResource = Res.drawable.ic_archive,
     ) : SettingsItem
 
     data class Budget(
         override val id: Int = 3,
         override val title: StringResource = Res.string.settings_budget_title,
         override val subtitle: StringResource = Res.string.settings_budget_subtitle,
-        override val emoji: String = "📊",
+        override val icon: DrawableResource = Res.drawable.ic_analytics_outlined,
     ) : SettingsItem
 
     data class Subscriptions(
         override val id: Int = 4,
         override val title: StringResource = Res.string.settings_subscriptions_title,
         override val subtitle: StringResource = Res.string.settings_subscriptions_subtitle,
-        override val emoji: String = "🔔",
+        override val icon: DrawableResource = Res.drawable.ic_subscriptions,
     ) : SettingsItem
 
     data class Notifications(
         override val id: Int = 5,
         override val title: StringResource = Res.string.settings_notifications_title,
         override val subtitle: StringResource = Res.string.settings_notifications_subtitle,
-        override val emoji: String = "🔔",
+        override val icon: DrawableResource = Res.drawable.ic_schedule,
     ) : SettingsItem
 
     data class Appearance(
         override val id: Int = 6,
         override val title: StringResource = Res.string.settings_appearance_title,
         override val subtitle: StringResource = Res.string.settings_appearance_subtitle,
-        override val emoji: String = "🌙",
+        override val icon: DrawableResource = Res.drawable.ic_settings,
     ) : SettingsItem
 
     data class ExportData(
         override val id: Int = 7,
         override val title: StringResource = Res.string.settings_export_title,
         override val subtitle: StringResource = Res.string.settings_export_subtitle,
-        override val emoji: String = "📤",
+        override val icon: DrawableResource = Res.drawable.ic_send,
     ) : SettingsItem
 
     data class HelpSupport(
         override val id: Int = 8,
         override val title: StringResource = Res.string.settings_help_title,
         override val subtitle: StringResource = Res.string.settings_help_subtitle,
-        override val emoji: String = "❓",
+        override val icon: DrawableResource = Res.drawable.ic_other,
     ) : SettingsItem
 
     data class PrivacyPolicy(
         override val id: Int = 9,
         override val title: StringResource = Res.string.settings_privacy_title,
         override val subtitle: StringResource = Res.string.settings_privacy_subtitle,
-        override val emoji: String = "📄",
+        override val icon: DrawableResource = Res.drawable.ic_lock,
     ) : SettingsItem
 
     data class AppVersion(
         override val id: Int = 10,
         override val title: StringResource = Res.string.settings_app_version_title,
         override val subtitle: StringResource = Res.string.settings_app_version_subtitle,
-        override val emoji: String = "ℹ️",
+        override val icon: DrawableResource = Res.drawable.ic_app,
     ) : SettingsItem
 }

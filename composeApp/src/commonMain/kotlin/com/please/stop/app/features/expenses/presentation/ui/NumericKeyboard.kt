@@ -66,7 +66,7 @@ internal fun NumericKeyboard(
                 )
             }
         }
-        // Row 2: ×  4  5  6  📅
+        // Row 2: ×  4  5  6  calendar
         KeyboardRow {
             OperatorButton("×", KeyboardOperator.MULTIPLY, onKey, Modifier.weight(1f).aspectRatio(1f))
             DigitButton(4, onKey, Modifier.weight(1f).aspectRatio(1f))

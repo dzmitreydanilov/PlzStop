@@ -1,7 +1,5 @@
 package com.please.stop.app.features.settings.presentation
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,34 +19,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.please.stop.app.theme.LocalAppColors
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
-import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
 import org.koin.compose.viewmodel.koinViewModel
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.settings_tab
 import plzstop.composeapp.generated.resources.settings_user_manage
 import plzstop.composeapp.generated.resources.settings_user_name
-
-private const val SECTION_ANIMATION_DURATION_MS = 400
-private const val SECTION_INITIAL_OFFSET_PX = -20f
-private const val SECTION_DELAY_BASE_MS = 150
-private const val SECTION_DELAY_STEP_MS = 150
 
 @Composable
 fun SettingsScreenRoute(
@@ -103,10 +94,9 @@ private fun SettingsContent(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            state.sections.forEachIndexed { index, group ->
-                AnimatedSettingsSection(
+            state.sections.forEach { group ->
+                SettingsSection(
                     title = stringResource(group.title),
-                    delayMillis = SECTION_DELAY_BASE_MS + index * SECTION_DELAY_STEP_MS,
                 ) {
                     group.items.forEach { item ->
                         SettingsItemRow(
@@ -190,29 +180,11 @@ private fun SettingsHeader(
 }
 
 @Composable
-private fun AnimatedSettingsSection(
+private fun SettingsSection(
     title: String,
-    delayMillis: Int,
     content: @Composable () -> Unit,
 ) {
-    val alpha = remember { Animatable(0f) }
-    val offsetX = remember { Animatable(SECTION_INITIAL_OFFSET_PX) }
-
-    LaunchedEffect(Unit) {
-        delay(delayMillis.toLong())
-        alpha.animateTo(1f, tween(SECTION_ANIMATION_DURATION_MS))
-    }
-    LaunchedEffect(Unit) {
-        delay(delayMillis.toLong())
-        offsetX.animateTo(0f, tween(SECTION_ANIMATION_DURATION_MS))
-    }
-
-    Column(
-        modifier = Modifier.graphicsLayer {
-            this.alpha = alpha.value
-            translationX = offsetX.value
-        },
-    ) {
+    Column {
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
@@ -249,7 +221,12 @@ private fun SettingsItemRow(
                 .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = item.emoji, style = MaterialTheme.typography.titleMedium)
+            Icon(
+                imageVector = vectorResource(item.icon),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {

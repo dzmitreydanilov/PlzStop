@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,7 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
+import plzstop.composeapp.generated.resources.ic_app
 import plzstop.composeapp.generated.resources.onboarding_app_name
 import plzstop.composeapp.generated.resources.onboarding_tagline
 
@@ -42,9 +45,11 @@ fun WelcomeStep() {
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = "\uD83D\uDE80",
-            style = MaterialTheme.typography.headlineMedium,
+        Icon(
+            imageVector = vectorResource(Res.drawable.ic_app),
+            contentDescription = null,
+            modifier = Modifier.size(44.dp),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
         )
     }
 
