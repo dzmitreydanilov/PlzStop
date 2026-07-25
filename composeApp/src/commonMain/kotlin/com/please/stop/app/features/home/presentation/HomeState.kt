@@ -1,8 +1,10 @@
 package com.please.stop.app.features.home.presentation
 
+import androidx.compose.runtime.Composable
 import com.please.stop.app.core.models.domain.Currency
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.serialization.ImmutableListSerializer
+import com.please.stop.app.uicomponents.error.ScreenOverlay
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.Serializable
@@ -52,11 +54,9 @@ sealed interface HomeState {
     ) : HomeState
 }
 
-@Serializable
-data class HomeCategoryUiModel(
-    val id: Long,
-    val name: String,
-    val iconKey: String,
-    val spentFormatted: String,
-    val hasSpending: Boolean,
-)
+
+internal val HomeState.asOverlay: ScreenOverlay?
+    @Composable get() = when (this) {
+        is HomeState.Error -> ScreenOverlay.Error(type = errorType)
+        else -> null
+    }

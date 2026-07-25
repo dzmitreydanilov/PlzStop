@@ -23,13 +23,30 @@ data class AppColors(
     val cardGlassBorder: Color,
     val chartColors: ImmutableList<Color>,        // 6-color palette for charts
     val headerGradient: Brush,
-    val categoryGradients: ImmutableList<Brush>,  // 6 gradient brushes
+    val headerContent: Color,
+    val headerContainer: Color,
+    val headerAvatarContainer: Color,
 )
 ```
 
-Brand palette: Sage (`0xFF6B8F71`) primary, Clay (`0xFFA07855`) secondary, Wheat (`0xFFC4A265`) tertiary.
+Brand palette: Teal (`0xFF006B5D`) primary, Violet (`0xFF66558E`) secondary, Coral
+(`0xFF984A52`) tertiary. Teal is the durable product color; coral is the preferred personality accent for a
+future mascot. Keep semantic budget colors and data-visualization colors independent from mascot styling.
+
+Branded headers must use the matching `AppColors` content/container roles. Derive these roles from the active
+Material `ColorScheme`; do not duplicate Material role values as hardcoded colors. Category tiles use Material tonal
+container/content pairs selected by stable category ID.
 
 Standard Material 3 colors (primary, surface, etc.) are available via `MaterialTheme.colorScheme` as usual.
+
+## Color ownership
+
+- Screens and UI components must use `MaterialTheme.colorScheme` or `LocalAppColors.current`.
+- Do not declare raw ARGB colors or use named palette colors such as `Color.White`, `Color.Black`, or `Color.Red`
+  outside the theme package.
+- Declare brand, chart, gradient, and other app-specific palette values in `AppColors`.
+- Derive custom roles from the Material `ColorScheme` when an equivalent Material role exists.
+- `Color.Transparent` is allowed when a component needs an explicit absence of paint.
 
 ## Responsive spacing — `LocalAppDimens.current`
 

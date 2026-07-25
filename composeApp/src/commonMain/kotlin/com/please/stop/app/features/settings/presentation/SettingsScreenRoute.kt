@@ -27,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -118,6 +117,8 @@ private fun SettingsHeader(
     onUserClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appColors = LocalAppColors.current
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -130,14 +131,14 @@ private fun SettingsHeader(
             text = stringResource(Res.string.settings_tab),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = appColors.headerContent,
         )
 
         Spacer(modifier = Modifier.height(20.dp))
 
         Card(
             modifier = Modifier.clickable(onClick = onUserClick),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.18f)),
+            colors = CardDefaults.cardColors(containerColor = appColors.headerContainer),
             shape = RoundedCornerShape(20.dp),
         ) {
             Row(
@@ -150,13 +151,13 @@ private fun SettingsHeader(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.25f)),
+                        .background(appColors.headerAvatarContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "U",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
+                        color = appColors.headerContent,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -165,13 +166,13 @@ private fun SettingsHeader(
                     Text(
                         text = stringResource(Res.string.settings_user_name),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
+                        color = appColors.headerContent,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         text = stringResource(Res.string.settings_user_manage),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = appColors.headerContent.copy(alpha = 0.7f),
                     )
                 }
             }

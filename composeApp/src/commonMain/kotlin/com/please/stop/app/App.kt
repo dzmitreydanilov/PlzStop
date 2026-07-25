@@ -1,9 +1,9 @@
 package com.please.stop.app
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.retain.retain
@@ -23,27 +23,28 @@ fun App(
     deepLinkHandler: DeepLinkHandler? = null,
 ) {
     AppTheme {
-        val rootStateHolder = koinViewModel<RootStateHolder>()
-        val state by rootStateHolder.state.collectAsStateWithLifecycle()
-        val retainedDeepLinkHandler = retain<DeepLinkHandler> { DeepLinkHandler(DeepLinkResolver()) }
-        val resolvedDeepLinkHandler = deepLinkHandler ?: retainedDeepLinkHandler
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            val rootStateHolder = koinViewModel<RootStateHolder>()
+            val state by rootStateHolder.state.collectAsStateWithLifecycle()
+            val retainedDeepLinkHandler = retain<DeepLinkHandler> { DeepLinkHandler(DeepLinkResolver()) }
+            val resolvedDeepLinkHandler = deepLinkHandler ?: retainedDeepLinkHandler
 
-        when (val s = state) {
-            is RootState.Loading -> RootLoadingSurface()
-            is RootState.Ready -> RootContent(
-                initialRoute = s.initialRoute,
-                deepLinkUri = deepLinkUri,
-                deepLinkHandler = resolvedDeepLinkHandler,
-            )
+            when (val s = state) {
+                is RootState.Loading -> RootLoadingSurface()
+                is RootState.Ready -> RootContent(
+                    initialRoute = s.initialRoute,
+                    deepLinkUri = deepLinkUri,
+                    deepLinkHandler = resolvedDeepLinkHandler,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun RootLoadingSurface() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-    )
+    Box(modifier = Modifier.fillMaxSize())
 }

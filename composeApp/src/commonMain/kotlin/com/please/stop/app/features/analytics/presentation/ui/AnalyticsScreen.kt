@@ -23,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -110,13 +109,13 @@ private fun AnalyticsScreenContent(
                     text = stringResource(Res.string.analytics_tab),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = appColors.headerContent,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = stringResource(Res.string.analytics_insights_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = appColors.headerContent.copy(alpha = 0.8f),
                 )
             }
         }
@@ -226,4 +225,3 @@ private fun DashboardContent(
         )
     }
 }
-

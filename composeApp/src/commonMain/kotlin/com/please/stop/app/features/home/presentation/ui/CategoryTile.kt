@@ -20,11 +20,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewWrapper
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.home.presentation.HomeCategoryUiModel
-import com.please.stop.app.theme.AppTheme
-import com.please.stop.app.theme.LocalAppColors
 import com.please.stop.app.uicomponents.CategoryIconImage
+import com.please.stop.app.uicomponents.previews.ApplicationPreviewThemeWrapper
+
+private const val PRIMARY_CATEGORY_VARIANT = 0L
+private const val SECONDARY_CATEGORY_VARIANT = 1L
+private const val CATEGORY_VARIANT_COUNT = 3L
 
 @Composable
 internal fun CategoryTile(
@@ -32,17 +36,19 @@ internal fun CategoryTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val appColors = LocalAppColors.current
-    val gradients = appColors.categoryGradients
-    val gradientIndex = category.name.hashCode()
-        .let { (it % gradients.size + gradients.size) % gradients.size }
+    val colorScheme = MaterialTheme.colorScheme
+    val (iconContainerColor, iconContentColor) = when (category.id % CATEGORY_VARIANT_COUNT) {
+        PRIMARY_CATEGORY_VARIANT -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+        SECONDARY_CATEGORY_VARIANT -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
+        else -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
+    }
 
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = MaterialTheme.shapes.medium,
         modifier = modifier,
     ) {
@@ -56,12 +62,12 @@ internal fun CategoryTile(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(MaterialTheme.shapes.small)
-                    .background(gradients[gradientIndex]),
+                    .background(iconContainerColor),
                 contentAlignment = Alignment.Center,
             ) {
                 CategoryIconImage(
                     iconKey = category.iconKey,
-                    tint = MaterialTheme.colorScheme.onPrimary,
+                    tint = iconContentColor,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -69,7 +75,6 @@ internal fun CategoryTile(
             Text(
                 text = category.name,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -79,9 +84,12 @@ internal fun CategoryTile(
             Text(
                 text = category.spentFormatted,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (category.hasSpending) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (category.hasSpending) FontWeight.Medium else FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (category.hasSpending) {
+                    FontWeight.Medium
+                } else {
+                    FontWeight.Normal
+                },
                 textAlign = TextAlign.Center,
             )
         }
@@ -89,35 +97,33 @@ internal fun CategoryTile(
 }
 
 @Preview(showBackground = true)
+@PreviewWrapper(ApplicationPreviewThemeWrapper::class)
 @Composable
 private fun CategoryTilePreview() {
-    AppTheme {
-        CategoryTile(
-            category = HomeCategoryUiModel(
-                id = 1,
-                name = "Food",
-                iconKey = "ic_food",
-                spentFormatted = "$120.50",
-                hasSpending = true,
-            ),
-            onClick = {},
-        )
-    }
+    CategoryTile(
+        category = HomeCategoryUiModel(
+            id = 1,
+            name = "Food",
+            iconKey = "ic_food",
+            spentFormatted = "$120.50",
+            hasSpending = true,
+        ),
+        onClick = {},
+    )
 }
 
 @Preview(showBackground = true)
+@PreviewWrapper(ApplicationPreviewThemeWrapper::class)
 @Composable
 private fun CategoryTileNoSpendingPreview() {
-    AppTheme {
-        CategoryTile(
-            category = HomeCategoryUiModel(
-                id = 2,
-                name = "Entertainment",
-                iconKey = "ic_entertainment",
-                spentFormatted = "$0.00",
-                hasSpending = false,
-            ),
-            onClick = {},
-        )
-    }
+    CategoryTile(
+        category = HomeCategoryUiModel(
+            id = 2,
+            name = "Entertainment",
+            iconKey = "ic_entertainment",
+            spentFormatted = "$0.00",
+            hasSpending = false,
+        ),
+        onClick = {},
+    )
 }

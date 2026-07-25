@@ -51,7 +51,7 @@ internal fun QuickStatRow(state: AnalyticsState.Content) {
             icon = Res.drawable.ic_savings,
             label = stringResource(Res.string.analytics_stat_total_spent),
             value = state.totalSpentFormatted.orEmpty(),
-            color = MaterialTheme.colorScheme.error,
+            color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.weight(1f),
         )
         QuickStatCard(
@@ -169,7 +169,7 @@ private fun QuickStatCardPreview() {
             icon = Res.drawable.ic_savings,
             label = "Total Spent",
             value = "$1,234",
-            color = Color.Red,
+            color = MaterialTheme.colorScheme.tertiary,
         )
     }
 }
