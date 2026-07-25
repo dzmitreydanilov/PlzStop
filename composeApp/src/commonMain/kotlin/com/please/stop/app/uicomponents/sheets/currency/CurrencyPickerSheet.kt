@@ -29,19 +29,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.ModalBottomSheetProperties
-import com.composeunstyled.SheetDetent
-import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.onboarding.domain.model.Currency
-import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.please.stop.app.uicomponents.sheets.AnimatedAppModalBottomSheet
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -54,7 +49,6 @@ import plzstop.composeapp.generated.resources.onboarding_search_currencies
 import plzstop.composeapp.generated.resources.onboarding_selected
 import plzstop.composeapp.generated.resources.onboarding_suggested
 
-private const val ANIMATION_DELAY = 100L
 private const val ICON_SCALE = 0.6f
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,28 +66,10 @@ fun CurrencyPickerSheet(
         viewModel.init(selectedCurrencyCode, deviceCurrencyCode)
     }
 
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(
-        initialDetent = SheetDetent.Hidden,
-        detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-    )
-
-    LaunchedEffect(Unit) {
-        delay(ANIMATION_DELAY)
-        sheetState.targetDetent = SheetDetent.FullyExpanded
-    }
-
-    AppModalBottomSheet(
-        state = sheetState,
-        onDismiss = {
-            scope.launch {
-                sheetState.targetDetent = SheetDetent.Hidden
-                delay(ANIMATION_DELAY)
-                onDismiss()
-            }
-        },
-        properties = ModalBottomSheetProperties(offsetForIme = true)
-    ) {
+    AnimatedAppModalBottomSheet(
+        onDismiss = onDismiss,
+        properties = ModalBottomSheetProperties(offsetForIme = true),
+    ) { _ ->
         SearchBar(
             inputField = {
                 SearchBarDefaults.InputField(

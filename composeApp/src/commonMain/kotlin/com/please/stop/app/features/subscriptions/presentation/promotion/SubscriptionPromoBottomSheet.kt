@@ -10,19 +10,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.composeunstyled.SheetDetent
-import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.uicomponents.buttons.ApplicationButton
-import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.please.stop.app.uicomponents.sheets.AnimatedAppModalBottomSheet
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
@@ -30,8 +24,6 @@ import plzstop.composeapp.generated.resources.ic_subscriptions
 import plzstop.composeapp.generated.resources.subscription_promo_body
 import plzstop.composeapp.generated.resources.subscription_promo_cta
 import plzstop.composeapp.generated.resources.subscription_promo_title
-
-private const val ANIMATION_DELAY_MS = 200L
 
 @Composable
 fun SubscriptionPromoBottomSheet(
@@ -42,33 +34,12 @@ fun SubscriptionPromoBottomSheet(
 ) {
     if (state !is SubscriptionPromoState.Visible) return
 
-    val scope = rememberCoroutineScope()
-    val bottomSheetState = rememberModalBottomSheetState(
-        initialDetent = SheetDetent.Hidden,
-        detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-    )
-
-    LaunchedEffect(Unit) {
-        delay(ANIMATION_DELAY_MS)
-        bottomSheetState.targetDetent = SheetDetent.FullyExpanded
-    }
-
-    AppModalBottomSheet(
-        state = bottomSheetState,
-        onDismiss = {
-            scope.launch {
-                bottomSheetState.targetDetent = SheetDetent.Hidden
-                delay(ANIMATION_DELAY_MS)
-                onDismiss()
-            }
-        },
+    AnimatedAppModalBottomSheet(
+        onDismiss = onDismiss,
         modifier = modifier,
-    ) {
+    ) { _ ->
         SubscriptionPromoContent(
-            onCtaClick = {
-                bottomSheetState.targetDetent = SheetDetent.Hidden
-                onCtaClick()
-            },
+            onCtaClick = onCtaClick,
         )
     }
 }

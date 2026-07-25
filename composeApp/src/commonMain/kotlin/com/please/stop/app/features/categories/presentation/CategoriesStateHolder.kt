@@ -4,14 +4,17 @@ import com.please.stop.app.core.BootstrapTiming
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.presentation.UiEffect
-import com.please.stop.app.features.categories.domain.model.CategoryWithSubcategories
+import com.please.stop.app.features.categories.domain.model.CategorySummary
 import com.please.stop.app.features.categories.domain.usecase.AddCategoryUseCase
 import com.please.stop.app.features.categories.domain.usecase.AddSubcategoryUseCase
 import com.please.stop.app.features.categories.domain.usecase.ArchiveCategoryUseCase
 import com.please.stop.app.features.categories.domain.usecase.DeleteSubcategoryUseCase
+import com.please.stop.app.features.categories.domain.usecase.LoadSubcategoriesUseCase
 import com.please.stop.app.features.categories.domain.usecase.ObserveCategoriesUseCase
 import com.please.stop.app.features.categories.domain.usecase.UpdateCategoryUseCase
+import com.please.stop.app.features.onboarding.domain.model.Subcategory
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -26,6 +29,7 @@ class CategoriesStateHolder(
     private val updateCategoryUseCase: UpdateCategoryUseCase,
     private val archiveCategoryUseCase: ArchiveCategoryUseCase,
     private val deleteSubcategoryUseCase: DeleteSubcategoryUseCase,
+    private val loadSubcategoriesUseCase: LoadSubcategoriesUseCase,
 ) : StateHolder<CategoriesState, CategoriesEvent>() {
 
     override val tag = "CategoriesStateHolder"
@@ -49,6 +53,7 @@ class CategoriesStateHolder(
         CategoriesEvent.AddCategoryClicked -> flowOf(CategoriesResult.ShowAddCategorySheet)
         is CategoriesEvent.ConfirmAddCategory -> handleAddCategory(event)
         CategoriesEvent.DismissAddCategorySheet -> flowOf(CategoriesResult.HideAddCategorySheet)
+        is CategoriesEvent.ExpandSubcategories -> loadSubcategories(event.categoryId)
         is CategoriesEvent.AddSubcategoryClicked -> {
             flowOf(CategoriesResult.ShowAddSubcategorySheet(event.categoryId))
         }
@@ -89,11 +94,14 @@ class CategoriesStateHolder(
     ): CategoriesState {
         return when (result) {
             is ObserveCategoriesUseCase.Result.Success -> {
-                val uiModels = result.data.toUiModels()
+                val uiModels = result.data.toUiModels(previous.categories)
                 previous.withCategories(uiModels)
             }
 
             is ObserveCategoriesUseCase.Result.Failure -> previous.toError(result.errorType)
+            is LoadSubcategoriesUseCase.Result.Success -> {
+                previous.withSubcategories(result.categoryId, result.subcategories.toUiModels())
+            }
             is CategoriesResult.ShowAddCategorySheet -> previous.updateSheet(showAddCategory = true)
             is CategoriesResult.HideAddCategorySheet -> previous.updateSheet(showAddCategory = false)
             is CategoriesResult.ShowAddSubcategorySheet -> {
@@ -163,11 +171,19 @@ class CategoriesStateHolder(
             }
         }
 
+    private fun loadSubcategories(categoryId: Long): Flow<DomainResult> = flow {
+        emit(loadSubcategoriesUseCase(categoryId))
+    }
+
     private fun handleAddSubcategory(
         event: CategoriesEvent.ConfirmAddSubcategory,
     ): Flow<DomainResult> = flow {
         val trimmedComment = event.comment?.trim()?.ifEmpty { null }
-        emit(addSubcategoryUseCase(event.categoryId, event.name.trim(), trimmedComment))
+        val result = addSubcategoryUseCase(event.categoryId, event.name.trim(), trimmedComment)
+        emit(result)
+        if (result is AddSubcategoryUseCase.Result.Success) {
+            emit(loadSubcategoriesUseCase(event.categoryId))
+        }
     }
 
     private fun handleEditCategory(event: CategoriesEvent.ConfirmEditCategory): Flow<DomainResult> =
@@ -192,8 +208,14 @@ class CategoriesStateHolder(
 
     private fun handleDeleteSubcategory(subcategoryId: Long): Flow<DomainResult> = flow {
         val name = state.value.subcategoryToDelete?.name
+        val categoryId = state.value.categories.firstOrNull { category ->
+            category.subcategories?.any { it.id == subcategoryId } == true
+        }?.id
         val result = deleteSubcategoryUseCase(subcategoryId)
         emit(result)
+        if (result is DeleteSubcategoryUseCase.Result.Success && categoryId != null) {
+            emit(loadSubcategoriesUseCase(categoryId))
+        }
         if (result is DeleteSubcategoryUseCase.Result.Success && name != null) {
             emit(CategoriesResult.ShowSuccessMessage("Subcategory $name deleted"))
         }
@@ -281,18 +303,45 @@ class CategoriesStateHolder(
         is CategoriesState.Error -> copy(subcategoryToDelete = subcategory)
         CategoriesState.Loading -> this
     }
+
+    private fun CategoriesState.withSubcategories(
+        categoryId: Long,
+        subcategories: ImmutableList<SubcategoryChipUiModel>,
+    ): CategoriesState {
+        val updated = categories.map { category ->
+            if (category.id == categoryId) category.copy(subcategories = subcategories) else category
+        }.toImmutableList()
+        return withCategories(updated)
+    }
 }
 
-private fun List<CategoryWithSubcategories>.toUiModels(): ImmutableList<CategoryRowUiModel> =
+private fun List<CategorySummary>.toUiModels(
+    previousCategories: ImmutableList<CategoryRowUiModel>,
+): ImmutableList<CategoryRowUiModel> =
     map { item ->
+        val previousSubcategories = previousCategories
+            .firstOrNull { it.id == item.category.id }
+            ?.subcategories
         CategoryRowUiModel(
             id = item.category.id,
             name = item.category.name,
             iconKey = item.category.iconKey,
             comment = item.category.comment,
-            subcategories = item.subcategories?.map { sub ->
-                SubcategoryChipUiModel(id = sub.id, name = sub.name, comment = sub.comment)
-            }?.toImmutableList(),
+            subcategoryCount = item.subcategoryCount,
+            subcategories = if (item.subcategoryCount == null) {
+                null
+            } else {
+                previousSubcategories ?: persistentListOf()
+            },
+        )
+    }.toImmutableList()
+
+private fun ImmutableList<Subcategory>.toUiModels(): ImmutableList<SubcategoryChipUiModel> =
+    map { subcategory ->
+        SubcategoryChipUiModel(
+            id = subcategory.id,
+            name = subcategory.name,
+            comment = subcategory.comment,
         )
     }.toImmutableList()
 

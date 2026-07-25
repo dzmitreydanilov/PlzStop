@@ -9,6 +9,7 @@ import com.please.stop.app.features.categories.domain.usecase.AddSubcategoryUseC
 import com.please.stop.app.features.categories.domain.usecase.ArchiveCategoryUseCase
 import com.please.stop.app.features.categories.domain.usecase.ArchiveSubcategoryUseCase
 import com.please.stop.app.features.categories.domain.usecase.DeleteSubcategoryUseCase
+import com.please.stop.app.features.categories.domain.usecase.LoadSubcategoriesUseCase
 import com.please.stop.app.features.categories.domain.usecase.ObserveArchivedCategoriesUseCase
 import com.please.stop.app.features.categories.domain.usecase.ObserveCategoriesUseCase
 import com.please.stop.app.features.categories.domain.usecase.UnarchiveCategoryUseCase
@@ -31,6 +32,13 @@ val categoriesModule = module {
     }
 
     factory { ObserveCategoriesUseCase(repository = get()) }
+
+    factory {
+        LoadSubcategoriesUseCase(
+            repository = get(),
+            ioDispatcher = get(named(DispatchersQualifiers.IO.name)),
+        )
+    }
 
     factory { ObserveArchivedCategoriesUseCase(repository = get()) }
 
@@ -91,6 +99,7 @@ val categoriesModule = module {
             updateCategoryUseCase = get(),
             archiveCategoryUseCase = get(),
             deleteSubcategoryUseCase = get(),
+            loadSubcategoriesUseCase = get(),
         )
     }
 

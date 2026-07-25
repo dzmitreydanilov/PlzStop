@@ -64,6 +64,7 @@ data class CategoryRowUiModel(
     val name: String,
     val iconKey: String,
     val comment: String?,
+    val subcategoryCount: Int?,
     @Serializable(with = ImmutableListSerializer::class)
     val subcategories: ImmutableList<SubcategoryChipUiModel>?,
 )

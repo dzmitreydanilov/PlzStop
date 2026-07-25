@@ -45,7 +45,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,8 +58,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.ModalBottomSheetProperties
-import com.composeunstyled.SheetDetent
-import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.expenses.presentation.AddExpenseEvent
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
@@ -69,14 +66,13 @@ import com.please.stop.app.features.expenses.presentation.NumericKey
 import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
 import com.please.stop.app.features.expenses.scanner.rememberDocumentScanner
 import com.please.stop.app.uicomponents.CategoryIconImage
-import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
+import com.please.stop.app.uicomponents.sheets.AnimatedAppModalBottomSheet
 import com.please.stop.app.uicomponents.sheets.currency.CurrencyPickerSheet
 import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.format
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -117,7 +113,6 @@ import plzstop.composeapp.generated.resources.ic_keyboard_arrow_down
 import plzstop.composeapp.generated.resources.ic_scan
 import plzstop.composeapp.generated.resources.ic_search
 import plzstop.composeapp.generated.resources.ic_trash_bin
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
@@ -206,58 +201,38 @@ internal fun AddExpenseContent(
     }
 
     if (showSubcategorySheet) {
-        val sheetState = rememberModalBottomSheetState(
-            initialDetent = SheetDetent.Hidden,
-            detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-        )
-
-        LaunchedEffect(Unit) {
-            delay(100L.milliseconds)
-            sheetState.targetDetent = SheetDetent.FullyExpanded
-        }
-        AppModalBottomSheet(
-            state = sheetState,
+        AnimatedAppModalBottomSheet(
             onDismiss = { showSubcategorySheet = false },
             showDragIndicator = false,
-            properties = ModalBottomSheetProperties(offsetForIme = true)
-        ) {
+            properties = ModalBottomSheetProperties(offsetForIme = true),
+        ) { dismiss ->
             SubcategoryPickerSheet(
                 categoryName = state.selectedCategory?.name.orEmpty(),
                 subcategories = state.filteredSubcategories,
                 frequentSubcategories = state.frequentSubcategories,
                 selectedSubcategoryId = state.form.selectedSubcategoryId,
-                onDismiss = { showSubcategorySheet = false },
+                onDismiss = dismiss,
                 onSelectSubcategory = { subcategoryId ->
                     onEvent(AddExpenseEvent.SubcategorySelected(subcategoryId))
-                    showSubcategorySheet = false
+                    dismiss()
                 },
                 onCreateSubcategory = { name ->
                     onEvent(AddExpenseEvent.CreateSubcategory(name))
-                    showSubcategorySheet = false
+                    dismiss()
                 },
             )
         }
     }
     if (showNotesSheet) {
-        val sheetState = rememberModalBottomSheetState(
-            initialDetent = SheetDetent.Hidden,
-            detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
-        )
-
-        LaunchedEffect(Unit) {
-            delay(100L.milliseconds)
-            sheetState.targetDetent = SheetDetent.FullyExpanded
-        }
-        AppModalBottomSheet(
-            state = sheetState,
+        AnimatedAppModalBottomSheet(
             onDismiss = { showNotesSheet = false },
-        ) {
+        ) { dismiss ->
             NotesInputSheet(
                 title = state.form.title,
                 notes = state.form.notes,
                 onChangeTitle = { onEvent(AddExpenseEvent.TitleChanged(it)) },
                 onChangeNotes = { onEvent(AddExpenseEvent.NotesChanged(it)) },
-                onDone = { showNotesSheet = false },
+                onDone = dismiss,
             )
         }
     }

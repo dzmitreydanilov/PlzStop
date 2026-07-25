@@ -5,10 +5,13 @@ import com.please.stop.app.core.db.dao.SubcategoryDao
 import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.db.entity.SubcategoryEntity
 import com.please.stop.app.core.featureflags.FeatureFlags
+import com.please.stop.app.core.runSuspendCatching
+import com.please.stop.app.features.categories.domain.model.CategorySummary
 import com.please.stop.app.features.categories.domain.model.CategoryWithSubcategories
 import com.please.stop.app.features.categories.domain.repository.CategoriesRepository
 import com.please.stop.app.features.onboarding.domain.model.Category
 import com.please.stop.app.features.onboarding.domain.model.Subcategory
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -23,21 +26,18 @@ class CategoriesRepositoryImpl(
     private val ioDispatcher: CoroutineDispatcher,
 ) : CategoriesRepository {
 
-    override fun observeCategoriesWithSubcategories(): Flow<List<CategoryWithSubcategories>> =
+    override fun observeCategorySummaries(): Flow<List<CategorySummary>> =
         combine(
             categoryDao.observeAll(),
-            subcategoryDao.observeAll(),
+            subcategoryDao.observeActiveCounts(),
             featureFlags.observeSubcategoriesEnabled(),
-        ) { categories, subcategories, subcategoriesEnabled ->
-            val subcategoryMap = subcategories.groupBy { it.parentCategoryId }
+        ) { categories, counts, subcategoriesEnabled ->
+            val countsByCategoryId = counts.associate { it.parentCategoryId to it.count }
             categories.map { entity ->
-                CategoryWithSubcategories(
+                CategorySummary(
                     category = entity.toDomain(),
-                    subcategories = if (subcategoriesEnabled) {
-                        subcategoryMap[entity.id]
-                            .orEmpty()
-                            .map { it.toDomain() }
-                            .toImmutableList()
+                    subcategoryCount = if (subcategoriesEnabled) {
+                        countsByCategoryId[entity.id] ?: 0
                     } else {
                         null
                     },
@@ -45,11 +45,19 @@ class CategoriesRepositoryImpl(
             }
         }.flowOn(ioDispatcher)
 
+    override suspend fun getSubcategories(
+        parentCategoryId: Long,
+    ): Result<ImmutableList<Subcategory>> = runSuspendCatching {
+        subcategoryDao.getByParent(parentCategoryId)
+            .map { it.toDomain() }
+            .toImmutableList()
+    }
+
     override suspend fun addCategory(
         name: String,
         iconKey: String,
         comment: String?,
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = runSuspendCatching {
         val sortOrder = categoryDao.getNextSortOrder()
         categoryDao.insert(
             CategoryEntity(
@@ -67,34 +75,35 @@ class CategoriesRepositoryImpl(
         name: String,
         iconKey: String,
         comment: String?,
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = runSuspendCatching {
         val existing = categoryDao.getById(id) ?: error("Category $id not found")
         categoryDao.update(existing.copy(name = name, iconKey = iconKey, comment = comment))
     }
 
-    override suspend fun countSubcategories(parentCategoryId: Long): Result<Int> = runCatching {
-        subcategoryDao.countByParent(parentCategoryId)
-    }
+    override suspend fun countSubcategories(parentCategoryId: Long): Result<Int> =
+        runSuspendCatching {
+            subcategoryDao.countByParent(parentCategoryId)
+        }
 
-    override suspend fun archiveCategory(id: Long): Result<Unit> = runCatching {
+    override suspend fun archiveCategory(id: Long): Result<Unit> = runSuspendCatching {
         categoryDao.archiveById(id)
         subcategoryDao.archiveByParentCategoryId(id)
     }
 
-    override suspend fun unarchiveCategory(id: Long): Result<Unit> = runCatching {
+    override suspend fun unarchiveCategory(id: Long): Result<Unit> = runSuspendCatching {
         categoryDao.unarchiveById(id)
         subcategoryDao.unarchiveByParentCategoryId(id)
     }
 
-    override suspend fun archiveSubcategory(id: Long): Result<Unit> = runCatching {
+    override suspend fun archiveSubcategory(id: Long): Result<Unit> = runSuspendCatching {
         subcategoryDao.archiveById(id)
     }
 
-    override suspend fun unarchiveSubcategory(id: Long): Result<Unit> = runCatching {
+    override suspend fun unarchiveSubcategory(id: Long): Result<Unit> = runSuspendCatching {
         subcategoryDao.unarchiveById(id)
     }
 
-    override suspend fun deleteSubcategory(id: Long): Result<Unit> = runCatching {
+    override suspend fun deleteSubcategory(id: Long): Result<Unit> = runSuspendCatching {
         subcategoryDao.deleteById(id)
     }
 
@@ -134,7 +143,7 @@ class CategoriesRepositoryImpl(
                 IllegalStateException("Maximum $MAX_SUBCATEGORIES_PER_CATEGORY subcategories per category"),
             )
         }
-        return runCatching {
+        return runSuspendCatching {
             val sortOrder = subcategoryDao.getNextSortOrder(parentCategoryId)
             subcategoryDao.insert(
                 SubcategoryEntity(

@@ -8,6 +8,7 @@ sealed interface CategoriesEvent {
         val comment: String?,
     ) : CategoriesEvent
     data object DismissAddCategorySheet : CategoriesEvent
+    data class ExpandSubcategories(val categoryId: Long) : CategoriesEvent
     data class AddSubcategoryClicked(val categoryId: Long) : CategoriesEvent
     data class ConfirmAddSubcategory(
         val categoryId: Long,
