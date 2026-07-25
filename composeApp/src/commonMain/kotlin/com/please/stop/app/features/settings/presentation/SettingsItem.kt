@@ -4,7 +4,6 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.ic_analytics_outlined
-import plzstop.composeapp.generated.resources.ic_app
 import plzstop.composeapp.generated.resources.ic_archive
 import plzstop.composeapp.generated.resources.ic_currency_exchange
 import plzstop.composeapp.generated.resources.ic_lock
@@ -12,6 +11,7 @@ import plzstop.composeapp.generated.resources.ic_other
 import plzstop.composeapp.generated.resources.ic_schedule
 import plzstop.composeapp.generated.resources.ic_send
 import plzstop.composeapp.generated.resources.ic_settings
+import plzstop.composeapp.generated.resources.ic_subcategory_apps
 import plzstop.composeapp.generated.resources.ic_subscriptions
 import plzstop.composeapp.generated.resources.settings_app_version_subtitle
 import plzstop.composeapp.generated.resources.settings_app_version_title
@@ -107,6 +107,6 @@ sealed interface SettingsItem {
         override val id: Int = 10,
         override val title: StringResource = Res.string.settings_app_version_title,
         override val subtitle: StringResource = Res.string.settings_app_version_subtitle,
-        override val icon: DrawableResource = Res.drawable.ic_app,
+        override val icon: DrawableResource = Res.drawable.ic_subcategory_apps,
     ) : SettingsItem
 }

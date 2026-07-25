@@ -108,6 +108,7 @@ private fun List<CategoryWithSubcategories>.toUiModels(): ImmutableList<Category
             name = item.category.name,
             iconKey = item.category.iconKey,
             comment = item.category.comment,
+            subcategoryCount = item.subcategories?.size,
             subcategories = item.subcategories?.map { sub ->
                 SubcategoryChipUiModel(id = sub.id, name = sub.name, comment = sub.comment)
             }?.toImmutableList(),

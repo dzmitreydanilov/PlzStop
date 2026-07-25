@@ -11,8 +11,17 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface SubcategoryDao {
 
+    @Query(
+        "SELECT parentCategoryId, COUNT(*) AS count FROM subcategory " +
+            "WHERE isArchived = 0 GROUP BY parentCategoryId",
+    )
+    fun observeActiveCounts(): Flow<List<SubcategoryCount>>
+
     @Query("SELECT * FROM subcategory WHERE parentCategoryId = :parentId AND isArchived = 0 ORDER BY sortOrder ASC")
     fun observeByParent(parentId: Long): Flow<List<SubcategoryEntity>>
+
+    @Query("SELECT * FROM subcategory WHERE parentCategoryId = :parentId AND isArchived = 0 ORDER BY sortOrder ASC")
+    suspend fun getByParent(parentId: Long): List<SubcategoryEntity>
 
     @Query("SELECT * FROM subcategory WHERE isArchived = 0 ORDER BY sortOrder ASC")
     fun observeAll(): Flow<List<SubcategoryEntity>>
@@ -56,3 +65,5 @@ interface SubcategoryDao {
     @Query("DELETE FROM subcategory WHERE isDefault = 0")
     suspend fun deleteAllNonDefault()
 }
+
+data class SubcategoryCount(val parentCategoryId: Long, val count: Int)

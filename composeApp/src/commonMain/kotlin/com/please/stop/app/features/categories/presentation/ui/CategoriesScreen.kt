@@ -2,12 +2,9 @@ package com.please.stop.app.features.categories.presentation.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,18 +41,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.composeunstyled.ModalBottomSheetProperties
 import com.please.stop.app.features.categories.presentation.CategoriesEvent
 import com.please.stop.app.features.categories.presentation.CategoriesState
 import com.please.stop.app.features.categories.presentation.CategoriesStateHolder
 import com.please.stop.app.features.categories.presentation.CategoryRowUiModel
 import com.please.stop.app.features.categories.presentation.SubcategoryChipUiModel
 import com.please.stop.app.theme.AppTheme
+import com.please.stop.app.theme.LocalAppDimens
 import com.please.stop.app.uicomponents.CategoryIconImage
 import com.please.stop.app.uicomponents.allCategoryIcons
 import com.please.stop.app.uicomponents.buttons.ApplicationButton
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
+import com.please.stop.app.uicomponents.sheets.AnimatedAppModalBottomSheet
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
 import com.please.stop.app.uicomponents.sheets.rememberFullyExpandedAppModalBottomSheetState
 import kotlinx.collections.immutable.persistentListOf
@@ -68,6 +71,7 @@ import plzstop.composeapp.generated.resources.categories_archive_confirm_message
 import plzstop.composeapp.generated.resources.categories_archive_confirm_title
 import plzstop.composeapp.generated.resources.categories_comment_label
 import plzstop.composeapp.generated.resources.categories_confirm
+import plzstop.composeapp.generated.resources.categories_create
 import plzstop.composeapp.generated.resources.categories_delete
 import plzstop.composeapp.generated.resources.categories_delete_subcategory_message
 import plzstop.composeapp.generated.resources.categories_delete_subcategory_title
@@ -82,6 +86,7 @@ import plzstop.composeapp.generated.resources.content_desc_view_archived
 import plzstop.composeapp.generated.resources.ic_add
 import plzstop.composeapp.generated.resources.ic_archive
 import plzstop.composeapp.generated.resources.ic_arrow_back
+import androidx.compose.foundation.lazy.grid.items as gridItems
 
 @Composable
 fun CategoriesScreen(onGoBack: () -> Unit, onOpenArchive: () -> Unit) {
@@ -117,6 +122,8 @@ private fun CategoriesContent(
     onGoBack: () -> Unit,
     onOpenArchive: () -> Unit,
 ) {
+    val dimens = LocalAppDimens.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -145,7 +152,9 @@ private fun CategoriesContent(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { onEvent(CategoriesEvent.AddCategoryClicked) }) {
+            FloatingActionButton(
+                onClick = { onEvent(CategoriesEvent.AddCategoryClicked) },
+            ) {
                 Icon(
                     imageVector = vectorResource(Res.drawable.ic_add),
                     contentDescription = stringResource(Res.string.content_desc_add_category),
@@ -158,12 +167,18 @@ private fun CategoriesContent(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+            contentPadding = PaddingValues(
+                top = 8.dp,
+                bottom = dimens.large + dimens.small3,
+            ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(items = state.categories, key = { it.id }) { category ->
                 CategoryManagementRow(
                     category = category,
+                    onExpandSubcategories = {
+                        onEvent(CategoriesEvent.ExpandSubcategories(category.id))
+                    },
                     onAddSubcategoryClick = {
                         onEvent(CategoriesEvent.AddSubcategoryClicked(category.id))
                     },
@@ -171,7 +186,9 @@ private fun CategoriesContent(
                         onEvent(CategoriesEvent.DeleteSubcategoryClicked(subcategory))
                     },
                     onEditClick = { onEvent(CategoriesEvent.EditCategoryClicked(category)) },
-                    onDeleteClick = { onEvent(CategoriesEvent.ArchiveCategoryClicked(category.id)) },
+                    onDeleteClick = {
+                        onEvent(CategoriesEvent.ArchiveCategoryClicked(category.id))
+                    },
                 )
             }
         }
@@ -277,7 +294,7 @@ private fun AddCategorySheet(
                 enabled = name.isNotBlank() && selectedIconKey != null,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(Res.string.categories_confirm))
+                Text(stringResource(Res.string.categories_create))
             }
         }
     }
@@ -355,12 +372,10 @@ private fun AddSubcategorySheet(
     var name by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
 
-    val sheetState = rememberFullyExpandedAppModalBottomSheetState()
-
-    AppModalBottomSheet(
-        state = sheetState,
+    AnimatedAppModalBottomSheet(
         onDismiss = onDismiss,
-    ) {
+        properties = ModalBottomSheetProperties(offsetForIme = true),
+    ) { _ ->
         Column(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
@@ -459,21 +474,33 @@ private fun DeleteSubcategoryDialog(
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EmojiPickerGrid(
     selectedIconKey: String?,
     onSelectIcon: (String) -> Unit,
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    val dimens = LocalAppDimens.current
+    val icons = remember {
+        val selectedIcon = allCategoryIcons.firstOrNull { it.key == selectedIconKey }
+        listOfNotNull(selectedIcon) + allCategoryIcons.filterNot { it.key == selectedIconKey }
+    }
+
+    LazyHorizontalGrid(
+        rows = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(dimens.large * 2 + dimens.extraSmall),
+        horizontalArrangement = Arrangement.spacedBy(dimens.extraSmall),
+        verticalArrangement = Arrangement.spacedBy(dimens.extraSmall),
     ) {
-        allCategoryIcons.forEach { icon ->
+        gridItems(
+            items = icons,
+            key = { it.key },
+        ) { icon ->
             val isSelected = icon.key == selectedIconKey
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(dimens.large)
                     .clip(CircleShape)
                     .then(
                         if (isSelected) {
@@ -489,7 +516,10 @@ private fun EmojiPickerGrid(
                             MaterialTheme.colorScheme.surfaceContainerHigh
                         },
                     )
-                    .clickable { onSelectIcon(icon.key) },
+                    .selectable(
+                        selected = isSelected,
+                        onClick = { onSelectIcon(icon.key) },
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 CategoryIconImage(
@@ -512,6 +542,7 @@ private val previewCategories = persistentListOf(
         name = "Food",
         iconKey = "ic_food",
         comment = "Groceries & dining",
+        subcategoryCount = 2,
         subcategories = persistentListOf(
             SubcategoryChipUiModel(id = 10L, name = "Groceries", comment = null),
             SubcategoryChipUiModel(id = 11L, name = "Restaurants", comment = "Eating out"),
@@ -522,6 +553,7 @@ private val previewCategories = persistentListOf(
         name = "Transport",
         iconKey = "ic_transport",
         comment = null,
+        subcategoryCount = 0,
         subcategories = persistentListOf(),
     ),
 )

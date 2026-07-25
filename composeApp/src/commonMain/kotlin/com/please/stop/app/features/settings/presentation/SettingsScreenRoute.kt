@@ -2,7 +2,6 @@ package com.please.stop.app.features.settings.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,10 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -27,6 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -77,37 +78,58 @@ private fun SettingsContent(
 ) {
     val appColors = LocalAppColors.current
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
     ) {
-        SettingsHeader(
-            headerBackground = appColors.headerGradient,
-            onUserClick = onNavigateToUser,
-        )
+        item(contentType = "header") {
+            SettingsHeader(
+                headerBackground = appColors.headerGradient,
+                onUserClick = onNavigateToUser,
+            )
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        item(contentType = "header-spacing") {
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            state.sections.forEach { group ->
-                SettingsSection(
-                    title = stringResource(group.title),
-                ) {
-                    group.items.forEach { item ->
-                        SettingsItemRow(
-                            item = item,
-                            onClick = { onItemClick(item) },
-                        )
-                    }
-                }
+        state.sections.forEachIndexed { sectionIndex, group ->
+            item(
+                key = "section-$sectionIndex",
+                contentType = "section-title",
+            ) {
+                Text(
+                    text = stringResource(group.title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(
+                        start = 20.dp,
+                        top = if (sectionIndex == 0) 8.dp else 16.dp,
+                        end = 20.dp,
+                        bottom = 8.dp,
+                    ),
+                )
+            }
+
+            itemsIndexed(
+                items = group.items,
+                key = { _, item -> item.id },
+                contentType = { _, _ -> "settings-item" },
+            ) { itemIndex, item ->
+                SettingsItemCard(
+                    item = item,
+                    shape = settingsItemShape(
+                        itemIndex = itemIndex,
+                        itemCount = group.items.size,
+                    ),
+                    onClick = { onItemClick(item) },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        item(contentType = "footer-spacing") {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
     }
 }
 
@@ -181,26 +203,31 @@ private fun SettingsHeader(
 }
 
 @Composable
-private fun SettingsSection(
-    title: String,
-    content: @Composable () -> Unit,
+private fun SettingsItemCard(
+    item: SettingsItem,
+    shape: Shape,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-        )
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-            ),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Column { content() }
-        }
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        ),
+        shape = shape,
+    ) {
+        SettingsItemRow(item = item, onClick = onClick)
     }
+}
+
+private fun settingsItemShape(
+    itemIndex: Int,
+    itemCount: Int,
+): Shape = when {
+    itemCount == 1 -> RoundedCornerShape(16.dp)
+    itemIndex == 0 -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+    itemIndex == itemCount - 1 -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+    else -> RectangleShape
 }
 
 @Composable

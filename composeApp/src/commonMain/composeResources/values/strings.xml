@@ -127,6 +127,7 @@
     <string name="categories_name_label">Name</string>
     <string name="categories_comment_label">Comment</string>
     <string name="categories_confirm">Confirm</string>
+    <string name="categories_create">Create category</string>
     <string name="categories_edit_category">Edit Category</string>
     <string name="categories_delete">Delete</string>
     <string name="categories_delete_confirm_title">Delete category?</string>
@@ -142,6 +143,8 @@
     <string name="categories_delete_subcategory_title">Delete subcategory?</string>
     <string name="categories_delete_subcategory_message">"%1$s" will be permanently removed.</string>
     <string name="categories_subcategory_limit_reached">Maximum 10 subcategories per category</string>
+    <string name="categories_show_subcategories">Show subcategories (%1$d)</string>
+    <string name="categories_hide_subcategories">Hide subcategories (%1$d)</string>
     <string name="categories_archive">Archive</string>
     <string name="categories_archive_confirm_title">Archive "%1$s"?</string>
     <string name="categories_archive_confirm_message">This category will be hidden from pickers and the home screen. Existing expenses keep their category. You can restore it anytime.</string>
