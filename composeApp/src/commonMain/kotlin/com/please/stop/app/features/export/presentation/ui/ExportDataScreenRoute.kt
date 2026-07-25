@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewWrapper
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.please.stop.app.features.export.domain.model.ExportDestination
@@ -24,7 +25,7 @@ import com.please.stop.app.features.export.domain.model.SpreadSheetFormat
 import com.please.stop.app.features.export.presentation.ExportEvent
 import com.please.stop.app.features.export.presentation.ExportState
 import com.please.stop.app.features.export.presentation.ExportStateHolder
-import com.please.stop.app.theme.AppTheme
+import com.please.stop.app.uicomponents.previews.ApplicationPreviewThemeWrapper
 import com.please.stop.app.utils.date.nowMillis
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
@@ -36,9 +37,7 @@ import plzstop.composeapp.generated.resources.export_title
 import plzstop.composeapp.generated.resources.ic_arrow_back
 
 @Composable
-fun ExportScreenRoute(
-    onNavigateBack: () -> Unit,
-) {
+fun ExportScreenRoute(onNavigateBack: () -> Unit) {
     val stateHolder = koinViewModel<ExportStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()
 
@@ -85,40 +84,36 @@ private fun ExportRouteContent(
         Column(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(paddingValues),
+                .padding(paddingValues)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 DocumentTitleInputField(
-                    state = state,
-                    onTitleChange = onEvent,
+                    fileName = state.fileName.orEmpty(),
+                    folderName = state.folderName.orEmpty(),
+                    destination = state.currentDestination,
+                    onEvent = onEvent,
                 )
-
                 DateRangeField(
                     startDateMillis = state.currentStartDateMillis,
                     endDateMillis = state.currentEndDateMillis,
                     onRangeChange = { start, end ->
                         onEvent(ExportEvent.DateRangeSelected(start, end))
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 DestinationSelector(
                     selected = state.currentDestination,
                     onSelect = { onEvent(ExportEvent.DestinationSelected(it)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 OrganizationMethod(
-                    state = state,
-                    onMethodSelect = onEvent,
+                    currentSpreadSheetFormat = state.currentSpreadSheetFormat,
+                    destination = state.currentDestination,
+                    onMethodSelect = onEvent
                 )
-
                 Spacer(modifier = Modifier.height(16.dp))
-
                 ExportActionContent(
                     state = state,
                     onEvent = onEvent,
@@ -127,23 +122,33 @@ private fun ExportRouteContent(
             }
         }
     }
+
+    if (state is ExportState.AuthenticationRequired) {
+        ExportAuthenticationBottomSheet(
+            onAuthenticationComplete = {
+                onEvent(ExportEvent.AuthenticationCompleted)
+            },
+            onDismiss = {
+                onEvent(ExportEvent.DismissAuthentication)
+            },
+        )
+    }
 }
 
 @Preview
 @Composable
+@PreviewWrapper(ApplicationPreviewThemeWrapper::class)
 private fun ExportRouteContentPreview() {
-    AppTheme {
-        ExportRouteContent(
-            state = ExportState.Confirm(
-                currentSpreadSheetFormat = SpreadSheetFormat.SINGLE_TAB,
-                currentDestination = ExportDestination.GOOGLE_SHEETS,
-                currentStartDateMillis = nowMillis(),
-                currentEndDateMillis = nowMillis(),
-                fileName = "My Expenses",
-                hasExpensesToExport = true,
-            ),
-            onEvent = {},
-            onNavigateBack = {},
-        )
-    }
+    ExportRouteContent(
+        state = ExportState.Idle(
+            currentSpreadSheetFormat = SpreadSheetFormat.SINGLE_TAB,
+            currentDestination = ExportDestination.GOOGLE_SHEETS,
+            currentStartDateMillis = nowMillis(),
+            currentEndDateMillis = nowMillis(),
+            fileName = "My Expenses",
+            hasExpensesToExport = true,
+        ),
+        onEvent = {},
+        onNavigateBack = {},
+    )
 }

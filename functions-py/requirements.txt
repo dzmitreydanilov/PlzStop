@@ -1,3 +1,6 @@
 gspread==6.1.2
 google-auth==2.29.0
 firebase-admin==6.5.0
+firebase-functions==0.6.0
+cryptography==48.0.1
+requests==2.33.0

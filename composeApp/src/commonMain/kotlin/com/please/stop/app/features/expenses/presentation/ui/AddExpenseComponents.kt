@@ -3,9 +3,7 @@ package com.please.stop.app.features.expenses.presentation.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,23 +13,15 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,155 +30,17 @@ import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.NOTES_COUNTER_THRESHOLD
 import com.please.stop.app.features.expenses.presentation.BaseExpenseStateHolder.Companion.TITLE_COUNTER_THRESHOLD
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
-import com.please.stop.app.uicomponents.categoryEmojiForKey
+import com.please.stop.app.uicomponents.CategoryIconImage
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.stringResource
-import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
-import plzstop.composeapp.generated.resources.add_expense_analyzing_receipt
 import plzstop.composeapp.generated.resources.add_expense_category
 import plzstop.composeapp.generated.resources.add_expense_done
 import plzstop.composeapp.generated.resources.add_expense_notes_label
-import plzstop.composeapp.generated.resources.add_expense_scan_receipt
-import plzstop.composeapp.generated.resources.add_expense_scan_receipt_hint
-import plzstop.composeapp.generated.resources.add_expense_select_category
 import plzstop.composeapp.generated.resources.add_expense_title_label
 import plzstop.composeapp.generated.resources.add_expense_what_was_it_for
-import plzstop.composeapp.generated.resources.ic_keyboard_arrow_right
-import plzstop.composeapp.generated.resources.ic_scan
 
-private val SCAN_LINE_TRAVEL_PX = 40.dp
 private const val CATEGORY_GRID_COLUMNS = 3
-
-@Composable
-internal fun ScanReceiptCard(
-    isAnalyzing: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val scanLineOffset by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(
-                durationMillis = 1500,
-                easing = androidx.compose.animation.core.LinearEasing,
-            ),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
-        ),
-    )
-
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        enabled = !isAnalyzing,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant,
-        ),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    androidx.compose.material3.Icon(
-                        imageVector = vectorResource(Res.drawable.ic_scan),
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                Spacer(modifier = Modifier.size(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(Res.string.add_expense_scan_receipt),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = if (isAnalyzing) {
-                            stringResource(Res.string.add_expense_analyzing_receipt)
-                        } else {
-                            stringResource(Res.string.add_expense_scan_receipt_hint)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (isAnalyzing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    androidx.compose.material3.Icon(
-                        imageVector = vectorResource(Res.drawable.ic_keyboard_arrow_right),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            if (!isAnalyzing) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 8.dp)
-                        .size(width = 32.dp, height = 2.dp)
-                        .graphicsLayer {
-                            translationY = (scanLineOffset - 0.5f) * SCAN_LINE_TRAVEL_PX.toPx()
-                        }
-                        .background(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                            RoundedCornerShape(1.dp),
-                        ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-internal fun CategoryChip(
-    selectedCategory: CategoryUiModel?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    AssistChip(
-        onClick = onClick,
-        label = {
-            Text(
-                text = selectedCategory?.let {
-                    "${categoryEmojiForKey(it.iconKey)} ${it.name}"
-                } ?: stringResource(Res.string.add_expense_select_category),
-                style = MaterialTheme.typography.labelLarge,
-            )
-        },
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ),
-        border = null,
-        elevation = AssistChipDefaults.assistChipElevation(elevation = 2.dp),
-    )
-}
 
 @Composable
 internal fun NotesSection(
@@ -201,7 +53,7 @@ internal fun NotesSection(
         modifier = modifier.clickable(onClick = onClick),
     ) {
         Text(
-            text = if (title.isNotBlank()) title else stringResource(Res.string.add_expense_what_was_it_for),
+            text = title.ifBlank { stringResource(Res.string.add_expense_what_was_it_for) },
             style = MaterialTheme.typography.headlineSmall,
             color = if (title.isNotBlank()) {
                 MaterialTheme.colorScheme.onSurface
@@ -254,9 +106,14 @@ internal fun CategoryGridSheet(
                         .padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(
-                        text = categoryEmojiForKey(category.iconKey),
-                        style = MaterialTheme.typography.headlineMedium,
+                    CategoryIconImage(
+                        iconKey = category.iconKey,
+                        tint = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(28.dp),
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(

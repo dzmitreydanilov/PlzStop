@@ -4,19 +4,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewWrapper
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOWER_BOUND
 import com.please.stop.app.features.home.presentation.HomeCategoryUiModel
 import com.please.stop.app.features.home.presentation.HomeEvent
 import com.please.stop.app.features.home.presentation.HomeState
-import com.please.stop.app.theme.AppTheme
+import com.please.stop.app.uicomponents.previews.ApplicationPreviewThemeWrapper
 import kotlinx.collections.immutable.persistentListOf
 
 private const val COLUMNS_COMPACT = 3
@@ -28,16 +31,13 @@ internal fun HomeBody(
     state: HomeState,
     onEvent: (HomeEvent) -> Unit,
     modifier: Modifier = Modifier,
+    gridState: LazyGridState = rememberLazyGridState(),
 ) {
-    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-    val columnCount = when {
-        windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND) -> COLUMNS_EXPANDED
-        windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_MEDIUM_LOWER_BOUND) -> COLUMNS_MEDIUM
-        else -> COLUMNS_COMPACT
-    }
+    val columnCount = getColumnCount()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(columnCount),
+        state = gridState,
         modifier = modifier.padding(horizontal = 8.dp),
         contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -56,8 +56,25 @@ internal fun HomeBody(
     }
 }
 
+@Composable
+private fun getColumnCount(): Int {
+    val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
+    return when {
+        windowSizeClass.isWidthAtLeastBreakpoint(
+            widthDpBreakpoint = WIDTH_DP_EXPANDED_LOWER_BOUND
+        ) -> COLUMNS_EXPANDED
+
+        windowSizeClass.isWidthAtLeastBreakpoint(
+            widthDpBreakpoint = WIDTH_DP_MEDIUM_LOWER_BOUND
+        ) -> COLUMNS_MEDIUM
+
+        else -> COLUMNS_COMPACT
+    }
+}
+
 @Suppress("MagicNumber")
 @Preview(showBackground = true, showSystemUi = true)
+@PreviewWrapper(ApplicationPreviewThemeWrapper::class)
 @Composable
 private fun HomeBodyWithCategoriesPreview() {
     val categories = persistentListOf(
@@ -102,39 +119,36 @@ private fun HomeBodyWithCategoriesPreview() {
         HomeCategoryUiModel(39, "Snacks", "ic_food", "$8.00", true),
         HomeCategoryUiModel(40, "Alcohol", "ic_food", "$45.00", true),
     )
-    AppTheme {
-        HomeBody(
-            state = HomeState.Content(
-                displayName = "Dmitry",
-                currency = null,
-                totalSpentFormatted = "$165.50",
-                categories = categories,
-                hasAnyExpenses = true,
-                showAddCategorySheet = false,
-            ),
-            onEvent = {},
-        )
-    }
+    HomeBody(
+        state = HomeState.Content(
+            displayName = "Dmitry",
+            currency = null,
+            totalSpentFormatted = "$165.50",
+            categories = categories,
+            hasAnyExpenses = true,
+            showAddCategorySheet = false,
+        ),
+        onEvent = {},
+    )
 }
 
 @Preview(showBackground = true, showSystemUi = true)
+@PreviewWrapper(ApplicationPreviewThemeWrapper::class)
 @Composable
 private fun HomeBodyEmptyPreview() {
     val categories = persistentListOf(
         HomeCategoryUiModel(1, "Food", "ic_food", "$0.00", false),
         HomeCategoryUiModel(2, "Transport", "ic_transport", "$0.00", false),
     )
-    AppTheme {
-        HomeBody(
-            state = HomeState.Content(
-                displayName = "Dmitry",
-                currency = null,
-                totalSpentFormatted = "$0.00",
-                categories = categories,
-                hasAnyExpenses = false,
-                showAddCategorySheet = false,
-            ),
-            onEvent = {},
-        )
-    }
+    HomeBody(
+        state = HomeState.Content(
+            displayName = "Dmitry",
+            currency = null,
+            totalSpentFormatted = "$0.00",
+            categories = categories,
+            hasAnyExpenses = false,
+            showAddCategorySheet = false,
+        ),
+        onEvent = {},
+    )
 }

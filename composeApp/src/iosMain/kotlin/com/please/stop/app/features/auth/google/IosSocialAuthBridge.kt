@@ -7,8 +7,14 @@ import kotlin.experimental.ExperimentalObjCName
 interface IosSocialAuthBridge {
 
     fun signInWithGoogle(
+        onSuccess: (idToken: String) -> Unit,
+        onError: (String) -> Unit,
+    )
+
+    fun authorizeGoogleSheets(
         scopes: List<String>,
-        onSuccess: (idToken: String, accessToken: String?) -> Unit,
+        forceConsent: Boolean,
+        onSuccess: (serverAuthCode: String) -> Unit,
         onError: (String) -> Unit,
     )
 
@@ -17,11 +23,7 @@ interface IosSocialAuthBridge {
         onError: (String) -> Unit,
     )
 
-    fun getGoogleAccessToken(
-        scopes: List<String>,
-        onSuccess: (accessToken: String) -> Unit,
-        onError: (String) -> Unit,
-    )
+    fun cancelAppleSignIn()
 
     fun signOut(onComplete: () -> Unit)
 }

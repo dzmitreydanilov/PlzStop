@@ -1,6 +1,7 @@
 import UIKit
 import SwiftUI
 import ComposeApp
+import GoogleSignIn
 
 struct ComposeView: UIViewControllerRepresentable {
     let deepLinkHandler: DeepLinkHandler
@@ -38,7 +39,9 @@ struct ContentView: View {
             }
         }
         .onOpenURL { url in
-            deepLinkHandler.handleDeepLink(uriString: url.absoluteString)
+            if !GIDSignIn.sharedInstance.handle(url) {
+                deepLinkHandler.handleDeepLink(uriString: url.absoluteString)
+            }
         }
     }
 }

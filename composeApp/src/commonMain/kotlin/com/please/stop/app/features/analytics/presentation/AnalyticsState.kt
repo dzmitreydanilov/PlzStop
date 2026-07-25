@@ -103,7 +103,7 @@ data class SubcategoryProgressUi(
 
 data class DayExpenseUiItem(
     val title: String,
-    val categoryEmoji: String,
+    val categoryIconKey: String,
     val subcategoryName: String? = null,
     val formattedAmount: String,
 )

@@ -2,6 +2,7 @@ package com.please.stop.app.features.expenses.presentation.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AssistChip
@@ -49,9 +51,10 @@ import plzstop.composeapp.generated.resources.conversion_rate_override_title
 import plzstop.composeapp.generated.resources.conversion_rate_unavailable
 import plzstop.composeapp.generated.resources.conversion_reset_rate
 import plzstop.composeapp.generated.resources.conversion_save_in
-import plzstop.composeapp.generated.resources.ic_currency_exchange
+import plzstop.composeapp.generated.resources.ic_keyboard_arrow_down
 
 private val AMOUNT_DISPLAY_HEIGHT = 64.dp
+private val AMOUNT_ROW_MAX_WIDTH = 340.dp
 
 @Suppress("ModifierHeightWithText")
 @Composable
@@ -65,7 +68,12 @@ internal fun AmountSection(
     modifier: Modifier = Modifier,
 ) {
     val isEmpty = form.amountDisplayExpression.isEmpty()
-    val displayText = if (isEmpty) "0 ${state.currency.symbol}" else form.amountDisplayExpression
+    val displayText = if (isEmpty) {
+        "0"
+    } else {
+        form.amountDisplayExpression.withoutCurrencySymbol(state.currency.symbol)
+    }
+    val currencyText = state.currency.symbol.ifEmpty { state.currency.code }
 
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (isEmpty) 1f else 1.02f,
@@ -78,7 +86,7 @@ internal fun AmountSection(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
@@ -86,30 +94,29 @@ internal fun AmountSection(
                     scaleY = scale
                 }
                 .height(AMOUNT_DISPLAY_HEIGHT),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
         ) {
-            Text(
-                text = displayText,
-                style = MaterialTheme.typography.displaySmall,
-                color = if (isEmpty) {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            val isForeignCurrency = state.currencyConversionEnabled &&
-                state.currency.code != state.conversion.defaultCurrencyCode &&
-                state.currency.code.isNotEmpty() &&
-                state.conversion.defaultCurrencyCode.isNotEmpty()
-            if (isForeignCurrency) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .widthIn(max = AMOUNT_ROW_MAX_WIDTH),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = displayText,
+                    style = MaterialTheme.typography.displaySmall,
+                    color = if (isEmpty) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(weight = 1f, fill = false),
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 CurrencyChip(
-                    currencyCode = state.currency.code,
-                    conversion = state.conversion,
+                    currencyText = currencyText,
                     onClick = onCurrencyClick,
                 )
             }
@@ -127,44 +134,40 @@ internal fun AmountSection(
 
 @Composable
 private fun CurrencyChip(
-    currencyCode: String,
-    conversion: ConversionState,
+    currencyText: String,
     onClick: () -> Unit,
 ) {
-    val isForeign = currencyCode != conversion.defaultCurrencyCode &&
-        currencyCode.isNotEmpty() &&
-        conversion.defaultCurrencyCode.isNotEmpty()
-
     AssistChip(
         onClick = onClick,
         label = {
             Text(
-                text = currencyCode,
+                text = currencyText,
                 style = MaterialTheme.typography.labelMedium,
             )
         },
-        leadingIcon = if (isForeign) {
-            {
-                Icon(
-                    imageVector = vectorResource(Res.drawable.ic_currency_exchange),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-            }
-        } else {
-            null
+        trailingIcon = {
+            Icon(
+                imageVector = vectorResource(Res.drawable.ic_keyboard_arrow_down),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
         },
         shape = RoundedCornerShape(20.dp),
-        colors = if (isForeign) {
-            AssistChipDefaults.assistChipColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                leadingIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        } else {
-            AssistChipDefaults.assistChipColors()
-        },
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            trailingIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
     )
+}
+
+private fun String.withoutCurrencySymbol(currencySymbol: String): String {
+    if (currencySymbol.isEmpty()) return this
+
+    return replace(" $currencySymbol", "")
+        .replace(currencySymbol, "")
+        .trim()
+        .ifEmpty { "0" }
 }
 
 @Composable

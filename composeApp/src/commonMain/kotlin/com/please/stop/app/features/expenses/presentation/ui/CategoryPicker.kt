@@ -25,7 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.expenses.presentation.CategoryUiModel
-import com.please.stop.app.uicomponents.categoryEmojiForKey
+import com.please.stop.app.uicomponents.CategoryIconImage
 import kotlinx.collections.immutable.ImmutableList
 
 private const val COLUMNS = 2
@@ -122,9 +122,14 @@ private fun CategoryTile(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = categoryEmojiForKey(category.iconKey),
-                    style = MaterialTheme.typography.titleSmall,
+                CategoryIconImage(
+                    iconKey = category.iconKey,
+                    tint = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(22.dp),
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))

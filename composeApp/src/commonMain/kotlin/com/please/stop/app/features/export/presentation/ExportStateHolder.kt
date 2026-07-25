@@ -2,7 +2,9 @@ package com.please.stop.app.features.export.presentation
 
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
+import com.please.stop.app.features.auth.domain.usecase.ConnectGoogleAccount
 import com.please.stop.app.features.auth.domain.usecase.ConnectGoogleAccountUseCase
+import com.please.stop.app.features.auth.google.GoogleSheetsAuthorizationCode
 import com.please.stop.app.features.export.domain.model.ExportDestination
 import com.please.stop.app.features.export.domain.model.SpreadSheetFormat
 import com.please.stop.app.features.export.domain.usecase.ExportCsvUseCase
@@ -12,6 +14,7 @@ import com.please.stop.app.features.export.domain.usecase.GoogleSpreadSheetExpor
 import com.please.stop.app.features.export.domain.usecase.GoogleSpreadSheetExportUseCase
 import com.please.stop.app.features.export.domain.usecase.HasExpensesToExportUseCase
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import com.please.stop.app.core.models.domain.Result as DomainResult
@@ -27,21 +30,25 @@ class ExportStateHolder(
 
     override fun getInitial(): ExportState = ExportState.Idle()
 
-    override fun collectWhileSubscribed(): Flow<DomainResult> {
-        return hasExpensesToExportUseCase()
+    override suspend fun bootstrap(emit: suspend (DomainResult) -> Unit) {
+        return hasExpensesToExportUseCase().collect { emit(it) }
     }
 
     override fun resolveEventResult(event: ExportEvent): Flow<DomainResult> {
         return when (event) {
             is ExportEvent.StartExport -> {
                 handleExportTapped(
-                    event.startDateMillis,
-                    event.endDateMillis
+                    startDateMillis = event.startDateMillis,
+                    endDateMillis = event.endDateMillis,
                 )
             }
 
             is ExportEvent.FileNameEntered -> {
                 flowOf(FileNameChange(event.fileName))
+            }
+
+            is ExportEvent.FolderNameEntered -> {
+                flowOf(FolderNameChange(event.folderName))
             }
 
             is ExportEvent.DestinationSelected -> {
@@ -61,17 +68,15 @@ class ExportStateHolder(
                 )
             }
 
-            ExportEvent.ShareCsvOptionSelected -> {
-                flowOf(ExportCvsSelected)
-            }
-
             is ExportEvent.GoogleAccountConnected -> {
-                flow {
-                    emit(connectGoogleAccountUseCase(event.googleUser))
-                }
+                connectAndExport(event.authorizationCode)
             }
 
-            ExportEvent.DismissError, ExportEvent.Dismiss -> flowOf(Dismissed)
+            ExportEvent.AuthenticationCompleted -> resumeExportAfterAuthentication()
+
+            ExportEvent.DismissAuthentication,
+            ExportEvent.DismissError,
+            ExportEvent.Dismiss -> flowOf(Dismissed)
         }
     }
 
@@ -80,6 +85,9 @@ class ExportStateHolder(
             ExportDestination.GOOGLE_SHEETS -> exportToGoogleSheetsUseCase(
                 startDateMillis = startDateMillis,
                 endDateMillis = endDateMillis,
+                spreadSheetFormat = state.value.currentSpreadSheetFormat,
+                spreadsheetTitle = state.value.fileName.orEmpty(),
+                folderName = state.value.folderName.orEmpty(),
             )
 
             ExportDestination.CSV ->
@@ -90,16 +98,84 @@ class ExportStateHolder(
         }
     }
 
+    private fun connectAndExport(
+        authorizationCode: GoogleSheetsAuthorizationCode,
+    ): Flow<DomainResult> = flow {
+        val connectionResult = connectGoogleAccountUseCase(authorizationCode)
+        emit(connectionResult)
+        if (connectionResult is ConnectGoogleAccount.Success) {
+            emitAll(
+                exportToGoogleSheetsUseCase(
+                    startDateMillis = state.value.currentStartDateMillis,
+                    endDateMillis = state.value.currentEndDateMillis,
+                    spreadSheetFormat = state.value.currentSpreadSheetFormat,
+                    spreadsheetTitle = state.value.fileName.orEmpty(),
+                    folderName = state.value.folderName.orEmpty(),
+                )
+            )
+        }
+    }
+
+    private fun resumeExportAfterAuthentication(): Flow<DomainResult> = flow {
+        emit(Dismissed)
+        emitAll(
+            exportToGoogleSheetsUseCase(
+                startDateMillis = state.value.currentStartDateMillis,
+                endDateMillis = state.value.currentEndDateMillis,
+                spreadSheetFormat = state.value.currentSpreadSheetFormat,
+                spreadsheetTitle = state.value.fileName.orEmpty(),
+                folderName = state.value.folderName.orEmpty(),
+            )
+        )
+    }
+
     override fun getStateByResult(previous: ExportState, result: DomainResult): ExportState =
         when (result) {
-            is GoogleSpreadSheetExportResult.GoogleAccountNotLinked -> {
+            ConnectGoogleAccount.Success -> ExportState.Idle(
+                currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
+                currentDestination = previous.currentDestination,
+                currentStartDateMillis = previous.currentStartDateMillis,
+                currentEndDateMillis = previous.currentEndDateMillis,
+                fileName = previous.fileName,
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = false,
+            )
+
+            ConnectGoogleAccount.ReconnectRequired -> ExportState.NeedsGoogleAccount(
+                currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
+                currentDestination = previous.currentDestination,
+                currentStartDateMillis = previous.currentStartDateMillis,
+                currentEndDateMillis = previous.currentEndDateMillis,
+                fileName = previous.fileName,
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = true,
+            )
+
+            GoogleSpreadSheetExportResult.GoogleAccountNotLinked -> {
                 ExportState.NeedsGoogleAccount(
                     currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
                     currentDestination = previous.currentDestination,
                     currentStartDateMillis = previous.currentStartDateMillis,
                     currentEndDateMillis = previous.currentEndDateMillis,
                     fileName = previous.fileName,
-                    hasExpensesToExport = previous.hasExpensesToExport
+                    folderName = previous.folderName,
+                    hasExpensesToExport = previous.hasExpensesToExport,
+                    forceGoogleConsent = false,
+                )
+            }
+
+            GoogleSpreadSheetExportResult.AuthenticationRequired -> {
+                ExportState.AuthenticationRequired(
+                    currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
+                    currentDestination = previous.currentDestination,
+                    currentStartDateMillis = previous.currentStartDateMillis,
+                    currentEndDateMillis = previous.currentEndDateMillis,
+                    fileName = previous.fileName,
+                    folderName = previous.folderName,
+                    hasExpensesToExport = previous.hasExpensesToExport,
+                    forceGoogleConsent = previous.forceGoogleConsent,
                 )
             }
 
@@ -110,19 +186,11 @@ class ExportStateHolder(
                     currentStartDateMillis = previous.currentStartDateMillis,
                     currentEndDateMillis = previous.currentEndDateMillis,
                     fileName = state.value.fileName,
-                    hasExpensesToExport = result is ExportExpensesAvailabilityResult.Available
+                    folderName = state.value.folderName,
+                    hasExpensesToExport = result is ExportExpensesAvailabilityResult.Available,
+                    forceGoogleConsent = previous.forceGoogleConsent,
                 )
             }
-
-
-            is ShowConfirm -> ExportState.Confirm(
-                currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
-                currentDestination = previous.currentDestination,
-                currentStartDateMillis = result.startDateMillis,
-                currentEndDateMillis = result.endDateMillis,
-                fileName = previous.fileName,
-                hasExpensesToExport = previous.hasExpensesToExport
-            )
 
             is DestinationUpdated -> ExportState.Idle(
                 currentSpreadSheetFormat = getSheetFormat(result, previous),
@@ -130,7 +198,9 @@ class ExportStateHolder(
                 currentStartDateMillis = previous.currentStartDateMillis,
                 currentEndDateMillis = previous.currentEndDateMillis,
                 fileName = previous.fileName,
-                hasExpensesToExport = previous.hasExpensesToExport
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = previous.forceGoogleConsent,
             )
 
             is FileNameChange -> ExportState.Idle(
@@ -139,19 +209,21 @@ class ExportStateHolder(
                 currentStartDateMillis = previous.currentStartDateMillis,
                 currentEndDateMillis = previous.currentEndDateMillis,
                 fileName = result.name,
-                hasExpensesToExport = previous.hasExpensesToExport
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = previous.forceGoogleConsent,
             )
 
-            ExportCvsSelected -> {
-                ExportState.Idle(
-                    currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
-                    currentDestination = ExportDestination.CSV,
-                    currentStartDateMillis = previous.currentStartDateMillis,
-                    currentEndDateMillis = previous.currentEndDateMillis,
-                    fileName = previous.fileName,
-                    hasExpensesToExport = previous.hasExpensesToExport
-                )
-            }
+            is FolderNameChange -> ExportState.Idle(
+                currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
+                currentDestination = previous.currentDestination,
+                currentStartDateMillis = previous.currentStartDateMillis,
+                currentEndDateMillis = previous.currentEndDateMillis,
+                fileName = previous.fileName,
+                folderName = result.name,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = previous.forceGoogleConsent,
+            )
 
             is TabLayoutSelectedResult -> ExportState.Idle(
                 currentSpreadSheetFormat = result.spreadSheetFormat,
@@ -159,7 +231,9 @@ class ExportStateHolder(
                 currentStartDateMillis = previous.currentStartDateMillis,
                 currentEndDateMillis = previous.currentEndDateMillis,
                 fileName = previous.fileName,
-                hasExpensesToExport = previous.hasExpensesToExport
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = previous.forceGoogleConsent,
             )
 
             is DateRangeUpdated -> ExportState.Idle(
@@ -168,24 +242,32 @@ class ExportStateHolder(
                 currentStartDateMillis = result.startDateMillis,
                 currentEndDateMillis = result.endDateMillis,
                 fileName = previous.fileName,
-                hasExpensesToExport = previous.hasExpensesToExport
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = previous.forceGoogleConsent,
             )
 
-            is Dismissed -> ExportState.Idle(
-                currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
-                currentDestination = previous.currentDestination,
-                fileName = previous.fileName,
-                hasExpensesToExport = previous.hasExpensesToExport
-
-            )
-
-            is ExportResult.Enqueued -> ExportState.Enqueued(
+            Dismissed -> ExportState.Idle(
                 currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
                 currentDestination = previous.currentDestination,
                 currentStartDateMillis = previous.currentStartDateMillis,
                 currentEndDateMillis = previous.currentEndDateMillis,
                 fileName = previous.fileName,
-                hasExpensesToExport = previous.hasExpensesToExport
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = false,
+            )
+
+            is ExportResult.Enqueued,
+            GoogleSpreadSheetExportResult.Enqueued -> ExportState.Enqueued(
+                currentSpreadSheetFormat = previous.currentSpreadSheetFormat,
+                currentDestination = previous.currentDestination,
+                currentStartDateMillis = previous.currentStartDateMillis,
+                currentEndDateMillis = previous.currentEndDateMillis,
+                fileName = previous.fileName,
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = false,
             )
 
             is ExportResult.CsvShareLaunched -> ExportState.CsvShareLaunched(
@@ -194,7 +276,9 @@ class ExportStateHolder(
                 currentStartDateMillis = previous.currentStartDateMillis,
                 currentEndDateMillis = previous.currentEndDateMillis,
                 fileName = previous.fileName,
-                hasExpensesToExport = previous.hasExpensesToExport
+                folderName = previous.folderName,
+                hasExpensesToExport = previous.hasExpensesToExport,
+                forceGoogleConsent = false,
             )
 
             is ExportResult.GoogleAccountNotLinked -> {
@@ -204,8 +288,9 @@ class ExportStateHolder(
                     currentStartDateMillis = previous.currentStartDateMillis,
                     currentEndDateMillis = previous.currentEndDateMillis,
                     fileName = previous.fileName,
-                    hasExpensesToExport = previous.hasExpensesToExport
-
+                    folderName = previous.folderName,
+                    hasExpensesToExport = previous.hasExpensesToExport,
+                    forceGoogleConsent = false,
                 )
             }
 
@@ -214,7 +299,7 @@ class ExportStateHolder(
 
     private fun getSheetFormat(
         result: DestinationUpdated,
-        previous: ExportState
+        previous: ExportState,
     ): SpreadSheetFormat = if (result.destination == ExportDestination.CSV) {
         SpreadSheetFormat.SINGLE_TAB
     } else {
@@ -223,28 +308,23 @@ class ExportStateHolder(
 
     override fun getErrorStateByResult(result: DomainResult, errorType: ErrorType): ExportState =
         ExportState.Error(
-            errorType,
+            errorType = errorType,
             currentSpreadSheetFormat = state.value.currentSpreadSheetFormat,
             currentDestination = state.value.currentDestination,
             currentStartDateMillis = state.value.currentStartDateMillis,
             currentEndDateMillis = state.value.currentEndDateMillis,
             fileName = state.value.fileName,
-            hasExpensesToExport = state.value.hasExpensesToExport
+            folderName = state.value.folderName,
+            hasExpensesToExport = state.value.hasExpensesToExport,
+            forceGoogleConsent = state.value.forceGoogleConsent,
         )
 }
 
-data class ShowConfirm(
-    val startDateMillis: Long,
-    val endDateMillis: Long,
-) : DomainResult
+private data class DateRangeUpdated(val startDateMillis: Long, val endDateMillis: Long) :
+    DomainResult
 
-data object Dismissed : DomainResult
-data class DestinationUpdated(val destination: ExportDestination) : DomainResult
-data class TabLayoutSelectedResult(val spreadSheetFormat: SpreadSheetFormat) : DomainResult
-data class FileNameChange(val name: String) : DomainResult
-
-data object ExportCvsSelected : DomainResult
-data class DateRangeUpdated(
-    val startDateMillis: Long,
-    val endDateMillis: Long,
-) : DomainResult
+private data class TabLayoutSelectedResult(val spreadSheetFormat: SpreadSheetFormat) : DomainResult
+private data object Dismissed : DomainResult
+private data class DestinationUpdated(val destination: ExportDestination) : DomainResult
+private data class FileNameChange(val name: String) : DomainResult
+private data class FolderNameChange(val name: String) : DomainResult

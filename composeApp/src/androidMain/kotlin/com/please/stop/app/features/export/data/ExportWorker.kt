@@ -11,27 +11,30 @@ internal class ExportWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val accessToken = inputData.getString(KEY_ACCESS_TOKEN) ?: return Result.failure()
-        val startDate = inputData.getLong(KEY_START_DATE, 0)
-        val endDate = inputData.getLong(KEY_END_DATE, 0)
-        val exportId = inputData.getLong(KEY_EXPORT_ID, 0)
-        val tabLayout = inputData.getString(KEY_TAB_LAYOUT) ?: "single_tab"
-
-        val success = exportWorkRunner.run(
-            exportId = exportId,
-            googleAccessToken = accessToken,
-            tabLayout = tabLayout,
-            startDateMillis = startDate,
-            endDateMillis = endDate,
+        val request = ExportWorkRequest(
+            exportId = inputData.getLong(ExportWorkRequest.KEY_EXPORT_ID, 0),
+            tabLayout = inputData.getString(ExportWorkRequest.KEY_TAB_LAYOUT) ?: "single_tab",
+            startDateMillis = inputData.getLong(ExportWorkRequest.KEY_START_DATE, 0),
+            endDateMillis = inputData.getLong(ExportWorkRequest.KEY_END_DATE, 0),
+            spreadsheetTitle = inputData.getString(ExportWorkRequest.KEY_SPREADSHEET_TITLE).orEmpty(),
+            folderName = inputData.getString(ExportWorkRequest.KEY_FOLDER_NAME).orEmpty(),
         )
-        return if (success) Result.success() else Result.failure()
+
+        return when (exportWorkRunner.run(request)) {
+            ExportWorkResult.Success -> Result.success()
+            ExportWorkResult.Failure -> Result.failure()
+            ExportWorkResult.Retry -> {
+                if (runAttemptCount < MAX_ATTEMPTS - 1) {
+                    Result.retry()
+                } else {
+                    exportWorkRunner.markRetryExhausted(exportId = request.exportId)
+                    Result.failure()
+                }
+            }
+        }
     }
 
-    companion object {
-        const val KEY_ACCESS_TOKEN = "accessToken"
-        const val KEY_START_DATE = "startDate"
-        const val KEY_END_DATE = "endDate"
-        const val KEY_EXPORT_ID = "exportId"
-        const val KEY_TAB_LAYOUT = "tabLayout"
+    private companion object {
+        const val MAX_ATTEMPTS = 3
     }
 }

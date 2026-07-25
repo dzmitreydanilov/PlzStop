@@ -53,6 +53,7 @@ fun BottomTabsNavNavigationHost(
     onNavigateToAddExpense: (preselectedCategoryId: Long) -> Unit,
     onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToUser: () -> Unit,
     onNavigateToExportData: () -> Unit,
     onNavigateToEditExpense: (expenseId: Long) -> Unit = {},
     onNavigateToCategories: () -> Unit,
@@ -94,6 +95,7 @@ fun BottomTabsNavNavigationHost(
                         onNavigateToAddExpense = onNavigateToAddExpense,
                         onNavigateToCreateExpense = onNavigateToCreateExpense,
                         onNavigateToSettings = onNavigateToSettings,
+                        onNavigateToUser = onNavigateToUser,
                         onNavigateToEditExpense = onNavigateToEditExpense,
                         onNavigateToCategories = onNavigateToCategories,
                         onNavigateToSubscriptions = onNavigateToSubscriptions,
@@ -146,6 +148,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationEntries(
     onNavigateToAddExpense: (categoryId: Long) -> Unit,
     onNavigateToCreateExpense: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToUser: () -> Unit,
     onNavigateToEditExpense: (expenseId: Long) -> Unit,
     onNavigateToCategories: () -> Unit,
     onNavigateToSubscriptions: () -> Unit,
@@ -161,6 +164,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationEntries(
     )
     analyticsTabEntries(onNavigateToEditExpense = onNavigateToEditExpense)
     settingsTabEntries(
+        onNavigateToUser = onNavigateToUser,
         onNavigateToCategories = onNavigateToCategories,
         onNavigateToSubscriptions = onNavigateToSubscriptions,
         onNavigateToExportData = onNavigateToExportData

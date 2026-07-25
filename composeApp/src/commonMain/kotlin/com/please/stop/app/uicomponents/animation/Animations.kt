@@ -9,6 +9,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,7 +85,7 @@ fun ScaleIn(
 @Suppress("UnusedParameter")
 @Composable
 fun PulseGlow(
-    color: Color = Color.White.copy(alpha = 0.3f),
+    color: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
     content: @Composable () -> Unit,
 ) {
     val infiniteTransition = rememberInfiniteTransition()
@@ -137,7 +138,7 @@ private class ShimmerModifier : Modifier.Element
 
 fun Modifier.shimmerOverlay(
     shimmerOffset: Float,
-    color: Color = Color.White.copy(alpha = 0.15f),
+    color: Color,
 ): Modifier = this.drawWithContent {
     drawContent()
     val width = size.width

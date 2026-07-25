@@ -5,6 +5,7 @@ import com.please.stop.app.core.db.dao.ExpenseDao
 import com.please.stop.app.core.db.dao.UserProfileDao
 import com.please.stop.app.core.db.entity.CategoryEntity
 import com.please.stop.app.core.models.domain.Currency
+import com.please.stop.app.core.runSuspendCatching
 import com.please.stop.app.features.home.domain.model.HomeCategoryItem
 import com.please.stop.app.features.home.domain.model.HomeData
 import com.please.stop.app.features.home.domain.repository.HomeRepository
@@ -59,15 +60,17 @@ class HomeRepositoryImpl(
         }.flowOn(ioDispatcher)
     }
 
-    override suspend fun addCategory(name: String, iconKey: String): Result<Unit> = runCatching {
-        val sortOrder = categoryDao.getNextSortOrder()
-        categoryDao.insert(
-            CategoryEntity(
-                name = name,
-                iconKey = iconKey,
-                isDefault = false,
-                sortOrder = sortOrder,
+    override suspend fun addCategory(name: String, iconKey: String): Result<Unit> {
+        return runSuspendCatching {
+            val sortOrder = categoryDao.getNextSortOrder()
+            categoryDao.insert(
+                CategoryEntity(
+                    name = name,
+                    iconKey = iconKey,
+                    isDefault = false,
+                    sortOrder = sortOrder,
+                )
             )
-        )
+        }
     }
 }

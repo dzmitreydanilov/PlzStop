@@ -15,7 +15,7 @@ internal class AndroidGoogleAccountStorage(
 ) : IGoogleAccountStorage {
 
     override suspend fun write(link: GoogleAccountLink) {
-        val value = "${link.email}|${link.isConnected}"
+        val value = GoogleAccountLinkCodec.encode(link)
         val encrypted = Crypto.encrypt(value.toByteArray(Charsets.UTF_8))
         val encoded = Base64.encodeToString(encrypted, Base64.NO_WRAP)
         dataStore.edit { prefs -> prefs[KEY_DATA] = encoded }
@@ -25,12 +25,7 @@ internal class AndroidGoogleAccountStorage(
         val encoded = dataStore.data.first()[KEY_DATA] ?: return null
         val encrypted = Base64.decode(encoded, Base64.NO_WRAP)
         val decrypted = Crypto.decrypt(encrypted).toString(Charsets.UTF_8)
-        val parts = decrypted.split("|")
-        if (parts.size != 2) return null
-        return GoogleAccountLink(
-            email = parts[0],
-            isConnected = parts[1].toBooleanStrictOrNull() ?: false,
-        )
+        return GoogleAccountLinkCodec.decode(decrypted)
     }
 
     override suspend fun delete() {

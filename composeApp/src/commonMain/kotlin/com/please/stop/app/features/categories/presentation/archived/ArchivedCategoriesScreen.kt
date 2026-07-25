@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.please.stop.app.features.categories.presentation.CategoryRowUiModel
-import com.please.stop.app.uicomponents.categoryEmojiForKey
+import com.please.stop.app.uicomponents.CategoryIconImage
 import com.please.stop.app.uicomponents.error.ScreenOverlay
 import com.please.stop.app.uicomponents.error.ScreenOverlayContainer
 import com.please.stop.app.uicomponents.progress.DisplayFullScreenProgress
@@ -155,9 +155,10 @@ private fun ArchivedCategoryRow(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = categoryEmojiForKey(category.iconKey),
-                style = MaterialTheme.typography.titleMedium,
+            CategoryIconImage(
+                iconKey = category.iconKey,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {

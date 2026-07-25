@@ -34,7 +34,7 @@ import platform.Security.kSecValueData
 internal class IosGoogleAccountStorage : IGoogleAccountStorage {
 
     override suspend fun write(link: GoogleAccountLink) {
-        val value = "${link.email}|${link.isConnected}"
+        val value = GoogleAccountLinkCodec.encode(link)
         val data = (value as NSString).dataUsingEncoding(NSUTF8StringEncoding) ?: return
 
         delete()
@@ -68,13 +68,7 @@ internal class IosGoogleAccountStorage : IGoogleAccountStorage {
 
             val data = CFBridgingRelease(result.value) as? NSData ?: return null
             val str = NSString.create(data = data, encoding = NSUTF8StringEncoding)?.toString() ?: return null
-            val parts = str.split("|")
-            if (parts.size != 2) return null
-
-            return GoogleAccountLink(
-                email = parts[0],
-                isConnected = parts[1].toBooleanStrictOrNull() ?: false,
-            )
+            return GoogleAccountLinkCodec.decode(str)
         }
     }
 

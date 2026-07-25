@@ -49,7 +49,9 @@ actual val platformModule: Module = module {
     } binds arrayOf(ICoroutineScopeProvider::class, DefaultLifecycleObserver::class)
 
     // Auth
-    single { GoogleAuthCredentials(webClientId = "YOUR_WEB_CLIENT_ID") }
+    single {
+        GoogleAuthCredentials(webClientId = "768142515658-8744b2sife7khdkvmqosjjme3c9jhhq1.apps.googleusercontent.com")
+    }
     single { CredentialManager.create(get<Context>()) }
     single<GoogleAuthProvider> {
         GoogleAuthProviderImpl(credentials = get(), credentialManager = get<CredentialManager>())

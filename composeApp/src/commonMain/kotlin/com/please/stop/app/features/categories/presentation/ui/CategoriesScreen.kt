@@ -47,6 +47,7 @@ import com.please.stop.app.features.categories.presentation.CategoriesStateHolde
 import com.please.stop.app.features.categories.presentation.CategoryRowUiModel
 import com.please.stop.app.features.categories.presentation.SubcategoryChipUiModel
 import com.please.stop.app.theme.AppTheme
+import com.please.stop.app.uicomponents.CategoryIconImage
 import com.please.stop.app.uicomponents.allCategoryIcons
 import com.please.stop.app.uicomponents.buttons.ApplicationButton
 import com.please.stop.app.uicomponents.error.ScreenOverlay
@@ -491,7 +492,15 @@ private fun EmojiPickerGrid(
                     .clickable { onSelectIcon(icon.key) },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = icon.emoji, style = MaterialTheme.typography.titleMedium)
+                CategoryIconImage(
+                    iconKey = icon.key,
+                    tint = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(22.dp),
+                )
             }
         }
     }

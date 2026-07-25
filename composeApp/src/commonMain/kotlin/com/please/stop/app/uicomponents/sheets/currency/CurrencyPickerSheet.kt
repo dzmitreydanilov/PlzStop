@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.composeunstyled.ModalBottomSheetProperties
 import com.composeunstyled.SheetDetent
 import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.onboarding.domain.model.Currency
@@ -91,6 +92,7 @@ fun CurrencyPickerSheet(
                 onDismiss()
             }
         },
+        properties = ModalBottomSheetProperties(offsetForIme = true)
     ) {
         SearchBar(
             inputField = {

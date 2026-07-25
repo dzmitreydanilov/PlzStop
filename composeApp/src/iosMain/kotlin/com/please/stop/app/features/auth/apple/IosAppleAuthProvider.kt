@@ -8,6 +8,8 @@ internal class IosAppleAuthProvider(
     private val bridge: IosSocialAuthBridge,
 ) : AppleAuthProvider {
 
+    override val isSupported: Boolean = true
+
     override suspend fun signIn(): AppleUser? = suspendCancellableCoroutine { continuation ->
         bridge.signInWithApple(
             onSuccess = { identityToken, nonce, email ->
@@ -17,6 +19,9 @@ internal class IosAppleAuthProvider(
                 continuation.resume(null)
             },
         )
+        continuation.invokeOnCancellation {
+            bridge.cancelAppleSignIn()
+        }
     }
 
     override suspend fun signOut() {

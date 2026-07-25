@@ -40,6 +40,8 @@ interface IosFirebaseAuthBridge {
 
     fun signOut(onComplete: () -> Unit)
 
+    fun currentSignInProviderId(): String?
+
     fun observeIsAuthenticated(onChanged: (Boolean) -> Unit)
 
     fun removeAuthStateListener()

@@ -1,34 +1,28 @@
 package com.please.stop.app.features.auth.google
 
-/**
- * Provider class for Google Authentication UI part. a.k.a [signIn]
- */
+/** Foreground Google identity and Sheets authorization operations. */
 interface GoogleAuthUiProvider {
 
     companion object {
-        internal val BASIC_AUTH_SCOPE = listOf("email", "profile")
+        internal val GOOGLE_SHEETS_SCOPES = listOf(
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.file",
+        )
     }
 
-    suspend fun signIn(): GoogleUser? =
+    /** Requests a Google identity credential for Firebase authentication. */
+    suspend fun signIn(): GoogleSignInCredential? =
         signIn(
             filterByAuthorizedAccounts = false,
-            isAutoSelectEnabled = true,
-            scopes = BASIC_AUTH_SCOPE
+            isAutoSelectEnabled = false,
         )
 
+    /** Requests a Google identity credential for Firebase authentication. */
     suspend fun signIn(
         filterByAuthorizedAccounts: Boolean,
-        isAutoSelectEnabled: Boolean = true
-    ): GoogleUser? =
-        signIn(
-            filterByAuthorizedAccounts = filterByAuthorizedAccounts,
-            isAutoSelectEnabled = isAutoSelectEnabled,
-            scopes = BASIC_AUTH_SCOPE
-        )
+        isAutoSelectEnabled: Boolean = false,
+    ): GoogleSignInCredential?
 
-    suspend fun signIn(
-        filterByAuthorizedAccounts: Boolean = false,
-        isAutoSelectEnabled: Boolean = true,
-        scopes: List<String> = BASIC_AUTH_SCOPE
-    ): GoogleUser?
+    /** Requests offline authorization for the exact Google Sheets export scopes. */
+    suspend fun authorizeSheets(forceConsent: Boolean = false): GoogleSheetsAuthorizationCode?
 }

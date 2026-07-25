@@ -43,6 +43,6 @@ interface CategoryDao {
     @Query("SELECT COALESCE(MAX(sortOrder), 0) + 1 FROM category")
     suspend fun getNextSortOrder(): Int
 
-    @Query("DELETE FROM category")
-    suspend fun deleteAll()
+    @Query("DELETE FROM category WHERE isDefault = 0")
+    suspend fun deleteAllNonDefault()
 }

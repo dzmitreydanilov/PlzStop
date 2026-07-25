@@ -14,8 +14,8 @@ const WINDOW_MS = 60_000;
 const MAX_PER_DAY = 3;
 const MAX_GLOBAL_PER_DAY = 500;
 
-function hashIp(ip: string): string {
-  return createHash("sha256").update(ip).digest("hex");
+function hashUserId(uid: string): string {
+  return createHash("sha256").update(`uid:${uid}`).digest("hex");
 }
 
 function getNextMidnightUtc(): Timestamp {
@@ -26,9 +26,9 @@ function getNextMidnightUtc(): Timestamp {
   return Timestamp.fromDate(midnight);
 }
 
-export async function checkRateLimit(ip: string): Promise<void> {
+export async function checkRateLimit(uid: string): Promise<void> {
   const db = getFirestore();
-  const docRef = db.collection(COLLECTION).doc(hashIp(ip));
+  const docRef = db.collection(COLLECTION).doc(hashUserId(uid));
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(docRef);
@@ -122,11 +122,26 @@ export async function checkGlobalDailyLimit(): Promise<void> {
 }
 
 export async function cleanupExpiredRateLimits(): Promise<number> {
+  const receiptLimitsDeleted = await cleanupExpiredDocuments(
+    COLLECTION,
+    "dailyResetAt"
+  );
+  const callableLimitsDeleted = await cleanupExpiredDocuments(
+    "callableRateLimits",
+    "expiresAt"
+  );
+  return receiptLimitsDeleted + callableLimitsDeleted;
+}
+
+async function cleanupExpiredDocuments(
+  collection: string,
+  expiryField: string
+): Promise<number> {
   const db = getFirestore();
   const now = Timestamp.now();
   const query = db
-    .collection(COLLECTION)
-    .where("dailyResetAt", "<", now)
+    .collection(collection)
+    .where(expiryField, "<", now)
     .limit(500);
 
   let totalDeleted = 0;

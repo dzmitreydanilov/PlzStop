@@ -1,5 +1,12 @@
 # Export to Spreadsheet or CSV — Implementation Plan
 
+> **Superseded OAuth design:** The token decisions in this WIP plan—especially Resolved Decisions 1, 2, and 8 and all
+> steps that return or send a client Google access token—are replaced by
+> [Export Feature Technical Specification](../features/export.md) and OpenSpec change
+> `define-export-token-lifecycle`. Current clients send a one-time server authorization code only when linking; the
+> backend stores an encrypted refresh token and mints access tokens inside `exportToSheets`. The CSV, workbook layout,
+> formatting, date-range, and sharing notes below remain useful unless contradicted by the technical specification.
+
 This plan delivers two sequential phases: platform authentication (Google + Apple Sign-In) followed by export options for either a Google Spreadsheet or a local CSV file shared with any app. Google Sheets export depends on Phase 1 being complete for authenticated users; CSV sharing only depends on local expense data.
 
 ---

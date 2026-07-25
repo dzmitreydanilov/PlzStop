@@ -66,7 +66,10 @@ internal fun SpendingOverviewCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .shimmerOverlay(shimmerOffset, Color.White.copy(alpha = 0.04f)),
+            .shimmerOverlay(
+                shimmerOffset = shimmerOffset,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f),
+            ),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             val chartColors = LocalAppColors.current.chartColors

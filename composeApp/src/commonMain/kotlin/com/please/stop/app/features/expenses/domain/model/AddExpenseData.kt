@@ -6,6 +6,7 @@ data class AddExpenseFormData(
     val decimalPlaces: Int,
     val categories: List<ExpenseCategory>,
     val subcategories: List<ExpenseSubcategory> = emptyList(),
+    val frequentSubcategoryIdsByCategory: Map<Long, List<Long>> = emptyMap(),
     val currencyConversionEnabled: Boolean = false,
 )
 

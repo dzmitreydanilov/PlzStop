@@ -11,7 +11,7 @@ import androidx.credentials.CredentialManager
 import com.please.stop.app.features.auth.google.GoogleAuthCredentials
 import com.please.stop.app.features.auth.google.GoogleAuthProvider
 import com.please.stop.app.features.auth.google.GoogleAuthUiProvider
-import kotlinx.coroutines.channels.Channel
+import com.please.stop.app.features.auth.google.PendingAuthorizationResult
 
 internal class GoogleAuthProviderImpl(
     private val credentials: GoogleAuthCredentials,
@@ -21,18 +21,20 @@ internal class GoogleAuthProviderImpl(
     @Composable
     override fun getUiProvider(): GoogleAuthUiProvider {
         val activityContext = LocalContext.current
-        val authResultChannel = remember { Channel<ActivityResult>(Channel.UNLIMITED) }
+        val pendingAuthorizationResult = remember {
+            PendingAuthorizationResult<ActivityResult>()
+        }
         val scopeIntentLauncher =
             rememberLauncherForActivityResult(
                 ActivityResultContracts.StartIntentSenderForResult()
-            ) { res -> authResultChannel.trySend(res) }
+            ) { result -> pendingAuthorizationResult.complete(result) }
 
         return GoogleAuthUiProviderImpl(
             activityContext = activityContext,
             credentialManager = credentialManager,
             credentials = credentials,
             scopeIntentLauncher = scopeIntentLauncher::launch,
-            authResultChannel = authResultChannel
+            pendingAuthorizationResult = pendingAuthorizationResult,
         )
     }
 

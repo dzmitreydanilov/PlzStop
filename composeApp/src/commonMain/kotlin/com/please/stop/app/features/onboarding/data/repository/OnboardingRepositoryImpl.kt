@@ -10,6 +10,7 @@ import com.please.stop.app.features.onboarding.domain.repository.OnboardingRepos
 import com.please.stop.app.features.onboarding.presentation.CategoryUiModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -30,12 +31,14 @@ class OnboardingRepositoryImpl(
         runCatching {
             userProfileDao.upsert(data.toUserProfileEntity())
 
-            val defaultCategories = categoryRepository.getDefaultCategories().getOrThrow()
-            categoryDao.insertAll(
-                defaultCategories.mapIndexed { index, category ->
-                    category.toCategoryEntity(sortOrder = index)
-                }
-            )
+            if (categoryDao.observeAllIncludingArchived().first().isEmpty()) {
+                val defaultCategories = categoryRepository.getDefaultCategories().getOrThrow()
+                categoryDao.insertAll(
+                    defaultCategories.mapIndexed { index, category ->
+                        category.toCategoryEntity(sortOrder = index)
+                    }
+                )
+            }
         }
     }
 }

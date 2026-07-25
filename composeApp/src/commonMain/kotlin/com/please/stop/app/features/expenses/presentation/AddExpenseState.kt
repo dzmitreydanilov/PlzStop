@@ -13,10 +13,15 @@ data class AddExpenseState(
     val editContext: EditContext,
     val currency: CurrencyConfig,
     val form: ExpenseFormInput,
+    val initialCategoryId: Long?,
     @Serializable(with = ImmutableListSerializer::class)
     val categories: ImmutableList<CategoryUiModel>,
     @Serializable(with = ImmutableListSerializer::class)
     val subcategories: ImmutableList<SubcategoryUiModel>,
+    @Serializable(with = ImmutableListSerializer::class)
+    val filteredSubcategories: ImmutableList<SubcategoryUiModel> = persistentListOf(),
+    @Serializable(with = ImmutableListSerializer::class)
+    val frequentSubcategories: ImmutableList<SubcategoryUiModel> = persistentListOf(),
     val selectedCategory: CategoryUiModel? = null,
     @Serializable(with = ImmutableListSerializer::class)
     val titleTags: ImmutableList<String> = persistentListOf(),
@@ -90,6 +95,7 @@ data class SubcategoryUiModel(
     val parentCategoryId: Long,
     val name: String,
     val iconKey: String,
+    val frequentRank: Int? = null,
 )
 
 @Serializable

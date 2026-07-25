@@ -4,6 +4,7 @@ import com.please.stop.app.core.BootstrapTiming
 import com.please.stop.app.core.StateHolder
 import com.please.stop.app.core.models.domain.ErrorType
 import com.please.stop.app.core.models.presentation.Navigation
+import com.please.stop.app.features.categories.domain.usecase.AddSubcategoryUseCase
 import com.please.stop.app.features.expenses.domain.model.AddExpenseFormData
 import com.please.stop.app.features.expenses.domain.model.ReceiptError
 import com.please.stop.app.features.expenses.domain.usecase.AnalyzeReceiptUseCase
@@ -40,6 +41,7 @@ abstract class BaseExpenseStateHolder(
     private val fetchAndApplyExchangeRateUseCase: FetchAndApplyExchangeRateUseCase,
     private val setPendingReceiptDataUseCase: SetPendingReceiptDataUseCase,
     private val clearPendingReceiptDataUseCase: ClearPendingReceiptDataUseCase,
+    private val addSubcategoryUseCase: AddSubcategoryUseCase,
 ) : StateHolder<AddExpenseState, AddExpenseEvent>() {
 
     override val bootstrapTiming = BootstrapTiming.DEFERRED
@@ -57,13 +59,17 @@ abstract class BaseExpenseStateHolder(
         clearPendingReceiptDataUseCase()
     }
 
-    override fun getInitial(): AddExpenseState = AddExpenseState(
-        editContext = editContext,
-        currency = CurrencyConfig(symbol = "", decimalPlaces = 0),
-        form = buildInitialForm(),
-        categories = persistentListOf(),
-        subcategories = persistentListOf(),
-    )
+    override fun getInitial(): AddExpenseState {
+        val initialForm = buildInitialForm()
+        return AddExpenseState(
+            editContext = editContext,
+            currency = CurrencyConfig(symbol = "", decimalPlaces = 0),
+            form = initialForm,
+            initialCategoryId = initialForm.selectedCategoryId,
+            categories = persistentListOf(),
+            subcategories = persistentListOf(),
+        )
+    }
 
     override fun collectWhileSubscribed(): Flow<DomainResult> = observeFormDataUseCase()
 
@@ -89,6 +95,10 @@ abstract class BaseExpenseStateHolder(
             is SaveExpenseUseCase.Result.Failure -> {
                 previous.updateStatus { copy(isSaving = false) }.withError(result.errorType)
             }
+            is AddSubcategoryUseCase.Result.Success -> previous.copy(
+                form = previous.form.copy(selectedSubcategoryId = result.subcategoryId),
+            )
+            is AddSubcategoryUseCase.Result.Failure -> previous.withError(result.errorType)
             is AnalyzeReceiptUseCase.Result.Success -> applyReceiptResult(previous, result)
             is ExpenseResult.ClearError -> previous.copy(errorOverlay = null)
             else -> super.getStateByResult(previous, result)
@@ -123,6 +133,7 @@ abstract class BaseExpenseStateHolder(
             is AddExpenseEvent.SubcategorySelected -> flowOf(
                 updateState { copy(form = form.copy(selectedSubcategoryId = event.subcategoryId)) }
             )
+            is AddExpenseEvent.CreateSubcategory -> handleCreateSubcategory(event.name)
             is AddExpenseEvent.DateChanged -> handleDateChange(event.epochMillis)
             is AddExpenseEvent.NotesChanged -> flowOf(
                 updateState { copy(form = form.copy(notes = event.text.take(MAX_NOTES_LENGTH))) }
@@ -187,6 +198,21 @@ abstract class BaseExpenseStateHolder(
 
     protected open fun handleDismissDeleteDialog(): Flow<DomainResult> =
         flowOf(updateState { this })
+
+    private fun handleCreateSubcategory(name: String): Flow<DomainResult> = flow {
+        val parentCategoryId = state.value.form.selectedCategoryId ?: return@flow
+        val trimmedName = name.trim()
+        if (trimmedName.isBlank()) {
+            return@flow
+        }
+        emit(
+            addSubcategoryUseCase(
+                parentCategoryId = parentCategoryId,
+                name = trimmedName,
+                comment = null,
+            )
+        )
+    }
 
     protected fun applyFormData(
         previous: AddExpenseState,
@@ -518,10 +544,21 @@ abstract class BaseExpenseStateHolder(
 
     private fun AddExpenseState.withDerivedFields(): AddExpenseState {
         val resolvedCategory = categories.firstOrNull { it.id == form.selectedCategoryId }
+        val resolvedSubcategories = subcategories
+            .filter { it.parentCategoryId == form.selectedCategoryId }
+            .toImmutableList()
+        val resolvedFrequentSubcategories = resolvedSubcategories
+            .filter { it.frequentRank != null }
+            .sortedBy { it.frequentRank }
+            .take(MAX_FREQUENT_SUBCATEGORIES)
+            .toImmutableList()
         val resolvedTags = resolvedCategory?.let {
             tagsForCategoryKey(it.iconKey).toImmutableList()
         } ?: persistentListOf()
         return copy(
+            categories = categories.withSelectedFirst(initialCategoryId),
+            filteredSubcategories = resolvedSubcategories,
+            frequentSubcategories = resolvedFrequentSubcategories,
             selectedCategory = resolvedCategory,
             titleTags = resolvedTags,
             dateTime = localDateTimeFromMillis(form.dateEpochMillis),
@@ -533,10 +570,16 @@ abstract class BaseExpenseStateHolder(
         }
     }
 
+    private fun List<CategoryUiModel>.withSelectedFirst(selectedCategoryId: Long?) =
+        if (selectedCategoryId == null) {
+            toImmutableList()
+        } else {
+            (filter { it.id == selectedCategoryId } + filter { it.id != selectedCategoryId }).toImmutableList()
+        }
+
     private fun isFormValid(form: ExpenseFormInput): Boolean {
         return form.amountInput.isNotEmpty() &&
             form.amountInput.toDoubleOrNull().let { it != null && it > 0 } &&
-            form.title.isNotBlank() &&
             form.selectedCategoryId != null
     }
 
@@ -558,6 +601,7 @@ abstract class BaseExpenseStateHolder(
         const val TITLE_COUNTER_THRESHOLD = 50
         const val MAX_NOTES_LENGTH = 250
         const val NOTES_COUNTER_THRESHOLD = 200
+        private const val MAX_FREQUENT_SUBCATEGORIES = 4
     }
 }
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.analytics.presentation.DayExpenseUiItem
 import com.please.stop.app.features.analytics.presentation.DayExpensesSheetUi
+import com.please.stop.app.uicomponents.CategoryIconImage
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
 import com.please.stop.app.uicomponents.sheets.rememberFullyExpandedAppModalBottomSheetState
 import org.jetbrains.compose.resources.stringResource
@@ -104,9 +106,10 @@ private fun ExpenseRow(item: DayExpenseUiItem) {
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = item.categoryEmoji,
-            style = MaterialTheme.typography.titleMedium,
+        CategoryIconImage(
+            iconKey = item.categoryIconKey,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp),
         )
         Spacer(modifier = Modifier.padding(start = 12.dp))
         Column(modifier = Modifier.weight(1f)) {

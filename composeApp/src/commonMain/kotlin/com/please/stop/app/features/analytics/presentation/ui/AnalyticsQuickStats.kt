@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,13 +27,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.please.stop.app.features.analytics.presentation.AnalyticsState
 import com.please.stop.app.theme.AppTheme
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.analytics_empty_hint
 import plzstop.composeapp.generated.resources.analytics_empty_title
 import plzstop.composeapp.generated.resources.analytics_stat_active
 import plzstop.composeapp.generated.resources.analytics_stat_categories
 import plzstop.composeapp.generated.resources.analytics_stat_total_spent
+import plzstop.composeapp.generated.resources.ic_analytics_outlined
+import plzstop.composeapp.generated.resources.ic_archive
+import plzstop.composeapp.generated.resources.ic_savings
+import plzstop.composeapp.generated.resources.ic_success_circle
 
 @Composable
 internal fun QuickStatRow(state: AnalyticsState.Content) {
@@ -41,21 +48,21 @@ internal fun QuickStatRow(state: AnalyticsState.Content) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         QuickStatCard(
-            emoji = "\uD83D\uDCB8",
+            icon = Res.drawable.ic_savings,
             label = stringResource(Res.string.analytics_stat_total_spent),
             value = state.totalSpentFormatted.orEmpty(),
-            color = MaterialTheme.colorScheme.error,
+            color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.weight(1f),
         )
         QuickStatCard(
-            emoji = "\uD83D\uDCC1",
+            icon = Res.drawable.ic_archive,
             label = stringResource(Res.string.analytics_stat_categories),
             value = "${state.categoriesCount}",
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f),
         )
         QuickStatCard(
-            emoji = "\u2705",
+            icon = Res.drawable.ic_success_circle,
             label = stringResource(Res.string.analytics_stat_active),
             value = "${state.activeCategoriesCount}",
             color = MaterialTheme.colorScheme.secondary,
@@ -66,7 +73,7 @@ internal fun QuickStatRow(state: AnalyticsState.Content) {
 
 @Composable
 internal fun QuickStatCard(
-    emoji: String,
+    icon: DrawableResource,
     label: String,
     value: String,
     color: Color,
@@ -91,7 +98,12 @@ internal fun QuickStatCard(
                     .background(color.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = emoji, style = MaterialTheme.typography.bodyMedium)
+                Icon(
+                    imageVector = vectorResource(icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = color,
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -126,9 +138,11 @@ internal fun EmptyStateCard() {
                 .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = "\uD83D\uDCCA",
-                style = MaterialTheme.typography.displaySmall,
+            Icon(
+                imageVector = vectorResource(Res.drawable.ic_analytics_outlined),
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -152,10 +166,10 @@ internal fun EmptyStateCard() {
 private fun QuickStatCardPreview() {
     AppTheme {
         QuickStatCard(
-            emoji = "\uD83D\uDCB8",
+            icon = Res.drawable.ic_savings,
             label = "Total Spent",
             value = "$1,234",
-            color = Color.Red,
+            color = MaterialTheme.colorScheme.tertiary,
         )
     }
 }

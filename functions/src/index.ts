@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
+import { logger } from "firebase-functions";
 import { VertexAI, GenerativeModel as VertexModel } from "@google-cloud/vertexai";
 import {
   GoogleGenerativeAI,
@@ -15,6 +16,7 @@ import {
   validateResponseData,
   handleError,
 } from "./receipt";
+export { cleanupGoogleOAuthOnUserDelete } from "./userCleanup";
 
 // --- Vertex AI (GCP billing) ---
 
@@ -24,13 +26,13 @@ let cachedVertexModel: VertexModel | null = null;
 
 function getVertexModel(): VertexModel {
   if (cachedVertexModel) return cachedVertexModel;
-  const vertexAI = new VertexAI({ project: projectId, location: "europe-west1" });
+  const vertexAI = new VertexAI({project: projectId, location: "europe-west1"});
   cachedVertexModel = vertexAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       // @ts-expect-error -- thinkingConfig is supported by 2.5 models
-      thinkingConfig: { thinkingBudget: 0 },
+      thinkingConfig: {thinkingBudget: 0},
     },
     systemInstruction: SYSTEM_PROMPT,
   });
@@ -39,15 +41,16 @@ function getVertexModel(): VertexModel {
 
 export const analyzeReceipt = onCall(
   {
-    enforceAppCheck: false, // TODO: enable for production
+    enforceAppCheck: true,
     region: "europe-west1",
     timeoutSeconds: 120,
     memory: "512MiB",
     maxInstances: 10,
   },
   async (request): Promise<ReceiptResponse> => {
+    const startedAt = Date.now();
     try {
-      const { imageBase64, userPrompt, validCategoryIds, validSubcategoryIds } =
+      const {imageBase64, userPrompt, validCategoryIds, subcategoryParents} =
         await prepareRequest(request);
       const model = getVertexModel();
 
@@ -56,8 +59,8 @@ export const analyzeReceipt = onCall(
           {
             role: "user",
             parts: [
-              { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
-              { text: userPrompt },
+              {inlineData: {mimeType: "image/jpeg", data: imageBase64}},
+              {text: userPrompt},
             ],
           },
         ],
@@ -65,8 +68,9 @@ export const analyzeReceipt = onCall(
 
       const responseText =
         result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+      logReceiptUsage("vertex", startedAt, result.response?.usageMetadata);
       const parsed = parseResponse(responseText);
-      return validateResponseData(parsed, validCategoryIds, validSubcategoryIds);
+      return validateResponseData(parsed, validCategoryIds, subcategoryParents);
     } catch (error) {
       handleError(error);
     }
@@ -94,7 +98,7 @@ function getGeminiModel(apiKey: string): GeminiModel {
 
 export const analyzeReceiptGemini = onCall(
   {
-    enforceAppCheck: false, // TODO: enable for production
+    enforceAppCheck: true,
     region: "europe-west1",
     timeoutSeconds: 120,
     memory: "512MiB",
@@ -102,6 +106,7 @@ export const analyzeReceiptGemini = onCall(
     secrets: [geminiApiKey],
   },
   async (request): Promise<ReceiptResponse> => {
+    const startedAt = Date.now();
     const apiKey = geminiApiKey.value();
     if (!apiKey) {
       throw new HttpsError(
@@ -111,9 +116,9 @@ export const analyzeReceiptGemini = onCall(
     }
 
     try {
-      await checkGlobalDailyLimit();
-      const { imageBase64, userPrompt, validCategoryIds, validSubcategoryIds } =
+      const { imageBase64, userPrompt, validCategoryIds, subcategoryParents } =
         await prepareRequest(request);
+      await checkGlobalDailyLimit();
       const model = getGeminiModel(apiKey);
 
       const result = await model.generateContent([
@@ -123,14 +128,33 @@ export const analyzeReceiptGemini = onCall(
         { text: userPrompt },
       ]);
 
+      logReceiptUsage("developer_api", startedAt, result.response.usageMetadata);
       const responseText = result.response.text();
       const parsed = parseResponse(responseText);
-      return validateResponseData(parsed, validCategoryIds, validSubcategoryIds);
+      return validateResponseData(parsed, validCategoryIds, subcategoryParents);
     } catch (error) {
       handleError(error);
     }
   }
 );
+
+function logReceiptUsage(
+  provider: string,
+  startedAt: number,
+  usage: unknown
+): void {
+  const usageRecord =
+    typeof usage === "object" && usage !== null
+      ? (usage as Record<string, unknown>)
+      : {};
+  logger.info("receipt_analysis_completed", {
+    provider,
+    durationMs: Date.now() - startedAt,
+    promptTokenCount: usageRecord.promptTokenCount,
+    candidatesTokenCount: usageRecord.candidatesTokenCount,
+    totalTokenCount: usageRecord.totalTokenCount,
+  });
+}
 
 // --- Scheduled cleanup ---
 

@@ -122,8 +122,8 @@ firebase deploy --only functions:py:exportToSheets
 │                                                  │
 │  1. Rate Limit Check (Firestore)                 │
 │     ├─ Global daily cap (Gemini API only, 500/d) │
-│     ├─ Per-IP burst (10/min)                     │
-│     └─ Per-IP daily (50/day)                     │
+│     ├─ Per-UID burst (10/min)                    │
+│     └─ Per-UID daily (3/day)                     │
 │                                                  │
 │  2. Input Validation                             │
 │     ├─ Base64 format + size ≤ 5MB                │
@@ -266,7 +266,7 @@ Callable function that extracts structured data from receipt images using Gemini
 | Memory | 512 MiB |
 | Timeout | 120 seconds |
 | Max instances | 10 |
-| App Check | Disabled (TODO for production) |
+| App Check | Enforced |
 | Backend | Vertex AI (`@google-cloud/vertexai`) |
 | Billing | GCP pay-per-use |
 
@@ -282,7 +282,7 @@ Same functionality as `analyzeReceipt` but uses the **Gemini API** (free tier: 5
 | Memory | 512 MiB |
 | Timeout | 120 seconds |
 | Max instances | 10 |
-| App Check | Disabled (TODO for production) |
+| App Check | Enforced |
 | Backend | Gemini API (`@google/generative-ai`) |
 | Billing | Free tier (500 req/day), then pay-per-use |
 | Secret | `GEMINI_API_KEY` (Firebase secret) |
@@ -333,18 +333,39 @@ Get the key from [Google AI Studio](https://aistudio.google.com/apikey).
 
 ### `exportToSheets` (Python)
 
-Creates a Google Spreadsheet from expense data and notifies the user via FCM.
+Creates an idempotent Google Spreadsheet export from strictly validated expense data.
 
 | Property | Value |
 |---|---|
 | Type | Callable (`onCall`) |
 | Region | `europe-west1` |
-| Runtime | Python 3.12 |
-| Memory | 256 MiB |
+| Runtime | Python 3.13 |
+| Memory | 512 MiB |
 | Timeout | 300 seconds |
+| Max instances | 5 |
+| Concurrency | 4 requests per instance |
+| App Check | Enforced |
 | Codebase | `py` (`functions-py/main.py`) |
 
-Uses the client-provided Google access token to create and share a spreadsheet via the Google Sheets API.
+Uses a server-side Google OAuth refresh token to create and share a spreadsheet via the Google Sheets API. Refresh
+tokens are encrypted before being stored in the private `googleOAuthAccounts` Firestore collection.
+
+Set the required secrets before deploying the Python functions:
+
+```bash
+npx -y firebase-tools@latest functions:secrets:set GOOGLE_OAUTH_CLIENT_ID
+npx -y firebase-tools@latest functions:secrets:set GOOGLE_OAUTH_CLIENT_SECRET
+npx -y firebase-tools@latest functions:secrets:set GOOGLE_TOKEN_ENCRYPTION_KEY
+```
+
+`GOOGLE_TOKEN_ENCRYPTION_KEY` must be a Fernet-compatible, URL-safe base64-encoded 32-byte key. The OAuth client ID
+must be the Web application client configured as the Android server client ID and as `GIDServerClientID` on iOS.
+
+The encryption key is not directly replaceable while ciphertext exists. Retain the old Secret Manager version during a
+controlled decrypt-and-re-encrypt operation, verify aggregate success counts with the new key, and keep the old version
+through the rollback window. If the old key is lost, delete the affected token records and require reconnect; ciphertext
+cannot be recovered. The complete clean-rollout, rotation, key-loss, and OAuth consent procedures are in
+[Export Feature Technical Specification](../features/export.md#rollout-and-operational-procedures).
 
 ### `rateLimitCleanup`
 
@@ -370,14 +391,14 @@ Performed in `validation.ts` before any LLM call:
 
 Implemented in `rateLimit.ts` using Firestore (collection: `rateLimits`).
 
-### Per-IP limits (both functions)
+### Per-user limits (both functions)
 
 | Limit | Value | Scope |
 |---|---|---|
-| Burst | 10 requests/minute | Per IP |
-| Daily | 50 requests/day | Per IP |
+| Burst | 10 requests/minute | Per Firebase UID |
+| Daily | 3 requests/day | Per Firebase UID |
 
-- Document ID is SHA-256 hash of the client IP (no raw IPs stored)
+- Document ID is a SHA-256 hash derived from the verified Firebase UID
 - Uses Firestore transactions to avoid race conditions across function instances
 - Works correctly with `maxInstances: 10` (shared state, not in-memory)
 - Expired documents cleaned up daily by `rateLimitCleanup`
@@ -391,16 +412,17 @@ Implemented in `rateLimit.ts` using Firestore (collection: `rateLimits`).
 - Tracks total daily calls in a single Firestore document (`rateLimits/globalDailyCounter`)
 - Matches the Gemini API free tier (500 req/day) to prevent billing overages
 - Resets at midnight UTC
-- Checked **before** per-IP limits and LLM calls (cheapest check first)
+- Checked only after App Check, Firebase authentication, input validation, and per-UID limits
 - Does **not** apply to `analyzeReceipt` (Vertex AI) — that function has no global cap
 
 ### Check order for `analyzeReceiptGemini`
 
-1. Global daily limit (500/day total)
-2. Per-IP burst limit (10/min)
-3. Per-IP daily limit (50/day)
-4. Input validation
-5. LLM call
+1. App Check enforcement
+2. Firebase authentication
+3. Input validation
+4. Per-UID burst/daily limit
+5. Global daily limit (500/day total)
+6. LLM call
 
 ## Error Handling
 

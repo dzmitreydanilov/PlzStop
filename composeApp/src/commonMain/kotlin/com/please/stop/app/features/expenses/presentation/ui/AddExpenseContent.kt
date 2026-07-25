@@ -1,20 +1,31 @@
 package com.please.stop.app.features.expenses.presentation.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -22,9 +33,11 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
@@ -32,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,43 +53,71 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.composeunstyled.ModalBottomSheetProperties
+import com.composeunstyled.SheetDetent
+import com.composeunstyled.rememberModalBottomSheetState
 import com.please.stop.app.features.expenses.presentation.AddExpenseEvent
 import com.please.stop.app.features.expenses.presentation.AddExpenseState
+import com.please.stop.app.features.expenses.presentation.CategoryUiModel
 import com.please.stop.app.features.expenses.presentation.ExpenseFormInput
 import com.please.stop.app.features.expenses.presentation.NumericKey
 import com.please.stop.app.features.expenses.presentation.SubcategoryUiModel
 import com.please.stop.app.features.expenses.scanner.rememberDocumentScanner
-import com.please.stop.app.uicomponents.categoryEmojiForKey
+import com.please.stop.app.uicomponents.CategoryIconImage
 import com.please.stop.app.uicomponents.sheets.AppModalBottomSheet
-import com.please.stop.app.uicomponents.sheets.rememberFullyExpandedAppModalBottomSheetState
 import com.please.stop.app.uicomponents.sheets.currency.CurrencyPickerSheet
 import com.please.stop.app.utils.date.DatePattern
 import com.please.stop.app.utils.date.format
 import com.please.stop.app.utils.date.localDateTimeFromMillis
 import com.please.stop.app.utils.date.nowMillis
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.vectorResource
 import plzstop.composeapp.generated.resources.Res
 import plzstop.composeapp.generated.resources.add_expense_add_receipt_manually
+import plzstop.composeapp.generated.resources.add_expense_add_subcategory
+import plzstop.composeapp.generated.resources.add_expense_all_subcategories
 import plzstop.composeapp.generated.resources.add_expense_analyzing_receipt
 import plzstop.composeapp.generated.resources.add_expense_cancel
+import plzstop.composeapp.generated.resources.add_expense_change_subcategory
 import plzstop.composeapp.generated.resources.add_expense_confirm
+import plzstop.composeapp.generated.resources.add_expense_create_subcategory
 import plzstop.composeapp.generated.resources.add_expense_delete
 import plzstop.composeapp.generated.resources.add_expense_delete_message
 import plzstop.composeapp.generated.resources.add_expense_delete_title
 import plzstop.composeapp.generated.resources.add_expense_discard
 import plzstop.composeapp.generated.resources.add_expense_discard_message
 import plzstop.composeapp.generated.resources.add_expense_discard_title
+import plzstop.composeapp.generated.resources.add_expense_frequent_subcategories
+import plzstop.composeapp.generated.resources.add_expense_no_subcategory_results
+import plzstop.composeapp.generated.resources.add_expense_scan_receipt
+import plzstop.composeapp.generated.resources.add_expense_search_subcategories
+import plzstop.composeapp.generated.resources.add_expense_select_subcategory
 import plzstop.composeapp.generated.resources.add_expense_title
 import plzstop.composeapp.generated.resources.add_expense_title_edit
+import plzstop.composeapp.generated.resources.add_expense_under_category
+import plzstop.composeapp.generated.resources.content_desc_clear
+import plzstop.composeapp.generated.resources.content_desc_close
 import plzstop.composeapp.generated.resources.content_desc_navigate_back
+import plzstop.composeapp.generated.resources.ic_add
+import plzstop.composeapp.generated.resources.ic_add_note
 import plzstop.composeapp.generated.resources.ic_arrow_back
 import plzstop.composeapp.generated.resources.ic_calendar
+import plzstop.composeapp.generated.resources.ic_check
+import plzstop.composeapp.generated.resources.ic_close
+import plzstop.composeapp.generated.resources.ic_edit
+import plzstop.composeapp.generated.resources.ic_keyboard_arrow_down
+import plzstop.composeapp.generated.resources.ic_scan
+import plzstop.composeapp.generated.resources.ic_search
 import plzstop.composeapp.generated.resources.ic_trash_bin
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
@@ -86,26 +128,25 @@ internal fun AddExpenseContent(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val documentScanner = rememberDocumentScanner()
-    var showCategorySheet by remember { mutableStateOf(false) }
+    var showSubcategorySheet by remember { mutableStateOf(false) }
     var showNotesSheet by remember { mutableStateOf(false) }
-
-    val form = state.form
-    val editContext = state.editContext
-    val status = state.status
-    val receipt = state.receipt
-
-    val filteredSubcategories = remember(
-        state.subcategories,
-        form.selectedCategoryId,
-    ) {
-        state.subcategories.filter { it.parentCategoryId == form.selectedCategoryId }
+    val onScanReceipt: () -> Unit = {
+        coroutineScope.launch {
+            documentScanner.scan()
+                .onSuccess { bytes ->
+                    onEvent(AddExpenseEvent.ReceiptScanned(bytes))
+                }
+        }
     }
 
     Scaffold(
         topBar = {
             AddExpenseTopBar(
-                isEditMode = editContext.isEditMode,
+                isEditMode = state.editContext.isEditMode,
+                isReceiptAnalyzing = state.receipt.isAnalyzing,
                 onNavigateBack = { onEvent(AddExpenseEvent.BackClicked) },
+                onCreateReceiptManually = { onEvent(AddExpenseEvent.CreateReceiptClicked) },
+                onScanReceipt = onScanReceipt,
                 onDeleteClick = { onEvent(AddExpenseEvent.DeleteClicked) },
             )
         },
@@ -115,31 +156,9 @@ internal fun AddExpenseContent(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            ExpenseFormSection(
-                state = state,
-                filteredSubcategories = filteredSubcategories,
-                onOpenDatePicker = { onEvent(AddExpenseEvent.KeyPressed(NumericKey.Calendar)) },
-                onScanReceipt = {
-                    coroutineScope.launch {
-                        documentScanner.scan()
-                            .onSuccess { bytes ->
-                                onEvent(AddExpenseEvent.ReceiptScanned(bytes))
-                            }
-                    }
-                },
-                onCreateReceiptManually = { onEvent(AddExpenseEvent.CreateReceiptClicked) },
-                onOpenCategorySheet = { showCategorySheet = true },
-                onSelectSubcategory = { subcategoryId ->
-                    onEvent(AddExpenseEvent.SubcategorySelected(subcategoryId))
-                },
-                onOpenNotesSheet = { showNotesSheet = true },
-                onSelectTitleTag = { title -> onEvent(AddExpenseEvent.TitleChanged(title)) },
-                modifier = Modifier.weight(1f),
-            )
-
             AmountSection(
                 state = state,
-                form = form,
+                form = state.form,
                 onCurrencyClick = { onEvent(AddExpenseEvent.KeyPressed(NumericKey.CurrencySymbol)) },
                 onEditRate = { onEvent(AddExpenseEvent.ShowRateOverrideSheet) },
                 onResetRate = { onEvent(AddExpenseEvent.ResetToFetchedRate) },
@@ -149,11 +168,29 @@ internal fun AddExpenseContent(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
+            DateHeader(
+                dateEpochMillis = state.form.dateEpochMillis,
+                onClick = { onEvent(AddExpenseEvent.KeyPressed(NumericKey.Calendar)) },
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(bottom = 8.dp),
+            )
+
+            ExpenseFormSection(
+                state = state,
+                subcategories = state.filteredSubcategories,
+                onSelectCategory = { categoryId -> onEvent(AddExpenseEvent.CategorySelected(categoryId)) },
+                onOpenSubcategorySheet = { showSubcategorySheet = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            )
+
             NumericKeyboard(
                 currencySymbol = state.currency.symbol,
-                isInExpressionMode = form.isInExpressionMode,
-                isSaving = status.isSaving,
-                isSaveEnabled = status.isFormValid,
+                isInExpressionMode = state.form.isInExpressionMode,
+                isSaving = state.status.isSaving,
+                isSaveEnabled = state.status.isFormValid,
                 onKey = { key ->
                     if (key is NumericKey.Notes) {
                         showNotesSheet = true
@@ -168,31 +205,56 @@ internal fun AddExpenseContent(
         }
     }
 
-    if (showCategorySheet) {
-        val sheetState = rememberFullyExpandedAppModalBottomSheetState()
+    if (showSubcategorySheet) {
+        val sheetState = rememberModalBottomSheetState(
+            initialDetent = SheetDetent.Hidden,
+            detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
+        )
+
+        LaunchedEffect(Unit) {
+            delay(100L.milliseconds)
+            sheetState.targetDetent = SheetDetent.FullyExpanded
+        }
         AppModalBottomSheet(
             state = sheetState,
-            onDismiss = { showCategorySheet = false },
+            onDismiss = { showSubcategorySheet = false },
+            showDragIndicator = false,
+            properties = ModalBottomSheetProperties(offsetForIme = true)
         ) {
-            CategoryGridSheet(
-                categories = state.categories,
-                selectedCategoryId = form.selectedCategoryId,
-                onSelectCategory = { id ->
-                    onEvent(AddExpenseEvent.CategorySelected(id))
-                    showCategorySheet = false
+            SubcategoryPickerSheet(
+                categoryName = state.selectedCategory?.name.orEmpty(),
+                subcategories = state.filteredSubcategories,
+                frequentSubcategories = state.frequentSubcategories,
+                selectedSubcategoryId = state.form.selectedSubcategoryId,
+                onDismiss = { showSubcategorySheet = false },
+                onSelectSubcategory = { subcategoryId ->
+                    onEvent(AddExpenseEvent.SubcategorySelected(subcategoryId))
+                    showSubcategorySheet = false
+                },
+                onCreateSubcategory = { name ->
+                    onEvent(AddExpenseEvent.CreateSubcategory(name))
+                    showSubcategorySheet = false
                 },
             )
         }
     }
     if (showNotesSheet) {
-        val sheetState = rememberFullyExpandedAppModalBottomSheetState()
+        val sheetState = rememberModalBottomSheetState(
+            initialDetent = SheetDetent.Hidden,
+            detents = listOf(SheetDetent.Hidden, SheetDetent.FullyExpanded),
+        )
+
+        LaunchedEffect(Unit) {
+            delay(100L.milliseconds)
+            sheetState.targetDetent = SheetDetent.FullyExpanded
+        }
         AppModalBottomSheet(
             state = sheetState,
             onDismiss = { showNotesSheet = false },
         ) {
             NotesInputSheet(
-                title = form.title,
-                notes = form.notes,
+                title = state.form.title,
+                notes = state.form.notes,
                 onChangeTitle = { onEvent(AddExpenseEvent.TitleChanged(it)) },
                 onChangeNotes = { onEvent(AddExpenseEvent.NotesChanged(it)) },
                 onDone = { showNotesSheet = false },
@@ -200,19 +262,19 @@ internal fun AddExpenseContent(
         }
     }
 
-    if (status.showDatePicker) {
-        AddExpenseDatePicker(form = form, onEvent = onEvent)
+    if (state.status.showDatePicker) {
+        AddExpenseDatePicker(form = state.form, onEvent = onEvent)
     }
 
-    if (status.showDiscardDialog) {
+    if (state.status.showDiscardDialog) {
         DiscardDialog(onEvent = onEvent)
     }
 
-    if (status.showDeleteDialog) {
+    if (state.status.showDeleteDialog) {
         DeleteDialog(onEvent = onEvent)
     }
 
-    if (receipt.isAnalyzing) {
+    if (state.receipt.isAnalyzing) {
         AnalyzingInProgress()
     }
 
@@ -241,7 +303,10 @@ internal fun AddExpenseContent(
 @Composable
 private fun AddExpenseTopBar(
     isEditMode: Boolean,
+    isReceiptAnalyzing: Boolean,
     onNavigateBack: () -> Unit,
+    onCreateReceiptManually: () -> Unit,
+    onScanReceipt: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
     TopAppBar(
@@ -270,6 +335,24 @@ private fun AddExpenseTopBar(
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
+            } else {
+                IconButton(onClick = onCreateReceiptManually) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.ic_add_note),
+                        contentDescription = stringResource(
+                            Res.string.add_expense_add_receipt_manually,
+                        ),
+                    )
+                }
+                IconButton(
+                    onClick = onScanReceipt,
+                    enabled = !isReceiptAnalyzing,
+                ) {
+                    Icon(
+                        imageVector = vectorResource(Res.drawable.ic_scan),
+                        contentDescription = stringResource(Res.string.add_expense_scan_receipt),
+                    )
+                }
             }
         },
     )
@@ -278,18 +361,13 @@ private fun AddExpenseTopBar(
 @Composable
 private fun ExpenseFormSection(
     state: AddExpenseState,
-    filteredSubcategories: List<SubcategoryUiModel>,
-    onOpenDatePicker: () -> Unit,
-    onScanReceipt: () -> Unit,
-    onCreateReceiptManually: () -> Unit,
-    onOpenCategorySheet: () -> Unit,
-    onSelectSubcategory: (Long?) -> Unit,
-    onOpenNotesSheet: () -> Unit,
-    onSelectTitleTag: (String) -> Unit,
+    subcategories: ImmutableList<SubcategoryUiModel>,
+    onSelectCategory: (Long) -> Unit,
+    onOpenSubcategorySheet: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val form = state.form
-    val editContext = state.editContext
+    val selectedSubcategory = subcategories.firstOrNull { it.id == form.selectedSubcategoryId }
 
     Column(
         modifier = modifier
@@ -297,59 +375,143 @@ private fun ExpenseFormSection(
             .padding(horizontal = 16.dp),
     ) {
         Spacer(modifier = Modifier.height(8.dp))
-        DateHeader(
-            dateEpochMillis = form.dateEpochMillis,
-            onClick = onOpenDatePicker,
+
+        CategoryLazyRow(
+            categories = state.categories,
+            selectedCategoryId = form.selectedCategoryId,
+            selectedSubcategory = selectedSubcategory,
+            onSelectCategory = onSelectCategory,
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (!editContext.isEditMode) {
-            ScanReceiptCard(
-                isAnalyzing = state.receipt.isAnalyzing,
-                onClick = onScanReceipt,
-            )
+        if (subcategories.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
-            TextButton(
-                onClick = onCreateReceiptManually,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(Res.string.add_expense_add_receipt_manually))
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+            SubcategoryAction(
+                hasSelectedSubcategory = selectedSubcategory != null,
+                onClick = onOpenSubcategorySheet,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
         }
+    }
+}
 
-        CategoryChip(
-            selectedCategory = state.selectedCategory,
-            onClick = onOpenCategorySheet,
+@Composable
+private fun CategoryLazyRow(
+    categories: ImmutableList<CategoryUiModel>,
+    selectedCategoryId: Long?,
+    selectedSubcategory: SubcategoryUiModel?,
+    onSelectCategory: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        state = listState,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(categories, key = { it.id }) { category ->
+            CategoryCircleItem(
+                category = category,
+                isSelected = category.id == selectedCategoryId,
+                selectedSubcategory = selectedSubcategory,
+                onClick = {
+                    onSelectCategory(category.id)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryCircleItem(
+    category: CategoryUiModel,
+    isSelected: Boolean,
+    selectedSubcategory: SubcategoryUiModel?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.width(76.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerLow,
+                )
+                .border(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    },
+                    shape = CircleShape,
+                )
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            CategoryIconImage(
+                iconKey = category.iconKey,
+                tint = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = category.name,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
+        Text(
+            text = if (isSelected && selectedSubcategory != null) selectedSubcategory.name else "",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
 
-        if (filteredSubcategories.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            SubcategoryChipsRow(
-                subcategories = filteredSubcategories,
-                selectedSubcategoryId = form.selectedSubcategoryId,
-                onSelectSubcategory = onSelectSubcategory,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        if (form.title.isNotBlank() || form.notes.isNotBlank()) {
-            NotesSection(
-                title = form.title,
-                notes = form.notes,
-                onClick = onOpenNotesSheet,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-        if (state.titleTags.isNotEmpty()) {
-            TitleTagRow(
-                tags = state.titleTags,
-                selectedTitle = form.title,
-                onSelectTitleTag = onSelectTitleTag,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
+@Composable
+private fun SubcategoryAction(
+    hasSelectedSubcategory: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = modifier,
+    ) {
+        Icon(
+            imageVector = vectorResource(
+                if (hasSelectedSubcategory) Res.drawable.ic_edit
+                else Res.drawable.ic_add,
+            ),
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = stringResource(
+                if (hasSelectedSubcategory) Res.string.add_expense_change_subcategory
+                else Res.string.add_expense_add_subcategory,
+            ),
+        )
     }
 }
 
@@ -361,83 +523,281 @@ private fun DateHeader(
 ) {
     val formattedDate = localDateTimeFromMillis(dateEpochMillis).format(DatePattern.EEEE_MMM_DD)
 
-    Row(
+    AssistChip(
+        onClick = onClick,
+        label = {
+            Text(
+                text = formattedDate,
+                style = MaterialTheme.typography.labelLarge,
+            )
+        },
+        modifier = modifier,
+        leadingIcon = {
+            Icon(
+                imageVector = vectorResource(Res.drawable.ic_calendar),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+        },
+        trailingIcon = {
+            Icon(
+                imageVector = vectorResource(Res.drawable.ic_keyboard_arrow_down),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+        },
+        shape = CircleShape,
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            leadingIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            trailingIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SubcategoryPickerSheet(
+    categoryName: String,
+    subcategories: ImmutableList<SubcategoryUiModel>,
+    frequentSubcategories: ImmutableList<SubcategoryUiModel>,
+    selectedSubcategoryId: Long?,
+    onDismiss: () -> Unit,
+    onSelectSubcategory: (Long?) -> Unit,
+    onCreateSubcategory: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val trimmedQuery = searchQuery.trim()
+    val filteredSubcategories = remember(subcategories, trimmedQuery) {
+        if (trimmedQuery.isBlank()) {
+            subcategories
+        } else {
+            subcategories.filter { it.name.contains(trimmedQuery, ignoreCase = true) }
+        }
+    }
+    val frequentIds = remember(frequentSubcategories) {
+        frequentSubcategories.map { it.id }.toSet()
+    }
+    val allSectionSubcategories = remember(filteredSubcategories, frequentIds, trimmedQuery) {
+        if (trimmedQuery.isBlank()) {
+            filteredSubcategories.filterNot { it.id in frequentIds }
+        } else {
+            filteredSubcategories
+        }
+    }
+    val canCreateSubcategory = trimmedQuery.isNotBlank() &&
+        subcategories.none { it.name.equals(trimmedQuery, ignoreCase = true) }
+
+    Column(
         modifier = modifier
+            .padding(bottom = 24.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(Res.string.add_expense_select_subcategory),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = stringResource(Res.string.add_expense_under_category, categoryName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            ) {
+                Icon(
+                    imageVector = vectorResource(Res.drawable.ic_close),
+                    contentDescription = stringResource(Res.string.content_desc_close),
+                )
+            }
+        }
+        HorizontalDivider()
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            singleLine = true,
+            placeholder = { Text(stringResource(Res.string.add_expense_search_subcategories)) },
+            leadingIcon = {
+                Icon(
+                    imageVector = vectorResource(Res.drawable.ic_search),
+                    contentDescription = null,
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(
+                            imageVector = vectorResource(Res.drawable.ic_close),
+                            contentDescription = stringResource(Res.string.content_desc_clear),
+                        )
+                    }
+                }
+            },
+        )
+        if (trimmedQuery.isBlank() && frequentSubcategories.isNotEmpty()) {
+            Text(
+                text = stringResource(Res.string.add_expense_frequent_subcategories),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                frequentSubcategories.forEach { subcategory ->
+                    val isSelected = selectedSubcategoryId == subcategory.id
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            onSelectSubcategory(if (isSelected) null else subcategory.id)
+                        },
+                        leadingIcon = {
+                            CategoryIconImage(
+                                iconKey = subcategory.iconKey,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = subcategory.name,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        },
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        ),
+                    )
+                }
+            }
+        }
+        if (allSectionSubcategories.isNotEmpty() || trimmedQuery.isNotBlank() || canCreateSubcategory) {
+            Text(
+                text = stringResource(Res.string.add_expense_all_subcategories, categoryName),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp),
+            ) {
+                items(
+                    items = allSectionSubcategories,
+                    key = { it.id },
+                ) { subcategory ->
+                    SubcategoryPickerRow(
+                        subcategory = subcategory,
+                        isSelected = selectedSubcategoryId == subcategory.id,
+                        onClick = {
+                            val selectedId = if (selectedSubcategoryId == subcategory.id) null else subcategory.id
+                            onSelectSubcategory(selectedId)
+                        },
+                    )
+                }
+                if (trimmedQuery.isNotBlank() && allSectionSubcategories.isEmpty()) {
+                    item(key = "empty") {
+                        Text(
+                            text = stringResource(Res.string.add_expense_no_subcategory_results),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        )
+                    }
+                }
+                if (canCreateSubcategory) {
+                    item(key = "create") {
+                        SubcategoryCreateRow(
+                            name = trimmedQuery,
+                            onClick = { onCreateSubcategory(trimmedQuery) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubcategoryPickerRow(
+    subcategory: SubcategoryUiModel,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SimpleIcon(
-            icon = vectorResource(Res.drawable.ic_calendar),
-            modifier = Modifier.size(20.dp),
+        CategoryIconImage(
+            iconKey = subcategory.iconKey,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(32.dp),
         )
-        Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = formattedDate,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = subcategory.name,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
         )
-    }
-}
-
-@Composable
-private fun SubcategoryChipsRow(
-    subcategories: List<SubcategoryUiModel>,
-    selectedSubcategoryId: Long?,
-    onSelectSubcategory: (Long?) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        subcategories.forEach { subcategory ->
-            val isSelected = selectedSubcategoryId == subcategory.id
-            FilterChip(
-                selected = isSelected,
-                onClick = {
-                    onSelectSubcategory(if (isSelected) null else subcategory.id)
-                },
-                label = {
-                    Text(
-                        text = "${categoryEmojiForKey(subcategory.iconKey)} ${subcategory.name}",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                ),
+        if (isSelected) {
+            Icon(
+                imageVector = vectorResource(Res.drawable.ic_check),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
             )
         }
     }
 }
 
 @Composable
-private fun TitleTagRow(
-    tags: ImmutableList<String>,
-    selectedTitle: String,
-    onSelectTitleTag: (String) -> Unit,
-    modifier: Modifier = Modifier,
+private fun SubcategoryCreateRow(
+    name: String,
+    onClick: () -> Unit,
 ) {
     Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        tags.forEach { tag ->
-            val isSelected = selectedTitle == tag
-            FilterChip(
-                selected = isSelected,
-                onClick = { onSelectTitleTag(if (isSelected) "" else tag) },
-                label = { Text(tag, style = MaterialTheme.typography.labelMedium) },
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ),
-            )
-        }
+        Icon(
+            imageVector = vectorResource(Res.drawable.ic_add),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.width(32.dp),
+        )
+        Text(
+            text = stringResource(Res.string.add_expense_create_subcategory, name),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -524,7 +884,7 @@ private fun DeleteDialog(onEvent: (AddExpenseEvent) -> Unit) {
 
 @Composable
 private fun AnalyzingInProgress() {
-    androidx.compose.foundation.layout.Box(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)),
@@ -540,17 +900,4 @@ private fun AnalyzingInProgress() {
             )
         }
     }
-}
-
-@Composable
-private fun SimpleIcon(
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-) {
-    Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
 }

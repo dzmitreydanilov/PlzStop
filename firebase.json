@@ -15,6 +15,7 @@
     {
       "source": "functions-py",
       "codebase": "py",
+      "runtime": "python313",
       "ignore": [
         ".git",
         "__pycache__",
@@ -22,5 +23,13 @@
         "*.pyc"
       ]
     }
-  ]
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    }
+  }
 }

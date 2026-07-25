@@ -95,7 +95,7 @@ fun AppModalBottomSheet(
                         offset = DpOffset(0.dp, 4.dp),
                         radius = 4.dp,
                         spread = 0.dp,
-                        color = Color.Black.copy(alpha = 0.25f),
+                        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.25f),
                         blendMode = BlendMode.SrcOver
                     ),
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)

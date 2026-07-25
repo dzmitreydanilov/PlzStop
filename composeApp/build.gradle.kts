@@ -22,6 +22,7 @@ kotlin {
         minSdk = getMinSDK()
         namespace = "com.please.stop.app.kmp"
         androidResources { enable = true }
+        withHostTest { }
     }
 
     compilerOptions {
@@ -45,6 +46,11 @@ kotlin {
                 "FirebaseAuth",
                 "FirebaseMessaging",
             ),
+        )
+        swiftPackage(
+            url = "https://github.com/google/GoogleSignIn-iOS.git",
+            version = "9.0.0",
+            products = listOf("GoogleSignIn"),
         )
     }
 
@@ -103,7 +109,6 @@ kotlin {
         }
 
         androidMain.dependencies {
-            implementation(libs.amplitude.android)
             implementation(libs.koin.android)
             implementation(libs.ktor.okhttp)
             implementation(libs.coil.gif)

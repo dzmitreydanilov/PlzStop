@@ -2,6 +2,8 @@ package com.please.stop.app.features.auth.apple
 
 internal class NoOpAppleAuthProvider : AppleAuthProvider {
 
+    override val isSupported: Boolean = false
+
     override suspend fun signIn(): AppleUser? {
         throw UnsupportedOperationException("Apple Sign-In is not supported on Android")
     }
