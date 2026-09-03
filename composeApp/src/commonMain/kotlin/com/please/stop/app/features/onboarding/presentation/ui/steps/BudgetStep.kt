@@ -64,15 +64,13 @@ fun BudgetStep(
 }
 
 private fun filterBudgetInput(input: String, decimalPlaces: Int): String? {
-    if (input.isEmpty()) return input
-
-    if (input.count { it == '.' } > 1) return null
-    if (input.any { it != '.' && !it.isDigit() }) return null
-
-    if (decimalPlaces == 0 && '.' in input) return null
-
     val dotIndex = input.indexOf('.')
-    if (dotIndex >= 0 && input.length - dotIndex - 1 > decimalPlaces) return null
-
-    return input
+    return when {
+        input.isEmpty() -> input
+        input.count { it == '.' } > 1 -> null
+        input.any { it != '.' && !it.isDigit() } -> null
+        decimalPlaces == 0 && '.' in input -> null
+        dotIndex >= 0 && input.length - dotIndex - 1 > decimalPlaces -> null
+        else -> input
+    }
 }

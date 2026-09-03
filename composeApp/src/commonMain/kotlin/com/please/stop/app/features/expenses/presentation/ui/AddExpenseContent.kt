@@ -257,7 +257,7 @@ internal fun AddExpenseContent(
         CurrencyPickerSheet(
             selectedCurrencyCode = state.currency.code,
             deviceCurrencyCode = null,
-            onCurrencySelected = { onEvent(AddExpenseEvent.ExpenseCurrencySelected(it)) },
+            onCurrencySelect = { onEvent(AddExpenseEvent.ExpenseCurrencySelected(it)) },
             onDismiss = { onEvent(AddExpenseEvent.DismissCurrencyPicker) },
         )
     }
@@ -267,7 +267,7 @@ internal fun AddExpenseContent(
             input = state.conversion.rateEditInput,
             fromCode = state.currency.code,
             toCode = state.conversion.defaultCurrencyCode,
-            onInputChanged = { onEvent(AddExpenseEvent.RateOverrideInputChanged(it)) },
+            onInputChange = { onEvent(AddExpenseEvent.RateOverrideInputChanged(it)) },
             onConfirm = { onEvent(AddExpenseEvent.ConfirmRateOverride) },
             onDismiss = { onEvent(AddExpenseEvent.DismissRateOverrideSheet) },
         )

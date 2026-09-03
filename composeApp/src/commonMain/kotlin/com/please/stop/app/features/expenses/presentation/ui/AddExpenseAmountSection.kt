@@ -290,7 +290,7 @@ internal fun RateOverrideSheet(
     input: String,
     fromCode: String,
     toCode: String,
-    onInputChanged: (String) -> Unit,
+    onInputChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -311,7 +311,7 @@ internal fun RateOverrideSheet(
             )
             OutlinedTextField(
                 value = input,
-                onValueChange = onInputChanged,
+                onValueChange = onInputChange,
                 label = {
                     Text(
                         stringResource(

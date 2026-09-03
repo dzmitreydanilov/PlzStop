@@ -27,7 +27,7 @@ fun AppTheme(
         else -> CompactDimens
     }
 
-    val typography = AppTypography()
+    val typography = appTypography()
 
     CompositionLocalProvider(
         LocalAppDimens provides remember { dimens },

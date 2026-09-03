@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.please.stop.app.utils.date
 
 import kotlinx.datetime.DateTimeUnit
@@ -15,6 +17,9 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 const val DAYS_IN_WEEK = 7
+
+private const val MONTHS_IN_YEAR = 12
+private const val DATE_ABBREVIATION_LENGTH = 3
 
 @OptIn(ExperimentalTime::class)
 fun localDateTimeSince(
@@ -79,10 +84,10 @@ fun localDateToday(timeZone: TimeZone = TimeZone.currentSystemDefault()): LocalD
 data class EpochMillisRange(val fromMillis: Long, val toMillis: Long)
 
 fun previousMonth(year: Int, month: Int): Pair<Int, Int> =
-    if (month == 1) year - 1 to 12 else year to month - 1
+    if (month == 1) year - 1 to MONTHS_IN_YEAR else year to month - 1
 
 fun nextMonth(year: Int, month: Int): Pair<Int, Int> =
-    if (month == 12) year + 1 to 1 else year to month + 1
+    if (month == MONTHS_IN_YEAR) year + 1 to 1 else year to month + 1
 
 fun monthName(month: Int): String =
     kotlinx.datetime.Month(month).name.lowercase().replaceFirstChar { it.uppercase() }
@@ -113,8 +118,10 @@ fun formatDayLabel(
     timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ): String {
     val date = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(timeZone).date
-    val dayOfWeek = date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
-    val month = date.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+    val dayOfWeek = date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+        .take(DATE_ABBREVIATION_LENGTH)
+    val month = date.month.name.lowercase().replaceFirstChar { it.uppercase() }
+        .take(DATE_ABBREVIATION_LENGTH)
     return "$dayOfWeek, $month ${date.day}"
 }
 
@@ -132,14 +139,13 @@ fun monthMillisRange(
     )
 }
 
-
 private const val PAGER_BASE_YEAR = 2000
 
 fun monthPageIndex(year: Int, month: Int): Int =
-    (year - PAGER_BASE_YEAR) * 12 + (month - 1)
+    (year - PAGER_BASE_YEAR) * MONTHS_IN_YEAR + (month - 1)
 
 fun pageIndexToYearMonth(pageIndex: Int): Pair<Int, Int> =
-    (PAGER_BASE_YEAR + pageIndex / 12) to (pageIndex % 12 + 1)
+    (PAGER_BASE_YEAR + pageIndex / MONTHS_IN_YEAR) to (pageIndex % MONTHS_IN_YEAR + 1)
 
 @OptIn(ExperimentalTime::class)
 fun currentMonthPageIndex(): Int =

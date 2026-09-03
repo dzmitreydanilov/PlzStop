@@ -46,6 +46,8 @@ import com.composeunstyled.UnstyledModalBottomSheet
 import com.composeunstyled.rememberModalBottomSheetState
 import kotlinx.coroutines.launch
 
+private const val SHEET_ANIMATION_DURATION_MILLIS = 300
+
 /**
  * Remembers the default app modal sheet state for sheets that should stay fully expanded while composed.
  */
@@ -138,8 +140,8 @@ fun AppModalBottomSheet(
         properties = properties,
         overlay = {
             Scrim(
-                enter = fadeIn(tween(300)),
-                exit = fadeOut(tween(300)),
+                enter = fadeIn(tween(SHEET_ANIMATION_DURATION_MILLIS)),
+                exit = fadeOut(tween(SHEET_ANIMATION_DURATION_MILLIS)),
                 scrimColor = BottomSheetDefaults.ScrimColor
             )
         }

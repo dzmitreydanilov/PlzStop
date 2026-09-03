@@ -8,6 +8,8 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Serializable
 
+private const val DEFAULT_DATE_YEAR = 2000
+
 @Serializable
 data class AddExpenseState(
     val editContext: EditContext,
@@ -25,7 +27,7 @@ data class AddExpenseState(
     val selectedCategory: CategoryUiModel? = null,
     @Serializable(with = ImmutableListSerializer::class)
     val titleTags: ImmutableList<String> = persistentListOf(),
-    val dateTime: LocalDateTime = LocalDateTime(2000, 1, 1, 0, 0),
+    val dateTime: LocalDateTime = LocalDateTime(DEFAULT_DATE_YEAR, 1, 1, 0, 0),
     val showCurrencyPicker: Boolean = false,
     val status: FormStatus = FormStatus(),
     val receipt: ReceiptState = ReceiptState(),

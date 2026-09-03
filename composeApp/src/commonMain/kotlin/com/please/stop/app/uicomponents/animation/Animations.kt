@@ -22,6 +22,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
 
+private const val SCALE_INITIAL_VALUE = 0.8f
+private const val SCALE_FADE_DURATION_MILLIS = 300
+private const val PULSE_DURATION_MILLIS = 2_000
+private const val SHIMMER_DURATION_MILLIS = 2_500
+private const val SHIMMER_WIDTH_FRACTION = 0.4f
+
 @Composable
 fun FadeSlideIn(
     delayMillis: Int = 0,
@@ -56,7 +62,7 @@ fun ScaleIn(
     delayMillis: Int = 0,
     content: @Composable () -> Unit,
 ) {
-    val scale = remember { Animatable(0.8f) }
+    val scale = remember { Animatable(SCALE_INITIAL_VALUE) }
     val alpha = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
@@ -68,7 +74,7 @@ fun ScaleIn(
     }
     LaunchedEffect(Unit) {
         delay(delayMillis.toLong())
-        alpha.animateTo(1f, tween(300))
+        alpha.animateTo(1f, tween(SCALE_FADE_DURATION_MILLIS))
     }
 
     Box(
@@ -93,7 +99,7 @@ fun PulseGlow(
         initialValue = 0.4f,
         targetValue = 0.8f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000),
+            animation = tween(PULSE_DURATION_MILLIS),
             repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
         ),
     )
@@ -101,7 +107,7 @@ fun PulseGlow(
         initialValue = 1f,
         targetValue = 1.08f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000),
+            animation = tween(PULSE_DURATION_MILLIS),
             repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
         ),
     )
@@ -128,7 +134,7 @@ fun rememberShimmerOffset(): Float {
         initialValue = -1f,
         targetValue = 2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2500),
+            animation = tween(SHIMMER_DURATION_MILLIS),
         ),
     )
     return offset
@@ -146,7 +152,7 @@ fun Modifier.shimmerOverlay(
     val brush = Brush.linearGradient(
         colors = listOf(Color.Transparent, color, Color.Transparent),
         start = Offset(start, 0f),
-        end = Offset(start + width * 0.4f, size.height),
+        end = Offset(start + width * SHIMMER_WIDTH_FRACTION, size.height),
     )
     drawRect(brush = brush)
 }
