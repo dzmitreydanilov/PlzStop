@@ -7,6 +7,7 @@ import androidx.room.Update
 import com.please.stop.app.core.db.entity.CategoryEntity
 import kotlinx.coroutines.flow.Flow
 
+@Suppress("TooManyFunctions")
 @Dao
 interface CategoryDao {
 

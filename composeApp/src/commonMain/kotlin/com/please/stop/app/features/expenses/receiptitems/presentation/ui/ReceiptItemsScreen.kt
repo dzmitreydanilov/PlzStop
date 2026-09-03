@@ -98,7 +98,7 @@ import plzstop.composeapp.generated.resources.receipt_items_total
 @Composable
 fun ReceiptItemsScreen(
     onGoBack: () -> Unit,
-    onSaved: () -> Unit,
+    onSave: () -> Unit,
 ) {
     val stateHolder = koinViewModel<ReceiptItemsStateHolder>()
     val state by stateHolder.state.collectAsStateWithLifecycle()
@@ -109,7 +109,7 @@ fun ReceiptItemsScreen(
     ) { navigation ->
         when (navigation) {
             ReceiptItemsNavigation.GoBack -> onGoBack()
-            ReceiptItemsNavigation.Saved -> onSaved()
+            ReceiptItemsNavigation.Saved -> onSave()
         }
     }
 

@@ -73,38 +73,47 @@ class ReceiptRepositoryImpl(
             ResponseStatus.ERROR, ResponseStatus.UNKNOWN -> throw ReceiptAnalysisException.ServiceUnavailable(
                 message ?: "Service error processing receipt."
             )
-            ResponseStatus.SUCCESS, ResponseStatus.PARTIAL -> {
-                val totalAmount = (data?.get("totalAmount") as? Number)?.toDouble()
-                val totalAmountMinorUnits = totalAmount?.let {
-                    it.toMinorUnits(decimalPlaces)
-                }
-
-                val itemsRaw = data?.get("items") as? List<*>
-                val items = itemsRaw?.mapNotNull { entry ->
-                    val map = entry as? Map<*, *> ?: return@mapNotNull null
-                    val name = map["name"] as? String ?: return@mapNotNull null
-                    val amount = (map["amount"] as? Number)?.toDouble() ?: return@mapNotNull null
-                    ReceiptItem(
-                        name = name,
-                        amountMinorUnits = amount.toMinorUnits(decimalPlaces),
-                        categoryId = (map["categoryId"] as? Number)?.toLong(),
-                        subcategoryId = (map["subcategoryId"] as? Number)?.toLong(),
-                    )
-                } ?: emptyList()
-
-                ReceiptData(
-                    merchantName = data?.get("merchantName") as? String,
-                    totalAmountMinorUnits = totalAmountMinorUnits,
-                    currency = data?.get("currency") as? String,
-                    date = data?.get("date") as? String,
-                    categoryId = (data?.get("categoryId") as? Number)?.toLong(),
-                    subcategoryId = (data?.get("subcategoryId") as? Number)?.toLong(),
-                    isPartial = status == ResponseStatus.PARTIAL,
-                    message = message,
-                    items = items,
-                )
-            }
+            ResponseStatus.SUCCESS, ResponseStatus.PARTIAL -> parseReceiptData(
+                data = data,
+                message = message,
+                status = status,
+                decimalPlaces = decimalPlaces,
+            )
         }
+    }
+
+    private fun parseReceiptData(
+        data: Map<*, *>?,
+        message: String?,
+        status: ResponseStatus,
+        decimalPlaces: Int,
+    ): ReceiptData {
+        val totalAmount = (data?.get("totalAmount") as? Number)?.toDouble()
+        val totalAmountMinorUnits = totalAmount?.let { it.toMinorUnits(decimalPlaces) }
+        val itemsRaw = data?.get("items") as? List<*>
+        val items = itemsRaw?.mapNotNull { entry ->
+            val map = entry as? Map<*, *> ?: return@mapNotNull null
+            val name = map["name"] as? String ?: return@mapNotNull null
+            val amount = (map["amount"] as? Number)?.toDouble() ?: return@mapNotNull null
+            ReceiptItem(
+                name = name,
+                amountMinorUnits = amount.toMinorUnits(decimalPlaces),
+                categoryId = (map["categoryId"] as? Number)?.toLong(),
+                subcategoryId = (map["subcategoryId"] as? Number)?.toLong(),
+            )
+        } ?: emptyList()
+
+        return ReceiptData(
+            merchantName = data?.get("merchantName") as? String,
+            totalAmountMinorUnits = totalAmountMinorUnits,
+            currency = data?.get("currency") as? String,
+            date = data?.get("date") as? String,
+            categoryId = (data?.get("categoryId") as? Number)?.toLong(),
+            subcategoryId = (data?.get("subcategoryId") as? Number)?.toLong(),
+            isPartial = status == ResponseStatus.PARTIAL,
+            message = message,
+            items = items,
+        )
     }
 
     private enum class ResponseStatus(val value: String) {

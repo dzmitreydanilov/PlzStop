@@ -132,10 +132,10 @@ fun MonthlyExpensesScreen(
                     monthLabel = "${monthName(currentMonth)} $currentYear",
                     canGoToPreviousMonth = pagerState.currentPage > 0,
                     canGoToNextMonth = pagerState.currentPage < maxPage,
-                    onPreviousClicked = {
+                    onPreviousClick = {
                         scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
                     },
-                    onNextClicked = {
+                    onNextClick = {
                         scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                     },
                 )
@@ -151,13 +151,13 @@ fun MonthlyExpensesScreen(
 
                 MonthBody(
                     state = pageState,
-                    onExpenseClicked = { id ->
+                    onExpenseClick = { id ->
                         stateHolder.processEvent(OperationsEvent.ExpenseClicked(id))
                     },
-                    onExpenseLongClicked = { id ->
+                    onExpenseLongClick = { id ->
                         stateHolder.processEvent(OperationsEvent.ExpenseLongClicked(id))
                     },
-                    onReceiptGroupClicked = { id ->
+                    onReceiptGroupClick = { id ->
                         stateHolder.processEvent(
                             OperationsEvent.ReceiptGroupClicked(id, year, month)
                         )
@@ -184,9 +184,9 @@ fun MonthlyExpensesScreen(
 private fun MonthBody(
     state: MonthPageState,
     modifier: Modifier = Modifier,
-    onExpenseClicked: (Long) -> Unit,
-    onExpenseLongClicked: (Long) -> Unit,
-    onReceiptGroupClicked: (Long) -> Unit,
+    onExpenseClick: (Long) -> Unit,
+    onExpenseLongClick: (Long) -> Unit,
+    onReceiptGroupClick: (Long) -> Unit,
 ) {
     when {
         state is MonthPageState.Loading -> DisplayFullScreenProgress(
@@ -210,9 +210,9 @@ private fun MonthBody(
             dayGroups = state.dayGroups,
             expandedReceiptIds = state.expandedReceiptIds,
             modifier = modifier,
-            onExpenseClicked = onExpenseClicked,
-            onExpenseLongClicked = onExpenseLongClicked,
-            onReceiptGroupClicked = onReceiptGroupClicked,
+            onExpenseClick = onExpenseClick,
+            onExpenseLongClick = onExpenseLongClick,
+            onReceiptGroupClick = onReceiptGroupClick,
         )
     }
 }
@@ -222,8 +222,8 @@ private fun MonthHeader(
     monthLabel: String,
     canGoToPreviousMonth: Boolean,
     canGoToNextMonth: Boolean,
-    onPreviousClicked: () -> Unit,
-    onNextClicked: () -> Unit,
+    onPreviousClick: () -> Unit,
+    onNextClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -233,7 +233,7 @@ private fun MonthHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(
-            onClick = onPreviousClicked,
+            onClick = onPreviousClick,
             enabled = canGoToPreviousMonth,
         ) {
             Icon(
@@ -247,7 +247,7 @@ private fun MonthHeader(
             fontWeight = FontWeight.SemiBold,
         )
         IconButton(
-            onClick = onNextClicked,
+            onClick = onNextClick,
             enabled = canGoToNextMonth,
         ) {
             Icon(
@@ -264,9 +264,9 @@ private fun MonthlyExpenseList(
     dayGroups: ImmutableList<DayGroupUiModel>,
     expandedReceiptIds: ImmutableSet<Long>,
     modifier: Modifier = Modifier,
-    onExpenseClicked: (Long) -> Unit,
-    onExpenseLongClicked: (Long) -> Unit,
-    onReceiptGroupClicked: (Long) -> Unit,
+    onExpenseClick: (Long) -> Unit,
+    onExpenseLongClick: (Long) -> Unit,
+    onReceiptGroupClick: (Long) -> Unit,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -287,8 +287,8 @@ private fun MonthlyExpenseList(
                         item(key = "single_${entry.id}") {
                             ExpenseCard(
                                 expense = entry,
-                                onClick = { onExpenseClicked(entry.id) },
-                                onLongClick = { onExpenseLongClicked(entry.id) },
+                                onClick = { onExpenseClick(entry.id) },
+                                onLongClick = { onExpenseLongClick(entry.id) },
                             )
                         }
                     }
@@ -298,9 +298,9 @@ private fun MonthlyExpenseList(
                             ReceiptGroupCard(
                                 group = entry,
                                 isExpanded = entry.receiptId in expandedReceiptIds,
-                                onGroupClicked = { onReceiptGroupClicked(entry.receiptId) },
-                                onExpenseClicked = onExpenseClicked,
-                                onExpenseLongClicked = onExpenseLongClicked,
+                                onGroupClick = { onReceiptGroupClick(entry.receiptId) },
+                                onExpenseClick = onExpenseClick,
+                                onExpenseLongClick = onExpenseLongClick,
                             )
                         }
                     }
@@ -363,9 +363,9 @@ private fun DayGroupHeader(group: DayGroupUiModel) {
 private fun ReceiptGroupCard(
     group: ExpenseEntryUiModel.ReceiptGroup,
     isExpanded: Boolean,
-    onGroupClicked: () -> Unit,
-    onExpenseClicked: (Long) -> Unit,
-    onExpenseLongClicked: (Long) -> Unit,
+    onGroupClick: () -> Unit,
+    onExpenseClick: (Long) -> Unit,
+    onExpenseLongClick: (Long) -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -380,7 +380,7 @@ private fun ReceiptGroupCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onGroupClicked)
+                .clickable(onClick = onGroupClick)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -421,8 +421,8 @@ private fun ReceiptGroupCard(
                 )
                 ExpenseRowContent(
                     expense = expense,
-                    onClick = { onExpenseClicked(expense.id) },
-                    onLongClick = { onExpenseLongClicked(expense.id) },
+                    onClick = { onExpenseClick(expense.id) },
+                    onLongClick = { onExpenseLongClick(expense.id) },
                 )
             }
         }

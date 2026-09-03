@@ -12,6 +12,8 @@ import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
 
+private const val PERCENT_MAX = 100.0
+
 @OptIn(ExperimentalForeignApi::class)
 actual fun compressImage(imageBytes: ByteArray, maxWidthPx: Int, quality: Int): ByteArray {
     val nsData = imageBytes.toNsData()
@@ -41,7 +43,7 @@ actual fun compressImage(imageBytes: ByteArray, maxWidthPx: Int, quality: Int): 
 
     if (resizedImage == null) return imageBytes
 
-    val qualityFloat = quality.toDouble() / 100.0
+    val qualityFloat = quality.toDouble() / PERCENT_MAX
     val jpegData = UIImageJPEGRepresentation(resizedImage, qualityFloat)
         ?: return imageBytes
 

@@ -105,10 +105,10 @@ private fun HomeHeader(
     CollapsingHomeHeader(
         displayName = state.displayName,
         totalSpentFormatted = state.totalSpentFormatted.orEmpty(),
-        onProfileClicked = { onEvent(HomeEvent.ProfileClicked) },
+        onProfileClick = { onEvent(HomeEvent.ProfileClicked) },
         currentHeight = headerScrollState.currentHeight,
         expandedHeight = headerScrollState.expandedHeight,
-        onExpandedHeightMeasured = headerScrollState::onExpandedHeightMeasured,
+        onExpandedHeightMeasure = headerScrollState::onExpandedHeightMeasured,
         modifier = Modifier,
     )
 }

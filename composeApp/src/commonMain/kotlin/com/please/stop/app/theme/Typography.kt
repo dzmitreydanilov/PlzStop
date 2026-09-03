@@ -14,7 +14,7 @@ import plzstop.composeapp.generated.resources.space_grotesk_medium
 import plzstop.composeapp.generated.resources.space_grotesk_regular
 
 @Composable
-internal fun SpaceGroteskFamily(): FontFamily = FontFamily(
+internal fun spaceGroteskFamily(): FontFamily = FontFamily(
     Font(Res.font.space_grotesk_regular, FontWeight.Normal),
     Font(Res.font.space_grotesk_medium, FontWeight.Medium),
     Font(Res.font.space_grotesk_medium, FontWeight.SemiBold),
@@ -27,8 +27,8 @@ internal fun SpaceGroteskFamily(): FontFamily = FontFamily(
 // Body & Buttons: 20sp — calculator keys, main body
 // Labels: 14sp — meta-information, UI pills
 @Composable
-internal fun AppTypography(): Typography {
-    val spaceGrotesk = SpaceGroteskFamily()
+internal fun appTypography(): Typography {
+    val spaceGrotesk = spaceGroteskFamily()
     return Typography(
         displayLarge = TextStyle(
             fontFamily = spaceGrotesk,

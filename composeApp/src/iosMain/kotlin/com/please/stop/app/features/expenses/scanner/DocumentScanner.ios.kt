@@ -14,6 +14,8 @@ import platform.darwin.NSObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+private const val SCANNED_IMAGE_JPEG_QUALITY = 0.9
+
 @Composable
 actual fun rememberDocumentScanner(): DocumentScanner {
     return remember { DocumentScanner() }
@@ -31,7 +33,7 @@ actual class DocumentScanner {
                 ) {
                     controller.dismissViewControllerAnimated(true, completion = null)
                     val page = didFinishWithScan.imageOfPageAtIndex(0.toULong())
-                    val jpegData = UIImageJPEGRepresentation(page, 0.9)
+                    val jpegData = UIImageJPEGRepresentation(page, SCANNED_IMAGE_JPEG_QUALITY)
                     if (jpegData != null) {
                         continuation.resume(jpegData)
                     } else {

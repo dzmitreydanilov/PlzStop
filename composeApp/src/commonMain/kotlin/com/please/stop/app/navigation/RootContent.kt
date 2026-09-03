@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -65,19 +66,23 @@ import org.koin.compose.koinInject
  * Root navigation host that wires the entire app graph.
  *
  * @param initialRoute The starting route determined by onboarding state.
- * @param deepLinkUri Optional deep link URI from the launching intent (cold start).
  * @param deepLinkHandler Handler for runtime deep link events (warm start / onNewIntent).
+ * @param deepLinkUri Optional deep link URI from the launching intent (cold start).
  */
 @Composable
 fun RootContent(
     initialRoute: NavKey,
-    deepLinkUri: String? = null,
     deepLinkHandler: DeepLinkHandler,
+    deepLinkUri: String? = null,
 ) {
     val bottomNavIntentHolder = LocalBottomNavIntentHolder.current
     val urlOpener = koinInject<UrlOpener>()
     val promoCoordinator = koinInject<SubscriptionPromoCoordinator>()
     val promoState by promoCoordinator.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(deepLinkUri, deepLinkHandler) {
+        deepLinkUri?.let(deepLinkHandler::handleDeepLink)
+    }
 
     DisposableEffect(promoCoordinator) {
         promoCoordinator.start()
@@ -213,7 +218,7 @@ private fun EntryProviderScope<NavKey>.bottomNavigationNavHost(router: Router<Na
     entry<ReceiptItemsRoute> {
         ReceiptItemsScreen(
             onGoBack = { router.pop() },
-            onSaved = { router.pop() },
+            onSave = { router.pop() },
         )
     }
 

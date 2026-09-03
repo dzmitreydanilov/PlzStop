@@ -34,7 +34,7 @@ private const val COLUMNS = 2
 internal fun CategoryPicker(
     categories: ImmutableList<CategoryUiModel>,
     selectedCategoryId: Long?,
-    onCategorySelected: (Long) -> Unit,
+    onCategorySelect: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -52,7 +52,7 @@ internal fun CategoryPicker(
                     CategoryTile(
                         category = category,
                         isSelected = category.id == selectedCategoryId,
-                        onClick = { onCategorySelected(category.id) },
+                        onClick = { onCategorySelect(category.id) },
                         modifier = Modifier.weight(1f),
                     )
                 }

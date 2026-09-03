@@ -14,7 +14,7 @@ fun CurrencyBottomSheet(
     CurrencyPickerSheet(
         selectedCurrencyCode = state.selectedCurrency?.code,
         deviceCurrencyCode = state.deviceCurrencyCode,
-        onCurrencySelected = { currency: Currency ->
+        onCurrencySelect = { currency: Currency ->
             onEvent(OnboardingEvent.CurrencySelected(currency))
         },
         onDismiss = { onEvent(OnboardingEvent.CurrencySheetDismissed) },

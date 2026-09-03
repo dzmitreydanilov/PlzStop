@@ -56,7 +56,7 @@ private const val ICON_SCALE = 0.6f
 fun CurrencyPickerSheet(
     selectedCurrencyCode: String?,
     deviceCurrencyCode: String?,
-    onCurrencySelected: (Currency) -> Unit,
+    onCurrencySelect: (Currency) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val viewModel = koinViewModel<CurrencyPickerViewModel>()
@@ -140,7 +140,7 @@ fun CurrencyPickerSheet(
                         CurrencyRow(
                             currency = currency,
                             isSelected = currency == pickerState.selectedCurrency,
-                            onClick = { onCurrencySelected(currency) },
+                            onClick = { onCurrencySelect(currency) },
                         )
                     }
                 }
@@ -162,7 +162,7 @@ fun CurrencyPickerSheet(
                         CurrencyRow(
                             currency = currency,
                             isSelected = currency == pickerState.selectedCurrency,
-                            onClick = { onCurrencySelected(currency) },
+                            onClick = { onCurrencySelect(currency) },
                         )
                     }
                 }

@@ -76,10 +76,10 @@ private val CollapsedSummaryTopPadding = 16.dp
 internal fun CollapsingHomeHeader(
     displayName: String?,
     totalSpentFormatted: String,
-    onProfileClicked: () -> Unit,
+    onProfileClick: () -> Unit,
     currentHeight: Dp,
     expandedHeight: Dp,
-    onExpandedHeightMeasured: (Float) -> Unit,
+    onExpandedHeightMeasure: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -131,7 +131,7 @@ internal fun CollapsingHomeHeader(
             collapseFraction = collapseFraction,
             modifier = Modifier
                 .onGloballyPositioned { coordinates ->
-                    onExpandedHeightMeasured(coordinates.size.height.toFloat())
+                    onExpandedHeightMeasure(coordinates.size.height.toFloat())
                 },
         )
         SpendSummaryText(
@@ -149,7 +149,7 @@ internal fun CollapsingHomeHeader(
         InitialAvatar(
             name = displayName,
             size = ExpandedAvatarSize,
-            onClick = onProfileClicked,
+            onClick = onProfileClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = avatarTopPadding, end = HeaderHorizontalPadding)
@@ -354,9 +354,9 @@ private fun CollapsingHomeHeaderPreview(currentHeight: Dp) {
     CollapsingHomeHeader(
         displayName = null,
         totalSpentFormatted = "$1,248.32",
-        onProfileClicked = {},
+        onProfileClick = {},
         currentHeight = currentHeight,
         expandedHeight = 220.dp,
-        onExpandedHeightMeasured = {},
+        onExpandedHeightMeasure = {},
     )
 }
